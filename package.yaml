@@ -1,0 +1,102 @@
+name: dependent-type-search
+version: 0.1.0.0
+github: "githubuser/dependent-type-search"
+license: BSD-3-Clause
+author: "Author name here"
+maintainer: "example@example.com"
+copyright: "2025 Author name here"
+
+extra-source-files:
+  - README.md
+  - CHANGELOG.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description: Please see the README on GitHub at <https://github.com/githubuser/dependent-type-search#readme>
+
+dependencies:
+  - base >= 4.7 && < 5
+  - containers
+  - hashable
+  - monus-weighted-search
+  - mtl
+  - unordered-containers
+  - witherable
+
+language: GHC2021
+
+default-extensions:
+  - AllowAmbiguousTypes
+  - BangPatterns
+  - BlockArguments
+  - ConstraintKinds
+  - DataKinds
+  - DerivingVia
+  - DuplicateRecordFields
+  - ExplicitNamespaces
+  - FlexibleContexts
+  - FlexibleInstances
+  - FunctionalDependencies
+  - GADTs
+  - InstanceSigs
+  - ImplicitParams
+  - KindSignatures
+  - LambdaCase
+  - MultiParamTypeClasses
+  - MultiWayIf
+  - NoFieldSelectors
+  - OverloadedStrings
+  - OverloadedRecordDot
+  - PackageImports
+  - PatternSynonyms
+  - PolyKinds
+  - QualifiedDo
+  - RankNTypes
+  - ScopedTypeVariables
+  - StandaloneDeriving
+  - StandaloneKindSignatures
+  - Strict
+  - TemplateHaskell
+  - TypeApplications
+  - TypeFamilies
+  - TypeFamilyDependencies
+  - UndecidableInstances
+  - UnboxedTuples
+  - UnboxedSums
+  - ViewPatterns
+
+ghc-options:
+  - -Wall
+  - -Wcompat
+  - -Widentities
+  - -Wincomplete-record-updates
+  - -Wincomplete-uni-patterns
+  - -Wmissing-deriving-strategies
+  - -Wmissing-export-lists
+  - -Wmissing-home-modules
+  - -Wpartial-fields
+  - -Wredundant-constraints
+  - -O2
+  - -funbox-strict-fields
+
+library:
+  source-dirs: src
+
+executables:
+  dependent-type-search-exe:
+    main: Main.hs
+    source-dirs: app
+    dependencies:
+      - dependent-type-search
+
+tests:
+  dependent-type-search-test:
+    main: Spec.hs
+    source-dirs: test
+    dependencies:
+      - dependent-type-search
