@@ -84,6 +84,7 @@ library
     , hashable
     , monus-weighted-search
     , mtl
+    , text
     , unordered-containers
     , witherable
   default-language: GHC2021
@@ -143,6 +144,7 @@ executable dependent-type-search-exe
     , hashable
     , monus-weighted-search
     , mtl
+    , text
     , unordered-containers
     , witherable
   default-language: GHC2021
@@ -203,6 +205,7 @@ test-suite dependent-type-search-test
     , hashable
     , monus-weighted-search
     , mtl
+    , text
     , unordered-containers
     , witherable
   default-language: GHC2021

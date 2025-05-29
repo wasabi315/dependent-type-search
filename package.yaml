@@ -25,6 +25,7 @@ dependencies:
   - hashable
   - monus-weighted-search
   - mtl
+  - text
   - unordered-containers
   - witherable
 

@@ -2,19 +2,26 @@ module TypeSearch.Common
   ( -- * Utils
     down,
     choose,
+    par,
+    punctuate,
+    enclose,
 
     -- * Names
     Index (..),
     Meta (..),
     freshMeta,
     Name,
-    TopName,
+    TopName (..),
     freshen,
   )
 where
 
 import Control.Applicative
+import Data.Function
 import Data.Hashable
+import Data.List (intersperse)
+import Data.List.NonEmpty qualified as NE
+import Data.Text qualified as T
 import Data.Unique
 
 --------------------------------------------------------------------------------
@@ -26,6 +33,15 @@ down x y = [x, x - 1 .. y]
 
 choose :: (Alternative m, Foldable t) => t a -> m a
 choose = foldr ((<|>) . pure) empty
+
+par :: Int -> Int -> ShowS -> ShowS
+par p q = showParen (p > q)
+
+punctuate :: ShowS -> [ShowS] -> ShowS
+punctuate sep xs = foldr (.) id (intersperse sep xs)
+
+enclose :: ShowS -> ShowS -> ShowS -> ShowS
+enclose open close x = open . x . close
 
 --------------------------------------------------------------------------------
 -- Names
@@ -45,14 +61,25 @@ freshMeta :: IO Meta
 freshMeta = Meta <$> newUnique
 
 -- | Raw variable names
-type Name = String
+type Name = T.Text
 
 -- | Top-level names
-type TopName = String
+data TopName
+  = Unqual Name
+  | Qual (NE.NonEmpty Name) Name
+  deriving stock (Eq)
+
+instance Show TopName where
+  showsPrec _ = \case
+    Unqual n -> showString (T.unpack n)
+    Qual (m NE.:| ns) n ->
+      (m : ns ++ [n])
+        & map (showString . T.unpack)
+        & punctuate (showChar '.')
 
 freshen :: [Name] -> Name -> Name
 freshen ns = \case
   "_" -> "_"
   n
-    | n `elem` ns -> freshen ns (n ++ "'")
+    | n `elem` ns -> freshen ns (T.snoc n '\'')
     | otherwise -> n
