@@ -12,4 +12,10 @@ let app : (A : Type) (B : (x : A) → Type) (f : (x : A) → B x) (x : A) → B 
 
 let proj1 : (A : Type) (B : (x : A) → Type) → Σ x : A. B x → A = λ A B p → p.1
 
-let proj2 : (A : Type) (B : (x : A) → Type) (p : Σ x : A. B x) → B (proj1 p) = λ A B p → p.2
+let proj2 : (A : Type) (B : (x : A) → Type) (p : Σ x : A. B x) → B (Basic.proj1 p) = λ A B p → p.2
+
+let Nat : Type = (A : Type) → A → (A → A) → A
+
+let zero : Basic.Nat = λ A z s → z
+
+let suc : Basic.Nat → Basic.Nat = λ n A z s → s (n A z s)

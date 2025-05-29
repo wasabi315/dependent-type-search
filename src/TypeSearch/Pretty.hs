@@ -146,7 +146,7 @@ prettyTerm = go
 
     goAbs ns = \case
       Abs (freshen ns -> n) t ->
-        showChar ' ' . shows n . go (n : ns) absP t
+        showChar ' ' . shows n . goAbs (n : ns) t
       t -> showString ". " . go ns absP t
 
 prettyMetaSubst :: MetaSubst -> ShowS

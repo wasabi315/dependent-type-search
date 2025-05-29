@@ -34,6 +34,9 @@ module TypeSearch.Evaluation
     -- * Forcing
     force,
     deepForce,
+
+    -- * Top-level environment
+    modulesEnv,
   )
 where
 
@@ -150,14 +153,14 @@ lookupWithQName topEnv env = \case
     Just v -> v
     Nothing -> case HM.lookup n topEnv of
       Just vs -> VTop (HM.keys vs) n SNil (HM.elems vs)
-      Nothing -> error "Variable not found"
-  Qual q n -> case HM.lookup n topEnv >>= HM.lookup q of
-    Just v -> v
-    Nothing -> error "Variable not found"
+      Nothing -> error $ "Variable not found: " ++ show n
+  m@(Qual q n) -> case HM.lookup n topEnv >>= HM.lookup q of
+    Just v -> VTop [q] n SNil [v]
+    Nothing -> error $ "Variable not found: " ++ show m
 
 lookupPossibleModules :: TopEnv -> [ModuleName] -> Name -> Value
 lookupPossibleModules topEnv ms n = case HM.lookup n topEnv of
-  Nothing -> error "Variable not found"
+  Nothing -> error $ "Variable not found: " ++ show n
   Just vs -> VTop ms n SNil (map (vs HM.!) ms)
 
 evaluateRaw :: TopEnv -> RawEnv -> Raw -> Value
@@ -300,3 +303,30 @@ deepForce topEnv subst = go
       EApp v -> EApp (go v)
       EFst -> EFst
       ESnd -> ESnd
+
+--------------------------------------------------------------------------------
+-- Create top-level environment from modules
+
+-- | Create a top-level environment from modules.
+modulesEnv :: HM.HashMap ModuleName Module -> TopEnv
+modulesEnv mods = go HM.empty (HM.keys mods)
+  where
+    go topEnv = \case
+      [] -> topEnv
+      m : todos ->
+        let mod' = mods HM.! m
+            deps = mod'.imports
+         in if any (`elem` todos) deps
+              then go topEnv (todos ++ [m])
+              else go (goModule topEnv mod') todos
+
+    goModule topEnv (Module m _ decls) = foldl' (goDecl m) topEnv decls
+
+    goDecl m topEnv = \case
+      DLoc (d :@ _) -> goDecl m topEnv d
+      DLet x _ t ->
+        HM.insertWith
+          (<>)
+          x
+          (HM.singleton m (evaluateRaw topEnv HM.empty t))
+          topEnv
