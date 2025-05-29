@@ -257,8 +257,9 @@ unify topEnv subst = \case
       (t, VFlex m arity ts' SNil) -> do
         expectNotFlex cm
         tryFlexRigid cm topEnv subst todos' lvl moduloIso m arity ts' t
-      -- definitions
-      (VTop n sp ts, VTop n' sp' ts') -> case cm of
+      -- definition unfolding
+      -- TODO: track which definition we have unfolded
+      (VTop _ n sp ts, VTop _ n' sp' ts') -> case cm of
         Rigid
           | n == n' ->
               unifySpine Flex topEnv subst todos' lvl sp sp'
@@ -277,14 +278,14 @@ unify topEnv subst = \case
           t' <- choose ts'
           let todo' = Constraint lvl cm False t t'
           unify topEnv subst (todo' : todos')
-      (VTop _ _ ts, t') -> case cm of
+      (VTop _ _ _ ts, t') -> case cm of
         Flex -> empty
         _ -> do
           tell 1
           t <- choose ts
           let todo' = Constraint lvl cm False t t'
           unify topEnv subst (todo' : todos')
-      (t, VTop _ _ ts) -> case cm of
+      (t, VTop _ _ _ ts) -> case cm of
         Flex -> empty
         _ -> do
           tell 1
@@ -405,7 +406,7 @@ tryFlexRigid cm topEnv subst todos lvl moduloIso m arity args t = do
       HFlex {} -> error "unreachable"
       HRigid {} -> empty
       -- m[x0, ..., xn] ↦ f
-      HTop f vs -> pure (Top f, VTop f SNil vs)
+      HTop ms f vs -> pure (Top ms f, VTop ms f SNil vs)
       -- m[x0, ..., xn] ↦ Type
       HType -> pure (Type, VType)
       -- m[x0, ..., xn] ↦ (x : m1[x0, ..., xn]) -> m2[x, x0, ..., xn]

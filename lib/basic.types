@@ -1,0 +1,15 @@
+module Basic where
+
+let id : (A : Type) → A → A = λ A x → x
+
+let const : (A B : Type) → A → B → A = λ A B x _ → x
+
+let flip : (A B C : Type) → (A → B → C) → B → A → C = λ A B C f x y → f y x
+
+let comp : (A B C : Type) → (B → C) → (A → B) → A → C = λ A B C f g x → f (g x)
+
+let app : (A : Type) (B : (x : A) → Type) (f : (x : A) → B x) (x : A) → B x = λ A B f x → f x
+
+let proj1 : (A : Type) (B : (x : A) → Type) → Σ x : A. B x → A = λ A B p → p.1
+
+let proj2 : (A : Type) (B : (x : A) → Type) (p : Σ x : A. B x) → B (proj1 p) = λ A B p → p.2

@@ -9,11 +9,13 @@ where
 import Data.HashMap.Strict qualified as HM
 import TypeSearch.Common
 
+--------------------------------------------------------------------------------
+
 -- | Terms
 data Term
   = Var Index -- x
   | MetaApp Meta [Term] -- M[t1, ..., tn]
-  | Top TopName -- f
+  | Top [ModuleName] Name -- f
   | Type -- Type
   | Pi Name Term Term -- (x : A) -> B
   | Abs Name Term -- \x -> t

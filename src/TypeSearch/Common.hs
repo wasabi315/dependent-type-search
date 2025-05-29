@@ -10,19 +10,26 @@ module TypeSearch.Common
     Index (..),
     Meta (..),
     freshMeta,
-    Name,
-    TopName (..),
+    Name (..),
+    ModuleName (..),
+    QName (..),
     freshen,
+
+    -- * Position
+    Located (..),
+    HasPosition (..),
+    value,
+    mergePosition,
   )
 where
 
 import Control.Applicative
-import Data.Function
 import Data.Hashable
 import Data.List (intersperse)
-import Data.List.NonEmpty qualified as NE
+import Data.String
 import Data.Text qualified as T
 import Data.Unique
+import Error.Diagnose
 
 --------------------------------------------------------------------------------
 -- Utils
@@ -60,26 +67,57 @@ instance Show Meta where
 freshMeta :: IO Meta
 freshMeta = Meta <$> newUnique
 
--- | Raw variable names
-type Name = T.Text
+-- | Names
+newtype Name = Name T.Text
+  deriving newtype (Eq, Ord, Hashable, IsString)
 
--- | Top-level names
-data TopName
+instance Show Name where
+  showsPrec _ (Name n) = showString (T.unpack n)
+
+-- | Module names
+newtype ModuleName = ModuleName T.Text
+  deriving newtype (Eq, Ord, Hashable, IsString)
+
+instance Show ModuleName where
+  showsPrec _ (ModuleName n) = showString (T.unpack n)
+
+-- | Qualified names
+data QName
   = Unqual Name
-  | Qual (NE.NonEmpty Name) Name
+  | Qual ModuleName Name
   deriving stock (Eq)
 
-instance Show TopName where
+instance IsString QName where
+  fromString = Unqual . Name . T.pack
+
+instance Show QName where
   showsPrec _ = \case
-    Unqual n -> showString (T.unpack n)
-    Qual (m NE.:| ns) n ->
-      (m : ns ++ [n])
-        & map (showString . T.unpack)
-        & punctuate (showChar '.')
+    Unqual n -> shows n
+    Qual m n -> shows m . showChar '.' . shows n
 
 freshen :: [Name] -> Name -> Name
 freshen ns = \case
   "_" -> "_"
-  n
-    | n `elem` ns -> freshen ns (T.snoc n '\'')
+  n@(Name n')
+    | n `elem` ns -> freshen ns (Name $ T.snoc n' '\'')
     | otherwise -> n
+
+--------------------------------------------------------------------------------
+
+data Located a = a :@ Position
+  deriving stock (Functor, Foldable, Traversable, Show)
+
+class HasPosition a where
+  position :: a -> Position
+
+instance HasPosition (Located a) where
+  position (_ :@ p) = p
+
+instance HasPosition Position where
+  position = id
+
+value :: Located a -> a
+value (a :@ _) = a
+
+mergePosition :: (HasPosition a, HasPosition b) => a -> b -> Position
+mergePosition (position -> Position s _ f) (position -> Position _ e _) = Position s e f

@@ -39,7 +39,6 @@ where
 
 import Data.Foldable
 import Data.HashMap.Lazy qualified as HM
-import Data.List.NonEmpty qualified as NE
 import Data.Sequence qualified as Seq
 import TypeSearch.Common
 import TypeSearch.Raw
@@ -59,13 +58,13 @@ type RawEnv = HM.HashMap Name Value
 type Env = [Value]
 
 -- | Environment keyed by top-level names
-type TopEnv = HM.HashMap Name (HM.HashMap (NE.NonEmpty Name) Value)
+type TopEnv = HM.HashMap Name (HM.HashMap ModuleName Value)
 
 -- | Values support efficient β-reduction and substitution.
 data Value
   = VRigid Level Spine
   | VFlex Meta Int [Value] Spine -- metavariables are parametarised in SOAS
-  | VTop TopName Spine [Value]
+  | VTop [ModuleName] Name Spine [Value]
   | VType
   | VPi Name Value (Value -> Value)
   | VAbs Name (Value -> Value)
@@ -118,7 +117,7 @@ pattern SSnd' sp = ESnd Seq.:<| sp
 data Head
   = HRigid Level
   | HFlex Meta Int [Value]
-  | HTop TopName [Value]
+  | HTop [ModuleName] Name [Value]
   | HType
   | HPi Name Value (Value -> Value)
   | HAbs Name (Value -> Value)
@@ -132,7 +131,7 @@ headSpine :: Value -> (Head, Spine)
 headSpine = \case
   VRigid l sp -> (HRigid l, sp)
   VFlex m ar vs sp -> (HFlex m ar vs, sp)
-  VTop n sp vs -> (HTop n vs, sp)
+  VTop ms n sp vs -> (HTop ms n vs, sp)
   VType -> (HType, SNil)
   VPi x a b -> (HPi x a b, SNil)
   VAbs x f -> (HAbs x f, SNil)
@@ -145,22 +144,26 @@ headSpine = \case
 --------------------------------------------------------------------------------
 -- Evaluation
 
-lookupTop :: TopEnv -> TopName -> [Value]
-lookupTop env = \case
-  Unqual n -> lookupTopUnqual env n
-  Qual q n -> lookupTopQual env q n
+lookupWithQName :: TopEnv -> RawEnv -> QName -> Value
+lookupWithQName topEnv env = \case
+  Unqual n -> case HM.lookup n env of
+    Just v -> v
+    Nothing -> case HM.lookup n topEnv of
+      Just vs -> VTop (HM.keys vs) n SNil (HM.elems vs)
+      Nothing -> error "Variable not found"
+  Qual q n -> case HM.lookup n topEnv >>= HM.lookup q of
+    Just v -> v
+    Nothing -> error "Variable not found"
 
-lookupTopUnqual :: TopEnv -> Name -> [Value]
-lookupTopUnqual env n = maybe [] HM.elems (HM.lookup n env)
-
-lookupTopQual :: TopEnv -> NE.NonEmpty Name -> Name -> [Value]
-lookupTopQual env q n = maybe [] pure $ HM.lookup n env >>= HM.lookup q
+lookupPossibleModules :: TopEnv -> [ModuleName] -> Name -> Value
+lookupPossibleModules topEnv ms n = case HM.lookup n topEnv of
+  Nothing -> error "Variable not found"
+  Just vs -> VTop ms n SNil (map (vs HM.!) ms)
 
 evaluateRaw :: TopEnv -> RawEnv -> Raw -> Value
 evaluateRaw topEnv env = \case
-  RVar n -> env HM.! n
+  RVar n -> lookupWithQName topEnv env n
   RMetaApp m ts -> VMetaApp m $ map (evaluateRaw topEnv env) ts
-  RTop n -> VTop n SNil (lookupTop topEnv n)
   RType -> VType
   RPi x a b -> VPi x (evaluateRaw topEnv env a) \v -> evaluateRaw topEnv (HM.insert x v env) b
   RAbs x t -> VAbs x \v -> evaluateRaw topEnv (HM.insert x v env) t
@@ -171,13 +174,14 @@ evaluateRaw topEnv env = \case
   RSnd t -> vsnd $ evaluateRaw topEnv env t
   RUnit -> VUnit
   RTT -> VTT
+  RLoc (t :@ _) -> evaluateRaw topEnv env t
 
 -- | Convert a term into a value.
 evaluate :: TopEnv -> Env -> Term -> Value
 evaluate topEnv env = \case
   Var (Index i) -> env !! i
   MetaApp m ts -> VMetaApp m $ map (evaluate topEnv env) ts
-  Top n -> VTop n SNil (lookupTop topEnv n)
+  Top ms n -> lookupPossibleModules topEnv ms n
   Type -> VType
   Pi x a b -> VPi x (evaluate topEnv env a) \v -> evaluate topEnv (v : env) b
   Abs x t -> VAbs x \v -> evaluate topEnv (v : env) t
@@ -195,7 +199,7 @@ vapp vt vu = case vt of
   VAbs _ f -> f vu
   VRigid l sp -> VRigid l (SApp sp vu)
   VFlex m ar vs sp -> VFlex m ar vs (SApp sp vu)
-  VTop n sp vs -> VTop n (SApp sp vu) (map (`vapp` vu) vs)
+  VTop ms n sp vs -> VTop ms n (SApp sp vu) (map (`vapp` vu) vs)
   VStuck v sp -> VStuck v (SApp sp vu)
   _ -> VStuck vt (SApp SNil vu)
 
@@ -205,14 +209,14 @@ vfst = \case
   VPair v _ -> v
   VRigid l sp -> VRigid l (SFst sp)
   VFlex m ar vs sp -> VFlex m ar vs (SFst sp)
-  VTop n sp vs -> VTop n (SFst sp) (map vfst vs)
+  VTop ms n sp vs -> VTop ms n (SFst sp) (map vfst vs)
   VStuck v sp -> VStuck v (SFst sp)
   v -> VStuck v (SFst SNil)
 vsnd = \case
   VPair _ v -> v
   VRigid l sp -> VRigid l (SSnd sp)
   VFlex m ar vs sp -> VFlex m ar vs (SSnd sp)
-  VTop n sp vs -> VTop n (SSnd sp) (map vsnd vs)
+  VTop ms n sp vs -> VTop ms n (SSnd sp) (map vsnd vs)
   VStuck v sp -> VStuck v (SSnd sp)
   v -> VStuck v (SSnd SNil)
 
@@ -242,7 +246,7 @@ quote :: Level -> Value -> Term
 quote lvl = \case
   VRigid x sp -> quoteSpine lvl (Var $ levelToIndex lvl x) sp
   VFlex m _ vs sp -> quoteSpine lvl (MetaApp m $ map (quote lvl) vs) sp
-  VTop n sp _ -> quoteSpine lvl (Top n) sp
+  VTop ms n sp _ -> quoteSpine lvl (Top ms n) sp
   VType -> Type
   VPi x va vb -> Pi x (quote lvl va) (quote (lvl + 1) $ vb (VVar lvl))
   VAbs x v -> Abs x $ quote (lvl + 1) $ v (VVar lvl)
@@ -280,7 +284,7 @@ deepForce topEnv subst = go
     go v = case force topEnv subst v of
       VFlex m ar vs sp -> VFlex m ar vs (goSpine sp)
       VRigid l sp -> VRigid l (goSpine sp)
-      VTop n sp vs -> VTop n (goSpine sp) (map go vs)
+      VTop ms n sp vs -> VTop ms n (goSpine sp) (map go vs)
       VType -> VType
       VPi x a b -> VPi x (go a) (go . b)
       VAbs x f -> VAbs x (go . f)

@@ -27,7 +27,10 @@ library
   exposed-modules:
       TypeSearch
       TypeSearch.Common
+      TypeSearch.Error
       TypeSearch.Evaluation
+      TypeSearch.Lexer
+      TypeSearch.Parser
       TypeSearch.Pretty
       TypeSearch.Raw
       TypeSearch.Term
@@ -65,6 +68,7 @@ library
       PolyKinds
       QualifiedDo
       RankNTypes
+      RecordWildCards
       ScopedTypeVariables
       StandaloneDeriving
       StandaloneKindSignatures
@@ -78,14 +82,21 @@ library
       UnboxedSums
       ViewPatterns
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -O2 -funbox-strict-fields
+  build-tools:
+      alex
+    , happy
   build-depends:
-      base >=4.7 && <5
+      array
+    , base >=4.7 && <5
+    , bytestring
     , containers
+    , diagnose
     , hashable
     , monus-weighted-search
     , mtl
     , text
     , unordered-containers
+    , utf8-string
     , witherable
   default-language: GHC2021
 
@@ -124,6 +135,7 @@ executable dependent-type-search-exe
       PolyKinds
       QualifiedDo
       RankNTypes
+      RecordWildCards
       ScopedTypeVariables
       StandaloneDeriving
       StandaloneKindSignatures
@@ -137,15 +149,22 @@ executable dependent-type-search-exe
       UnboxedSums
       ViewPatterns
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -O2 -funbox-strict-fields
+  build-tools:
+      alex
+    , happy
   build-depends:
-      base >=4.7 && <5
+      array
+    , base >=4.7 && <5
+    , bytestring
     , containers
     , dependent-type-search
+    , diagnose
     , hashable
     , monus-weighted-search
     , mtl
     , text
     , unordered-containers
+    , utf8-string
     , witherable
   default-language: GHC2021
 
@@ -185,6 +204,7 @@ test-suite dependent-type-search-test
       PolyKinds
       QualifiedDo
       RankNTypes
+      RecordWildCards
       ScopedTypeVariables
       StandaloneDeriving
       StandaloneKindSignatures
@@ -198,14 +218,21 @@ test-suite dependent-type-search-test
       UnboxedSums
       ViewPatterns
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -O2 -funbox-strict-fields
+  build-tools:
+      alex
+    , happy
   build-depends:
-      base >=4.7 && <5
+      array
+    , base >=4.7 && <5
+    , bytestring
     , containers
     , dependent-type-search
+    , diagnose
     , hashable
     , monus-weighted-search
     , mtl
     , text
     , unordered-containers
+    , utf8-string
     , witherable
   default-language: GHC2021
