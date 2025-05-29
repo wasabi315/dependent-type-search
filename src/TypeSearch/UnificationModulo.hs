@@ -249,7 +249,27 @@ unify topEnv subst = \case
             todo' = Constraint lvl cm False t (VFlex m2 arity ts' sp)
         unify topEnv subst' (todo' : todos')
       -- flex-flex
-      (VFlex _ _ _ SNil, VFlex _ _ _ SNil) -> pure (subst, todo : todos')
+      (VFlex m arity vs SNil, VFlex m' arity' vs' SNil)
+        | m /= m' -> do
+            -- identify
+            expectNotFlex cm
+            i <- lift freshMeta
+            ms <- lift $ traverse (const freshMeta) vs
+            ms' <- lift $ traverse (const freshMeta) vs'
+            let params = map Var $ down (Index arity - 1) 0
+                params' = map Var $ down (Index arity' - 1) 0
+                mabs = MetaAbs arity $ MetaApp i $ params ++ map (`MetaApp` params) ms'
+                mabs' = MetaAbs arity' $ MetaApp i $ map (`MetaApp` params') ms ++ params'
+                subst' = HM.insert m mabs $ HM.insert m' mabs' subst
+                todo' =
+                  Constraint
+                    lvl
+                    cm
+                    False
+                    (VMetaApp i $ vs ++ map (`VMetaApp` vs) ms')
+                    (VMetaApp i $ map (`VMetaApp` vs') ms ++ vs')
+            unify topEnv subst' (todo' : todos')
+        | otherwise -> pure (subst, todo : todos')
       -- flex-rigid
       (VFlex m arity ts SNil, t') -> do
         expectNotFlex cm
