@@ -330,6 +330,7 @@ decomposeMetaArgs cm lvl lhs rhs todos = case (lhs, rhs) of
 guessMeta :: Constraint -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
 guessMeta todo@(Constraint _ cm _ lhs rhs) subst todos = do
   guard (cm /= Flex)
+  tell 1
   (m, mabs) <- helper lhs <|> helper rhs
   let subst' = HM.insert m mabs subst
   pure (subst', todo : todos)
@@ -345,6 +346,7 @@ guessMeta todo@(Constraint _ cm _ lhs rhs) subst todos = do
 guessMetaIso :: TopEnv -> Constraint -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
 guessMetaIso topEnv todo@(Constraint lvl cm iso lhs rhs) subst todos = do
   guard (iso && cm /= Flex)
+  tell 1
   (m, mabs) <- helper lhs <|> helper rhs
   let subst' = HM.insert m mabs subst
   pure (subst', todo : todos)
@@ -377,6 +379,7 @@ guessMetaIso topEnv todo@(Constraint lvl cm iso lhs rhs) subst todos = do
 flexRigid :: Constraint -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
 flexRigid todo@(Constraint _ cm _ lhs rhs) subst todos = do
   guard (cm /= Flex)
+  tell 1
   case (lhs, rhs) of
     (VFlex {}, VFlex {}) -> empty
     (VFlex m ar _ SNil, t') -> do
@@ -389,41 +392,61 @@ flexRigid todo@(Constraint _ cm _ lhs rhs) subst todos = do
       pure (subst', todo : todos)
     _ -> empty
 
+type ChosenDefs = HM.HashMap Name ModuleName
+
 -- | Lazily unfold definitions.
--- TODO: track which definition we have unfolded
-unfold :: Constraint -> [Constraint] -> UnifyM [Constraint]
-unfold (Constraint lvl cm iso lhs rhs) todos = do
+unfold :: Constraint -> [Constraint] -> ChosenDefs -> UnifyM ([Constraint], ChosenDefs)
+unfold (Constraint lvl cm iso lhs rhs) todos chosenDefs = do
   case (cm, lhs, rhs) of
     (Rigid, VTop n sp ts, VTop n' sp' ts')
       | n == n' ->
-          decomposeSpine Flex lvl sp sp' todos
+          (,chosenDefs) <$> decomposeSpine Flex lvl sp sp' todos
             <|> do
-              tell 2
-              (_, t) <- choose ts
-              (_, t') <- choose ts'
-              let todo' = Constraint lvl Full iso t t'
-              pure (todo' : todos)
+              tell 1
+              -- assume modName = modName'
+              ((modName, t), (_modName', t')) <- choose (zip ts ts')
+              let chosenDefs' = HM.insert n modName chosenDefs
+                  todo' = Constraint lvl Full iso t t'
+              pure (todo' : todos, chosenDefs')
+      | otherwise -> do
+          tell 2
+          (modName, t) <- choose ts
+          (modName', t') <- choose ts'
+          let chosenDefs' = HM.insert n modName $ HM.insert n' modName' chosenDefs
+              todo' = Constraint lvl Rigid iso t t'
+          pure (todo' : todos, chosenDefs')
     (Flex, VTop n sp _, VTop n' sp' _)
-      | n == n' -> decomposeSpine Flex lvl sp sp' todos
+      | n == n' -> (,chosenDefs) <$> decomposeSpine Flex lvl sp sp' todos
       | otherwise -> empty
-    (_, VTop _ _ ts, VTop _ _ ts') -> do
-      tell 1
-      (_, t) <- choose ts
-      (_, t') <- choose ts'
-      let todo' = Constraint lvl cm iso t t'
-      pure (todo' : todos)
+    (Full, VTop n _ ts, VTop n' _ ts')
+      | n == n' -> do
+          tell 1
+          -- assume modName = modName'
+          ((modName, t), (_modName', t')) <- choose (zip ts ts')
+          let chosenDefs' = HM.insert n modName chosenDefs
+              todo' = Constraint lvl Full iso t t'
+          pure (todo' : todos, chosenDefs')
+      | otherwise -> do
+          tell 2
+          (modName, t) <- choose ts
+          (modName', t') <- choose ts'
+          let chosenDefs' = HM.insert n modName $ HM.insert n' modName' chosenDefs
+              todo' = Constraint lvl Rigid iso t t'
+          pure (todo' : todos, chosenDefs')
     (Flex, VTop {}, _) -> empty
-    (_, VTop _ _ ts, t') -> do
+    (_, VTop n _ ts, t') -> do
       tell 1
-      (_, t) <- choose ts
+      (modName, t) <- choose ts
       let todo' = Constraint lvl cm iso t t'
-      pure (todo' : todos)
+          chosenDefs' = HM.insert n modName chosenDefs
+      pure (todo' : todos, chosenDefs')
     (Flex, _, VTop {}) -> empty
-    (_, t, VTop _ _ ts) -> do
+    (_, t, VTop n _ ts) -> do
       tell 1
-      (_, t') <- choose ts
+      (modName, t') <- choose ts
       let todo' = Constraint lvl cm iso t t'
-      pure (todo' : todos)
+          chosenDefs' = HM.insert n modName chosenDefs
+      pure (todo' : todos, chosenDefs')
     _ -> empty
 
 -- | Pre-unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
@@ -433,26 +456,36 @@ unfold (Constraint lvl cm iso lhs rhs) todos = do
 --   e.g.)   (x : (y : (z : Type) * z) -> y.1)) * Type
 --         ~ (x : Type) * (y : (z : Type) * z) -> y.1)
 --         ~ (x : Type) * ((z : Type) * (y : z) -> z)
-unify :: TopEnv -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
-unify topEnv subst = \case
+unify :: TopEnv -> ChosenDefs -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
+unify topEnv chosenDefs subst = \case
   [] -> pure (subst, [])
   (forceConstraint topEnv subst -> Constraint lvl cm iso lhs rhs) : todos -> do
     let norm = if iso then normalise topEnv subst lvl else id
         todo = Constraint lvl cm iso (norm lhs) (norm rhs)
-    (subst', todos') <-
+    (subst', todos', chosenDefs') <-
       asum
-        [ (subst,) <$> decompose todo todos,
-          tell 1 >> guessMeta todo subst todos,
-          tell 1 >> guessMetaIso topEnv todo subst todos,
-          tell 1 >> flexRigid todo subst todos,
-          (subst,) <$> unfold todo todos
+        [ (subst,,chosenDefs) <$> decompose todo todos,
+          do
+            (subst', todos') <- guessMeta todo subst todos
+            pure (subst', todos', chosenDefs),
+          do
+            (subst', todos') <- guessMetaIso topEnv todo subst todos
+            pure (subst', todos', chosenDefs),
+          do
+            (subst', todos') <- flexRigid todo subst todos
+            pure (subst', todos', chosenDefs),
+          do
+            (todos', chosenDefs') <- unfold todo todos chosenDefs
+            pure (subst, todos', chosenDefs')
         ]
-    unify topEnv subst' todos'
+    unify topEnv chosenDefs' subst' todos'
 
 -- | Pre-unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
 unifyRaw' :: TopEnv -> Raw -> Raw -> UnifyM (MetaSubst, [Constraint])
-unifyRaw' topEnv t t' =
-  unify topEnv HM.empty [Constraint 0 Rigid True (evaluateRaw topEnv HM.empty t) (evaluateRaw topEnv HM.empty t')]
+unifyRaw' topEnv t t' = do
+  let initTodo =
+        Constraint 0 Rigid True (evaluateRaw topEnv HM.empty t) (evaluateRaw topEnv HM.empty t')
+  unify topEnv HM.empty HM.empty [initTodo]
 
 deepForceMetaAbs :: TopEnv -> MetaSubst -> MetaAbs -> MetaAbs
 deepForceMetaAbs topEnv subst mabs = mabs {body = body'}
