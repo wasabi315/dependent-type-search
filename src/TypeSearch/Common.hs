@@ -38,7 +38,7 @@ import Error.Diagnose
 down :: (Enum a, Num a) => a -> a -> [a]
 down x y = [x, x - 1 .. y]
 
-choose :: (Alternative m, Foldable t) => t a -> m a
+choose :: (Alternative f, Foldable t) => t a -> f a
 choose = foldr ((<|>) . pure) empty
 
 par :: Int -> Int -> ShowS -> ShowS

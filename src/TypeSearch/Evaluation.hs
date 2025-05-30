@@ -16,8 +16,7 @@ module TypeSearch.Evaluation
     pattern SApp',
     pattern SFst',
     pattern SSnd',
-    Head (..),
-    headSpine,
+    spine,
 
     -- * Evaluation
     evaluateRaw,
@@ -67,7 +66,7 @@ type TopEnv = HM.HashMap Name (HM.HashMap ModuleName Value)
 data Value
   = VRigid Level Spine
   | VFlex Meta Int [Value] Spine -- metavariables are parametarised in SOAS
-  | VTop [ModuleName] Name Spine [Value]
+  | VTop Name Spine [(ModuleName, Value)]
   | VType
   | VPi Name Value (Value -> Value)
   | VAbs Name (Value -> Value)
@@ -117,32 +116,19 @@ pattern SFst' sp = EFst Seq.:<| sp
 pattern SSnd' :: Spine -> Spine
 pattern SSnd' sp = ESnd Seq.:<| sp
 
-data Head
-  = HRigid Level
-  | HFlex Meta Int [Value]
-  | HTop [ModuleName] Name [Value]
-  | HType
-  | HPi Name Value (Value -> Value)
-  | HAbs Name (Value -> Value)
-  | HSigma Name Value (Value -> Value)
-  | HPair Value Value
-  | HUnit
-  | HTT
-  | HStuck Value
-
-headSpine :: Value -> (Head, Spine)
-headSpine = \case
-  VRigid l sp -> (HRigid l, sp)
-  VFlex m ar vs sp -> (HFlex m ar vs, sp)
-  VTop ms n sp vs -> (HTop ms n vs, sp)
-  VType -> (HType, SNil)
-  VPi x a b -> (HPi x a b, SNil)
-  VAbs x f -> (HAbs x f, SNil)
-  VSigma x a b -> (HSigma x a b, SNil)
-  VPair a b -> (HPair a b, SNil)
-  VUnit -> (HUnit, SNil)
-  VTT -> (HTT, SNil)
-  VStuck v sp -> (HStuck v, sp)
+spine :: Value -> Spine
+spine = \case
+  VRigid _ sp -> sp
+  VFlex _ _ _ sp -> sp
+  VTop _ sp _ -> sp
+  VStuck _ sp -> sp
+  VType -> SNil
+  VPi {} -> SNil
+  VAbs {} -> SNil
+  VSigma {} -> SNil
+  VPair {} -> SNil
+  VUnit -> SNil
+  VTT -> SNil
 
 --------------------------------------------------------------------------------
 -- Evaluation
@@ -152,16 +138,16 @@ lookupWithQName topEnv env = \case
   Unqual n -> case HM.lookup n env of
     Just v -> v
     Nothing -> case HM.lookup n topEnv of
-      Just vs -> VTop (HM.keys vs) n SNil (HM.elems vs)
+      Just vs -> VTop n SNil (HM.toList vs)
       Nothing -> error $ "Variable not found: " ++ show n
   m@(Qual q n) -> case HM.lookup n topEnv >>= HM.lookup q of
-    Just v -> VTop [q] n SNil [v]
+    Just v -> VTop n SNil [(q, v)]
     Nothing -> error $ "Variable not found: " ++ show m
 
 lookupPossibleModules :: TopEnv -> [ModuleName] -> Name -> Value
 lookupPossibleModules topEnv ms n = case HM.lookup n topEnv of
   Nothing -> error $ "Variable not found: " ++ show n
-  Just vs -> VTop ms n SNil (map (vs HM.!) ms)
+  Just vs -> VTop n SNil (map (\m -> (m, vs HM.! m)) ms)
 
 evaluateRaw :: TopEnv -> RawEnv -> Raw -> Value
 evaluateRaw topEnv env = \case
@@ -202,7 +188,7 @@ vapp vt vu = case vt of
   VAbs _ f -> f vu
   VRigid l sp -> VRigid l (SApp sp vu)
   VFlex m ar vs sp -> VFlex m ar vs (SApp sp vu)
-  VTop ms n sp vs -> VTop ms n (SApp sp vu) (map (`vapp` vu) vs)
+  VTop n sp vs -> VTop n (SApp sp vu) (fmap (`vapp` vu) <$> vs)
   VStuck v sp -> VStuck v (SApp sp vu)
   _ -> VStuck vt (SApp SNil vu)
 
@@ -212,14 +198,14 @@ vfst = \case
   VPair v _ -> v
   VRigid l sp -> VRigid l (SFst sp)
   VFlex m ar vs sp -> VFlex m ar vs (SFst sp)
-  VTop ms n sp vs -> VTop ms n (SFst sp) (map vfst vs)
+  VTop n sp vs -> VTop n (SFst sp) (fmap vfst <$> vs)
   VStuck v sp -> VStuck v (SFst sp)
   v -> VStuck v (SFst SNil)
 vsnd = \case
   VPair _ v -> v
   VRigid l sp -> VRigid l (SSnd sp)
   VFlex m ar vs sp -> VFlex m ar vs (SSnd sp)
-  VTop ms n sp vs -> VTop ms n (SSnd sp) (map vsnd vs)
+  VTop n sp vs -> VTop n (SSnd sp) (fmap vsnd <$> vs)
   VStuck v sp -> VStuck v (SSnd sp)
   v -> VStuck v (SSnd SNil)
 
@@ -249,7 +235,7 @@ quote :: Level -> Value -> Term
 quote lvl = \case
   VRigid x sp -> quoteSpine lvl (Var $ levelToIndex lvl x) sp
   VFlex m _ vs sp -> quoteSpine lvl (MetaApp m $ map (quote lvl) vs) sp
-  VTop ms n sp _ -> quoteSpine lvl (Top ms n) sp
+  VTop n sp vs -> quoteSpine lvl (Top (fst <$> vs) n) sp
   VType -> Type
   VPi x va vb -> Pi x (quote lvl va) (quote (lvl + 1) $ vb (VVar lvl))
   VAbs x v -> Abs x $ quote (lvl + 1) $ v (VVar lvl)
@@ -287,7 +273,7 @@ deepForce topEnv subst = go
     go v = case force topEnv subst v of
       VFlex m ar vs sp -> VFlex m ar vs (goSpine sp)
       VRigid l sp -> VRigid l (goSpine sp)
-      VTop ms n sp vs -> VTop ms n (goSpine sp) (map go vs)
+      VTop n sp vs -> VTop n (goSpine sp) (fmap go <$> vs)
       VType -> VType
       VPi x a b -> VPi x (go a) (go . b)
       VAbs x f -> VAbs x (go . f)
