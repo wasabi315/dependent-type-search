@@ -385,13 +385,17 @@ guessMetaIso topEnv todo@(Constraint lvl cm iso lhs rhs) subst todos = do
         | VFlex m ar _ _ <- force topEnv subst (b $ VVar lvl) ->
             -- M[x0, ..., xn] ↦ Unit
             (m,) <$> imitation IUnit ar
-      -- (x : A) → M[t0, ..., tn]
+      -- (x0 : A0) ... (xn : An) → M[t0, ..., tn]
       VPi _ _ b
-        | VFlex m ar _ _ <- force topEnv subst (b $ VVar lvl) ->
+        | VFlex m ar _ _ <- go lvl b ->
             -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y] or
             -- M[x0, ..., xn] ↦ Unit
             (m,) <$> (imitation (ISigma "x") ar <|> imitation IUnit ar)
       _ -> empty
+
+    go x f = case force topEnv subst (f $ VVar x) of
+      VPi _ _ f' -> go (x + 1) f'
+      t -> t
 
 -- | Go through candidate solutions for flex-rigid constraints
 flexRigid :: Constraint -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
