@@ -12,6 +12,7 @@ import Control.Monad.Trans
 import Control.Monad.Writer
 import Data.HashMap.Lazy qualified as HM
 import Data.HashSet qualified as HS
+import Data.List (subsequences)
 import Data.Maybe
 import Data.Monus.Dist
 import TypeSearch.Common
@@ -91,7 +92,7 @@ normalise topEnv subst lvl t =
       normalise1 topEnv subst t
 
 --------------------------------------------------------------------------------
--- Pre-unification algorithm modulo βη-equivalence and type isomorphisms related to Π and Σ:
+-- Unification procedure modulo βη-equivalence and type isomorphisms related to Π and Σ:
 --   - (x : (y : A) * B[y]) * C[x]     ~ (x : A) * (y : B[x]) * C[(x, y)]
 --   - (x : (y : A) * B[y]) -> C[x]    ~ (x : A) -> (y : B[x]) -> C[(x, y)]
 --   - (x : A) * B                     ~ (x : B) * A
@@ -129,7 +130,7 @@ data ConvMode
   deriving stock (Eq, Show)
 
 --------------------------------------------------------------------------------
--- Functions for creating projection bindings
+-- Functions for creating bindings
 
 data ImitationKind
   = ITop [ModuleName] Name
@@ -141,7 +142,6 @@ data ImitationKind
   | IUnit
   | ITT
 
--- | Generate imitation bindings
 imitation :: ImitationKind -> Int -> UnifyM MetaAbs
 imitation kind arity =
   MetaAbs arity <$> imitationHelper kind params params'
@@ -184,7 +184,6 @@ imitationHelper kind params params' = lift case kind of
 jpProjectionHelper :: Int -> UnifyM Term
 jpProjectionHelper arity = Var <$> choose [0 .. Index arity - 1]
 
--- | Generate Huet-style projection bindings
 huetProjection :: Value -> Int -> UnifyM MetaAbs
 huetProjection t arity =
   MetaAbs arity <$> huetProjectionHelper t arity params params'
@@ -217,6 +216,25 @@ huetProjectionHelper t arity params params' = go $ spine t
         flip App u <$> (go sp <|> jpProjectionHelper arity)
       SFst sp -> Fst <$> (go sp <|> jpProjectionHelper arity)
       SSnd sp -> Snd <$> (go sp <|> jpProjectionHelper arity)
+
+identification :: Int -> Int -> UnifyM (MetaAbs, MetaAbs)
+identification arity arity' = lift do
+  i <- freshMeta
+  ms <- replicateM arity freshMeta
+  ms' <- replicateM arity' freshMeta
+  let params = map Var $ down (Index arity - 1) 0
+      params' = map Var $ down (Index arity' - 1) 0
+      mabs = MetaAbs arity $ MetaApp i $ params ++ map (`MetaApp` params) ms'
+      mabs' = MetaAbs arity' $ MetaApp i $ map (`MetaApp` params') ms ++ params'
+  pure (mabs, mabs')
+
+elimination :: Int -> UnifyM MetaAbs
+elimination arity = do
+  e <- lift freshMeta
+  let params = map Var $ down (Index arity - 1) 0
+  subParams <- choose $ subsequences params
+  let mabs = MetaAbs arity $ MetaApp e subParams
+  pure mabs
 
 --------------------------------------------------------------------------------
 
@@ -392,6 +410,25 @@ flexRigid todo@(Constraint _ cm _ lhs rhs) subst todos = do
       pure (subst', todo : todos)
     _ -> empty
 
+-- | Go through candidate solutions for flex-flex constraints
+-- Iteration binding is not supported yet.
+flexFlex :: Constraint -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
+flexFlex todo@(Constraint _ cm _ lhs rhs) subst todos = do
+  guard (cm /= Flex)
+  tell 2
+  case (lhs, rhs) of
+    (VFlex m ar _ SNil, VFlex m' ar' _ SNil)
+      | m == m' -> do
+          guard (ar == ar')
+          mabs <- elimination ar
+          let subst' = HM.insert m mabs subst
+          pure (subst', todo : todos)
+      | otherwise -> do
+          (mabs, mabs') <- identification ar ar'
+          let subst' = HM.insert m mabs $ HM.insert m' mabs' subst
+          pure (subst', todo : todos)
+    _ -> empty
+
 type ChosenDefs = HM.HashMap Name ModuleName
 
 -- | Lazily unfold definitions.
@@ -449,7 +486,7 @@ unfold (Constraint lvl cm iso lhs rhs) todos chosenDefs = do
       pure (todo' : todos, chosenDefs')
     _ -> empty
 
--- | Pre-unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
+-- | Unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
 -- TODO: modulo permutations of Σ components
 -- NOTE: Permutating Σ components would unblock reduction!
 --       Take this into account?
@@ -475,12 +512,15 @@ unify topEnv chosenDefs subst = \case
             (subst', todos') <- flexRigid todo subst todos
             pure (subst', todos', chosenDefs),
           do
+            (subst', todos') <- flexFlex todo subst todos
+            pure (subst', todos', chosenDefs),
+          do
             (todos', chosenDefs') <- unfold todo todos chosenDefs
             pure (subst, todos', chosenDefs')
         ]
     unify topEnv chosenDefs' subst' todos'
 
--- | Pre-unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
+-- | Unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
 unifyRaw' :: TopEnv -> Raw -> Raw -> UnifyM (MetaSubst, [Constraint])
 unifyRaw' topEnv t t' = do
   let initTodo =
