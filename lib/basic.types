@@ -14,8 +14,8 @@ let proj1 : (A : Type) (B : (x : A) → Type) → Σ x : A. B x → A = λ A B p
 
 let proj2 : (A : Type) (B : (x : A) → Type) (p : Σ x : A. B x) → B (Basic.proj1 p) = λ A B p → p.2
 
-let Nat : Type = (A : Type) → A → (A → A) → A
+let add : Nat → Nat → Nat =
+  λ m n → natElim (Basic.const Type Nat Nat) (λ _ → suc) n m
 
-let zero : Basic.Nat = λ A z s → z
-
-let suc : Basic.Nat → Basic.Nat = λ n A z s → s (n A z s)
+let mul : Nat → Nat → Nat =
+  λ m n → natElim (λ _ → Nat) (λ _ → Basic.add n) 0 m

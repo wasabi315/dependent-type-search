@@ -7,6 +7,7 @@ module TypeSearch.Raw
     Raw (..),
     pattern (:->),
     pattern (:*),
+    rnatLit,
     unRLoc,
     metaVarSet,
   )
@@ -43,6 +44,10 @@ data Raw
   | RSnd Raw
   | RUnit
   | RTT
+  | RNat
+  | RZero
+  | RSuc
+  | RNatElim
   | RLoc (Located Raw)
   deriving stock (Show)
 
@@ -51,6 +56,11 @@ pattern t :-> u = RPi "_" t u
 
 pattern (:*) :: Raw -> Raw -> Raw
 pattern t :* u = RSigma "_" t u
+
+rnatLit :: Int -> Raw
+rnatLit = \case
+  0 -> RZero
+  n -> RSuc `RApp` rnatLit (n - 1)
 
 unRLoc :: Raw -> Raw
 unRLoc = \case
@@ -71,4 +81,8 @@ metaVarSet = \case
   RSnd t -> metaVarSet t
   RUnit -> HS.empty
   RTT -> HS.empty
+  RNat -> HS.empty
+  RZero -> HS.empty
+  RSuc -> HS.empty
+  RNatElim -> HS.empty
   RLoc (t :@ _) -> metaVarSet t

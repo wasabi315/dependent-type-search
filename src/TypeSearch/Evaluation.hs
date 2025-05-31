@@ -13,9 +13,11 @@ module TypeSearch.Evaluation
     pattern SApp,
     pattern SFst,
     pattern SSnd,
+    pattern SNatElim,
     pattern SApp',
     pattern SFst',
     pattern SSnd',
+    pattern SNatElim',
     spine,
 
     -- * Evaluation
@@ -24,6 +26,7 @@ module TypeSearch.Evaluation
     vapp,
     vfst,
     vsnd,
+    vnatElim,
     vappSpine,
     vmetaApp,
 
@@ -74,6 +77,9 @@ data Value
   | VPair Value Value
   | VUnit
   | VTT
+  | VNat
+  | VZero
+  | VSuc Value
   | VStuck Value Spine -- failed to eliminate
 
 pattern VVar :: Level -> Value
@@ -88,12 +94,13 @@ data Elim
   = EApp Value
   | EFst
   | ESnd
+  | ENatElim Value Value Value
 
 type Spine = Seq.Seq Elim
 
-{-# COMPLETE SNil, SApp, SFst, SSnd #-}
+{-# COMPLETE SNil, SApp, SFst, SSnd, SNatElim #-}
 
-{-# COMPLETE SNil, SApp', SFst', SSnd' #-}
+{-# COMPLETE SNil, SApp', SFst', SSnd', SNatElim' #-}
 
 pattern SNil :: Spine
 pattern SNil = Seq.Empty
@@ -107,6 +114,9 @@ pattern SFst sp = sp Seq.:|> EFst
 pattern SSnd :: Spine -> Spine
 pattern SSnd sp = sp Seq.:|> ESnd
 
+pattern SNatElim :: Value -> Value -> Value -> Spine -> Spine
+pattern SNatElim p s z sp = sp Seq.:|> ENatElim p s z
+
 pattern SApp' :: Value -> Spine -> Spine
 pattern SApp' v sp = EApp v Seq.:<| sp
 
@@ -115,6 +125,9 @@ pattern SFst' sp = EFst Seq.:<| sp
 
 pattern SSnd' :: Spine -> Spine
 pattern SSnd' sp = ESnd Seq.:<| sp
+
+pattern SNatElim' :: Value -> Value -> Value -> Spine -> Spine
+pattern SNatElim' p s z sp = ENatElim p s z Seq.:<| sp
 
 spine :: Value -> Spine
 spine = \case
@@ -129,6 +142,9 @@ spine = \case
   VPair {} -> SNil
   VUnit -> SNil
   VTT -> SNil
+  VNat -> SNil
+  VZero -> SNil
+  VSuc {} -> SNil
 
 --------------------------------------------------------------------------------
 -- Evaluation
@@ -163,6 +179,10 @@ evaluateRaw topEnv env = \case
   RSnd t -> vsnd $ evaluateRaw topEnv env t
   RUnit -> VUnit
   RTT -> VTT
+  RNat -> VNat
+  RZero -> VZero
+  RSuc -> VAbs "n" VSuc
+  RNatElim -> VAbs "p" \ ~p -> VAbs "s" \ ~s -> VAbs "z" \ ~z -> VAbs "n" \ ~n -> vnatElim p s z n
   RLoc (t :@ _) -> evaluateRaw topEnv env t
 
 -- | Convert a term into a value.
@@ -181,10 +201,14 @@ evaluate topEnv env = \case
   Snd t -> vsnd $ evaluate topEnv env t
   Unit -> VUnit
   TT -> VTT
+  Nat -> VNat
+  Zero -> VZero
+  Suc -> VAbs "n" VSuc
+  NatElim -> VAbs "p" \ ~p -> VAbs "s" \ ~s -> VAbs "z" \ ~z -> VAbs "n" \ ~n -> vnatElim p s z n
 
 -- | Application in "the value world".
 vapp :: Value -> Value -> Value
-vapp vt vu = case vt of
+vapp vt ~vu = case vt of
   VAbs _ f -> f vu
   VRigid l sp -> VRigid l (SApp sp vu)
   VFlex m ar vs sp -> VFlex m ar vs (SApp sp vu)
@@ -209,12 +233,23 @@ vsnd = \case
   VStuck v sp -> VStuck v (SSnd sp)
   v -> VStuck v (SSnd SNil)
 
+vnatElim :: Value -> Value -> Value -> Value -> Value
+vnatElim ~p ~s ~z = \case
+  VZero -> z
+  VSuc n -> (s `vapp` n) `vapp` vnatElim p s z n
+  VRigid l sp -> VRigid l (SNatElim p s z sp)
+  VFlex m ar vs sp -> VFlex m ar vs (SNatElim p s z sp)
+  VTop n sp vs -> VTop n (SNatElim p s z sp) (fmap (vnatElim p s z) <$> vs)
+  VStuck v sp -> VStuck v (SNatElim p s z sp)
+  v -> VStuck v (SNatElim p s z SNil)
+
 -- | Apply an elimination to a value.
 vappElim :: Value -> Elim -> Value
 vappElim v = \case
   EApp u -> vapp v u
   EFst -> vfst v
   ESnd -> vsnd v
+  ENatElim p s z -> vnatElim p s z v
 
 -- | Apply a value to a spine.
 vappSpine :: Value -> Spine -> Value
@@ -244,12 +279,16 @@ quote lvl = \case
   VUnit -> Unit
   VTT -> TT
   VStuck v sp -> quoteSpine lvl (quote lvl v) sp
+  VNat -> Nat
+  VZero -> Zero
+  VSuc n -> Suc `App` quote lvl n
 
 quoteElim :: Level -> Term -> Elim -> Term
 quoteElim lvl t = \case
   EApp u -> App t (quote lvl u)
   EFst -> Fst t
   ESnd -> Snd t
+  ENatElim p s z -> NatElim `App` quote lvl p `App` quote lvl s `App` quote lvl z `App` t
 
 -- | Convert a spine into a term.
 quoteSpine :: Level -> Term -> Spine -> Term
@@ -281,6 +320,9 @@ deepForce topEnv subst = go
       VPair a b -> VPair (go a) (go b)
       VUnit -> VUnit
       VTT -> VTT
+      VNat -> VNat
+      VZero -> VZero
+      VSuc n -> VSuc (go n)
       VStuck u sp -> VStuck (go u) (goSpine sp)
 
     goSpine = fmap goElim
@@ -289,6 +331,7 @@ deepForce topEnv subst = go
       EApp v -> EApp (go v)
       EFst -> EFst
       ESnd -> ESnd
+      ENatElim p s z -> ENatElim (go p) (go s) (go z)
 
 --------------------------------------------------------------------------------
 -- Create top-level environment from modules

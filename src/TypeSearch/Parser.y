@@ -136,9 +136,14 @@ Atom
                       "Type" -> fmap (const RType) $1
                       "Unit" -> fmap (const RUnit) $1
                       "tt" -> fmap (const RTT) $1
+                      "Nat" -> fmap (const RNat) $1
+                      "zero" -> fmap (const RZero) $1
+                      "suc" -> fmap (const RSuc) $1
+                      "natElim" -> fmap (const RNatElim) $1
                       _ -> fmap (RVar . Unqual) $1
                   }
   | QName         { fmap RVar $1 }
+  | num           { fmap rnatLit $1 }
 
 SpaceBinds :: { [Located Name] }
 SpaceBinds

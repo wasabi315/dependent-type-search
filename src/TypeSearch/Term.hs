@@ -26,6 +26,10 @@ data Term
   | Snd Term -- snd t
   | Unit -- Unit
   | TT -- tt
+  | Nat -- Nat
+  | Zero -- zero
+  | Suc -- suc
+  | NatElim -- natElim
   deriving stock (Show)
 
 -- | Meta abstractions

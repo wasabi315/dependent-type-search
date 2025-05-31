@@ -15,8 +15,10 @@ import Data.HashSet qualified as HS
 import Data.List (subsequences)
 import Data.Maybe
 import Data.Monus.Dist
+import Data.Text qualified as T
 import TypeSearch.Common
 import TypeSearch.Evaluation
+import TypeSearch.Pretty
 import TypeSearch.Raw
 import TypeSearch.Term
 import Witherable
@@ -141,6 +143,9 @@ data ImitationKind
   | IPair
   | IUnit
   | ITT
+  | INat
+  | IZero
+  | ISuc
 
 imitation :: ImitationKind -> Int -> UnifyM MetaAbs
 imitation kind arity =
@@ -180,6 +185,14 @@ imitationHelper kind params params' = lift case kind of
   IUnit -> pure Unit
   -- M[x0, ..., xn] ↦ tt
   ITT -> pure TT
+  -- M[x0, ..., xn] ↦ Nat
+  INat -> pure Nat
+  -- M[x0, ..., xn] ↦ zero
+  IZero -> pure Zero
+  -- M[x0, ..., xn] ↦ suc M'[x0, ..., xn]
+  ISuc -> do
+    m' <- freshMeta
+    pure $ Suc `App` MetaApp m' params
 
 jpProjectionHelper :: Int -> UnifyM Term
 jpProjectionHelper arity = Var <$> choose [0 .. Index arity - 1]
@@ -205,6 +218,9 @@ huetProjectionHelper t arity params params' = go $ spine t
       VPair _ _ -> pure IPair
       VUnit -> pure IUnit
       VTT -> pure ITT
+      VNat -> pure INat
+      VZero -> pure IZero
+      VSuc _ -> pure ISuc
       VStuck {} -> empty
 
     go sp =
@@ -216,6 +232,14 @@ huetProjectionHelper t arity params params' = go $ spine t
             flip App u <$> go sp'
           SFst sp' -> Fst <$> go sp'
           SSnd sp' -> Snd <$> go sp'
+          SNatElim _ _ _ sp' -> do
+            m1 <- lift freshMeta
+            m2 <- lift freshMeta
+            m3 <- lift freshMeta
+            let p = MetaApp m1 params
+                s = MetaApp m2 params
+                z = MetaApp m3 params
+            (\n -> NatElim `App` p `App` s `App` z `App` n) <$> go sp'
       )
         <|> jpProjectionHelper arity
 
@@ -314,6 +338,11 @@ decompose (Constraint lvl cm iso lhs rhs) todos = case (lhs, rhs) of
     pure (todo' : todo'' : todos)
   (VUnit, VUnit) -> pure todos
   (VTT, VTT) -> pure todos
+  (VNat, VNat) -> pure todos
+  (VZero, VZero) -> pure todos
+  (VSuc t, VSuc t') -> do
+    let todo' = Constraint lvl cm False t t'
+    pure (todo' : todos)
   _ -> empty
 
 -- | Decompose a pair of spines into constraints.
@@ -326,10 +355,16 @@ decomposeSpine ::
   UnifyM [Constraint]
 decomposeSpine cm lvl lhs rhs todos = case (lhs, rhs) of
   (SNil, SNil) -> pure todos
-  (SApp sp v, SApp sp' v') ->
-    decomposeSpine cm lvl sp sp' (Constraint lvl cm False v v' : todos)
+  (SApp sp v, SApp sp' v') -> do
+    let todo' = Constraint lvl cm False v v'
+    decomposeSpine cm lvl sp sp' (todo' : todos)
   (SFst sp, SFst sp') -> decomposeSpine cm lvl sp sp' todos
   (SSnd sp, SSnd sp') -> decomposeSpine cm lvl sp sp' todos
+  (SNatElim p s z sp, SNatElim p' s' z' sp') -> do
+    let todo' = Constraint lvl cm False p p'
+        todo'' = Constraint lvl cm False s s'
+        todo''' = Constraint lvl cm False z z'
+    decomposeSpine cm lvl sp sp' (todo' : todo'' : todo''' : todos)
   _ -> empty
 
 -- | Decompose a pair of argument lists applied to metavariables into constraints.
@@ -356,9 +391,10 @@ guessMeta todo@(Constraint _ cm _ lhs rhs) subst todos = do
   pure (subst', todo : todos)
   where
     helper = \case
-      VFlex m arity _ (SApp' _ _) -> (m,) <$> imitation (IAbs "x") arity
-      VFlex m arity _ (SFst' _) -> (m,) <$> imitation IPair arity
-      VFlex m arity _ (SSnd' _) -> (m,) <$> imitation IPair arity
+      VFlex m arity _ (SApp' {}) -> (m,) <$> imitation (IAbs "x") arity
+      VFlex m arity _ (SFst' {}) -> (m,) <$> imitation IPair arity
+      VFlex m arity _ (SSnd' {}) -> (m,) <$> imitation IPair arity
+      VFlex m arity _ (SNatElim' {}) -> (m,) <$> (imitation IZero arity <|> imitation ISuc arity)
       _ -> empty
 
 -- | Like @guessMeta@, but for type isomorphisms.
@@ -492,6 +528,20 @@ unfold (Constraint lvl cm iso lhs rhs) todos chosenDefs = do
       pure (todo' : todos, chosenDefs')
     _ -> empty
 
+printConstraint :: Constraint -> IO ()
+printConstraint (Constraint lvl _ iso lhs rhs) = do
+  let lhs' = quote lvl lhs
+      rhs' = quote lvl rhs
+      vars = map (\i -> Name $ "x" <> T.pack (show i)) [0 .. lvl - 1]
+  putStrLn "--------------------------------------------------"
+  putStrLn $
+    concat
+      [ if lvl > 0 then "∀ " ++ unwords (map show vars) ++ ". " else "",
+        prettyTerm (reverse vars) 0 lhs' "",
+        if iso then " ≅ " else " ≡ ",
+        prettyTerm (reverse vars) 0 rhs' ""
+      ]
+
 -- | Unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
 -- TODO: modulo permutations of Σ components
 -- NOTE: Permutating Σ components would unblock reduction!
@@ -505,6 +555,7 @@ unify topEnv chosenDefs subst = \case
   (forceConstraint topEnv subst -> Constraint lvl cm iso lhs rhs) : todos -> do
     let norm = if iso then normalise topEnv subst lvl else id
         todo = Constraint lvl cm iso (norm lhs) (norm rhs)
+    -- lift $ printConstraint todo
     (subst', todos', chosenDefs') <-
       asum
         [ (subst,,chosenDefs) <$> decompose todo todos,

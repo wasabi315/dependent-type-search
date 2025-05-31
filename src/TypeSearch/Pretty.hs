@@ -75,6 +75,10 @@ prettyRaw = go
       RPair a b -> par p pairP $ go absP a . showString ", " . go absP b
       RFst a -> par p projP $ go projP a . showString ".1"
       RSnd a -> par p projP $ go projP a . showString ".2"
+      RNat -> showString "Nat"
+      RZero -> showString "zero"
+      RSuc -> showString "suc"
+      RNatElim -> showString "natElim"
       RLoc (t :@ _) -> go p t
 
     piBind n a =
@@ -104,8 +108,6 @@ prettyTerm = go
         shows m . showChar '[' . punctuate (showChar ',') (map (go ns absP) ts) . showChar ']'
       Top _ n -> shows n
       Type -> showString "Type"
-      Unit -> showString "Unit"
-      TT -> showString "tt"
       Pi "_" a b ->
         par p piP $
           go ns sigmaP a . showString " → " . go ("_" : ns) piP b
@@ -129,6 +131,12 @@ prettyTerm = go
       Fst t -> par p projP $ go ns projP t . showString ".1"
       Snd t -> par p projP $ go ns projP t . showString ".2"
       Pair t u -> par p pairP $ go ns absP t . showString ", " . go ns pairP u
+      Unit -> showString "Unit"
+      TT -> showString "tt"
+      Nat -> showString "Nat"
+      Zero -> showString "zero"
+      Suc -> showString "suc"
+      NatElim -> showString "natElim"
 
     piBind n ns a =
       showString "("
