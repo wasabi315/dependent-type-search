@@ -62,6 +62,7 @@ prettyRaw = go
       RPi "_" a b -> par p piP $ go sigmaP a . showString " → " . go piP b
       RPi n a b -> par p piP $ piBind n a . goPi b
       RAbs n b -> par p absP $ showString "λ " . shows n . goAbs b
+      RApp RSuc n -> goSuc p 1 n
       RApp a b -> par p appP $ go appP a . showChar ' ' . go projP b
       RSigma "_" a b -> par p sigmaP $ go appP a . showString " × " . go sigmaP b
       RSigma n a b ->
@@ -76,13 +77,18 @@ prettyRaw = go
       RFst a -> par p projP $ go projP a . showString ".1"
       RSnd a -> par p projP $ go projP a . showString ".2"
       RNat -> showString "Nat"
-      RZero -> showString "zero"
+      RZero -> showString "0"
       RSuc -> showString "suc"
       RNatElim -> showString "natElim"
       REq -> showString "Eq"
       RRefl -> showString "refl"
       REqElim -> showString "eqElim"
       RLoc (t :@ _) -> go p t
+
+    goSuc p n = \case
+      RZero -> shows n
+      RSuc `RApp` m -> goSuc p (n + 1) m
+      t -> applyN n (\f q -> par q appP $ showString "suc " . f projP) (\q -> go q t) p
 
     piBind n a =
       showString "("
@@ -119,6 +125,7 @@ prettyTerm = go
       Abs (freshen ns -> n) t ->
         par p absP $
           showString "λ " . shows n . goAbs (n : ns) t
+      Suc `App` n -> goSuc p ns 1 n
       App t u -> par p appP $ go ns appP t . showChar ' ' . go ns projP u
       Sigma "_" a b ->
         par p sigmaP $
@@ -137,12 +144,17 @@ prettyTerm = go
       Unit -> showString "Unit"
       TT -> showString "tt"
       Nat -> showString "Nat"
-      Zero -> showString "zero"
+      Zero -> showString "0"
       Suc -> showString "suc"
       NatElim -> showString "natElim"
       Eq -> showString "Eq"
       Refl -> showString "refl"
       EqElim -> showString "eqElim"
+
+    goSuc p ns n = \case
+      Zero -> shows n
+      Suc `App` m -> goSuc p ns (n + 1) m
+      t -> applyN n (\f q -> par q appP $ showString "suc " . f projP) (\q -> go ns q t) p
 
     piBind n ns a =
       showString "("

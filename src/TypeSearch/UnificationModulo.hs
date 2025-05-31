@@ -49,9 +49,9 @@ normalise1 topEnv subst t = case force topEnv subst t of
 normalise2 :: TopEnv -> MetaSubst -> Level -> Value -> Value
 normalise2 topEnv subst lvl t = case force topEnv subst t of
   -- (x : Unit) * B[x] ~> B[tt]
-  VSigma _ VUnit vb -> normalise2 topEnv subst lvl $ vb VTT
+  VSigma _ (force topEnv subst -> VUnit) vb -> normalise2 topEnv subst lvl $ vb VTT
   -- (x : Unit) -> B[x] ~> B[tt]
-  VPi _ VUnit vb -> normalise2 topEnv subst lvl $ vb VTT
+  VPi _ (force topEnv subst -> VUnit) vb -> normalise2 topEnv subst lvl $ vb VTT
   -- (x : A) * Unit ~> A
   VSigma x va vb -> case normalise2 topEnv subst (lvl + 1) (vb $ VVar lvl) of
     VUnit -> normalise2 topEnv subst lvl va
@@ -376,6 +376,7 @@ rename topEnv metaSubst m = go
 
 --------------------------------------------------------------------------------
 
+-- | Solve a constraint in solved form.
 solve :: TopEnv -> MetaSubst -> Constraint -> UnifyM MetaSubst
 solve topEnv subst (Constraint lvl _ _ lhs rhs) = do
   case (lhs, rhs) of

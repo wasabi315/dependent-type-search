@@ -2,6 +2,7 @@ module TypeSearch.Common
   ( -- * Utils
     down,
     choose,
+    applyN,
     par,
     punctuate,
     enclose,
@@ -40,6 +41,11 @@ down x y = [x, x - 1 .. y]
 
 choose :: (Alternative f, Foldable t) => t a -> f a
 choose = foldr ((<|>) . pure) empty
+
+applyN :: Int -> (a -> a) -> a -> a
+applyN n _ _ | n < 0 = error "applyN: negative argument"
+applyN 0 _ x = x
+applyN n f x = f (applyN (n - 1) f x)
 
 par :: Int -> Int -> ShowS -> ShowS
 par p q = showParen (p > q)
