@@ -79,6 +79,9 @@ prettyRaw = go
       RZero -> showString "zero"
       RSuc -> showString "suc"
       RNatElim -> showString "natElim"
+      REq -> showString "Eq"
+      RRefl -> showString "refl"
+      REqElim -> showString "eqElim"
       RLoc (t :@ _) -> go p t
 
     piBind n a =
@@ -137,6 +140,9 @@ prettyTerm = go
       Zero -> showString "zero"
       Suc -> showString "suc"
       NatElim -> showString "natElim"
+      Eq -> showString "Eq"
+      Refl -> showString "refl"
+      EqElim -> showString "eqElim"
 
     piBind n ns a =
       showString "("

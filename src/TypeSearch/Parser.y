@@ -140,6 +140,9 @@ Atom
                       "zero" -> fmap (const RZero) $1
                       "suc" -> fmap (const RSuc) $1
                       "natElim" -> fmap (const RNatElim) $1
+                      "Eq" -> fmap (const REq) $1
+                      "refl" -> fmap (const RRefl) $1
+                      "eqElim" -> fmap (const REqElim) $1
                       _ -> fmap (RVar . Unqual) $1
                   }
   | QName         { fmap RVar $1 }

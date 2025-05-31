@@ -30,6 +30,9 @@ data Term
   | Zero -- zero
   | Suc -- suc
   | NatElim -- natElim
+  | Eq -- Eq
+  | Refl -- refl
+  | EqElim -- eqElim
   deriving stock (Show)
 
 -- | Meta abstractions

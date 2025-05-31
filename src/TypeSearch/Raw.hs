@@ -48,6 +48,9 @@ data Raw
   | RZero
   | RSuc
   | RNatElim
+  | REq
+  | RRefl
+  | REqElim
   | RLoc (Located Raw)
   deriving stock (Show)
 
@@ -85,4 +88,7 @@ metaVarSet = \case
   RZero -> HS.empty
   RSuc -> HS.empty
   RNatElim -> HS.empty
+  REq -> HS.empty
+  RRefl -> HS.empty
+  REqElim -> HS.empty
   RLoc (t :@ _) -> metaVarSet t

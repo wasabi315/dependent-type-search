@@ -14,10 +14,12 @@ module TypeSearch.Evaluation
     pattern SFst,
     pattern SSnd,
     pattern SNatElim,
+    pattern SEqElim,
     pattern SApp',
     pattern SFst',
     pattern SSnd',
     pattern SNatElim',
+    pattern SEqElim',
     spine,
 
     -- * Evaluation
@@ -31,6 +33,7 @@ module TypeSearch.Evaluation
     vmetaApp,
 
     -- * Quotation
+    levelToIndex,
     quote,
 
     -- * Forcing
@@ -44,6 +47,7 @@ where
 
 import Data.Foldable
 import Data.HashMap.Lazy qualified as HM
+import Data.Hashable
 import Data.Sequence qualified as Seq
 import TypeSearch.Common
 import TypeSearch.Raw
@@ -54,7 +58,7 @@ import TypeSearch.Term
 
 -- | De Bruijn levels
 newtype Level = Level Int
-  deriving newtype (Num, Eq, Ord, Show, Enum)
+  deriving newtype (Num, Eq, Ord, Show, Enum, Hashable)
 
 -- | Environment keyed by raw variable names
 type RawEnv = HM.HashMap Name Value
@@ -80,6 +84,8 @@ data Value
   | VNat
   | VZero
   | VSuc Value
+  | VEq Value Value Value
+  | VRefl Value Value
   | VStuck Value Spine -- failed to eliminate
 
 pattern VVar :: Level -> Value
@@ -95,12 +101,13 @@ data Elim
   | EFst
   | ESnd
   | ENatElim Value Value Value
+  | EEqElim Value Value Value Value Value
 
 type Spine = Seq.Seq Elim
 
-{-# COMPLETE SNil, SApp, SFst, SSnd, SNatElim #-}
+{-# COMPLETE SNil, SApp, SFst, SSnd, SNatElim, SEqElim #-}
 
-{-# COMPLETE SNil, SApp', SFst', SSnd', SNatElim' #-}
+{-# COMPLETE SNil, SApp', SFst', SSnd', SNatElim', SEqElim' #-}
 
 pattern SNil :: Spine
 pattern SNil = Seq.Empty
@@ -117,6 +124,9 @@ pattern SSnd sp = sp Seq.:|> ESnd
 pattern SNatElim :: Value -> Value -> Value -> Spine -> Spine
 pattern SNatElim p s z sp = sp Seq.:|> ENatElim p s z
 
+pattern SEqElim :: Value -> Value -> Value -> Value -> Value -> Spine -> Spine
+pattern SEqElim a x p r y sp = sp Seq.:|> EEqElim a x p r y
+
 pattern SApp' :: Value -> Spine -> Spine
 pattern SApp' v sp = EApp v Seq.:<| sp
 
@@ -128,6 +138,9 @@ pattern SSnd' sp = ESnd Seq.:<| sp
 
 pattern SNatElim' :: Value -> Value -> Value -> Spine -> Spine
 pattern SNatElim' p s z sp = ENatElim p s z Seq.:<| sp
+
+pattern SEqElim' :: Value -> Value -> Value -> Value -> Value -> Spine -> Spine
+pattern SEqElim' a x p r y sp = EEqElim a x p r y Seq.:<| sp
 
 spine :: Value -> Spine
 spine = \case
@@ -145,6 +158,8 @@ spine = \case
   VNat -> SNil
   VZero -> SNil
   VSuc {} -> SNil
+  VEq {} -> SNil
+  VRefl {} -> SNil
 
 --------------------------------------------------------------------------------
 -- Evaluation
@@ -182,7 +197,10 @@ evaluateRaw topEnv env = \case
   RNat -> VNat
   RZero -> VZero
   RSuc -> VAbs "n" VSuc
-  RNatElim -> VAbs "p" \ ~p -> VAbs "s" \ ~s -> VAbs "z" \ ~z -> VAbs "n" \ ~n -> vnatElim p s z n
+  RNatElim -> VAbs "p" \p -> VAbs "s" \s -> VAbs "z" \z -> VAbs "n" \n -> vnatElim p s z n
+  REq -> VAbs "A" \a -> VAbs "x" \x -> VAbs "y" \y -> VEq a x y
+  RRefl -> VAbs "A" \a -> VAbs "x" \x -> VRefl a x
+  REqElim -> VAbs "A" \a -> VAbs "x" \x -> VAbs "p" \p -> VAbs "r" \r -> VAbs "y" \y -> VAbs "eq" \eq -> veqElim a x p r y eq
   RLoc (t :@ _) -> evaluateRaw topEnv env t
 
 -- | Convert a term into a value.
@@ -204,11 +222,14 @@ evaluate topEnv env = \case
   Nat -> VNat
   Zero -> VZero
   Suc -> VAbs "n" VSuc
-  NatElim -> VAbs "p" \ ~p -> VAbs "s" \ ~s -> VAbs "z" \ ~z -> VAbs "n" \ ~n -> vnatElim p s z n
+  NatElim -> VAbs "p" \p -> VAbs "s" \s -> VAbs "z" \z -> VAbs "n" \n -> vnatElim p s z n
+  Eq -> VAbs "A" \a -> VAbs "x" \x -> VAbs "y" \y -> VEq a x y
+  Refl -> VAbs "A" \a -> VAbs "x" \x -> VRefl a x
+  EqElim -> VAbs "A" \a -> VAbs "x" \x -> VAbs "p" \p -> VAbs "r" \r -> VAbs "y" \y -> VAbs "eq" \eq -> veqElim a x p r y eq
 
 -- | Application in "the value world".
 vapp :: Value -> Value -> Value
-vapp vt ~vu = case vt of
+vapp vt vu = case vt of
   VAbs _ f -> f vu
   VRigid l sp -> VRigid l (SApp sp vu)
   VFlex m ar vs sp -> VFlex m ar vs (SApp sp vu)
@@ -234,7 +255,7 @@ vsnd = \case
   v -> VStuck v (SSnd SNil)
 
 vnatElim :: Value -> Value -> Value -> Value -> Value
-vnatElim ~p ~s ~z = \case
+vnatElim p s z = \case
   VZero -> z
   VSuc n -> (s `vapp` n) `vapp` vnatElim p s z n
   VRigid l sp -> VRigid l (SNatElim p s z sp)
@@ -243,6 +264,15 @@ vnatElim ~p ~s ~z = \case
   VStuck v sp -> VStuck v (SNatElim p s z sp)
   v -> VStuck v (SNatElim p s z SNil)
 
+veqElim :: Value -> Value -> Value -> Value -> Value -> Value -> Value
+veqElim a x p r y = \case
+  VRefl {} -> r
+  VRigid l sp -> VRigid l (SEqElim a x p r y sp)
+  VFlex m ar vs sp -> VFlex m ar vs (SEqElim a x p r y sp)
+  VTop n sp vs -> VTop n (SEqElim a x p r y sp) (fmap (veqElim a x p r y) <$> vs)
+  VStuck v sp -> VStuck v (SEqElim a x p r y sp)
+  v -> VStuck v (SEqElim a x p r y SNil)
+
 -- | Apply an elimination to a value.
 vappElim :: Value -> Elim -> Value
 vappElim v = \case
@@ -250,6 +280,7 @@ vappElim v = \case
   EFst -> vfst v
   ESnd -> vsnd v
   ENatElim p s z -> vnatElim p s z v
+  EEqElim a x p r y -> veqElim a x p r y v
 
 -- | Apply a value to a spine.
 vappSpine :: Value -> Spine -> Value
@@ -282,6 +313,8 @@ quote lvl = \case
   VNat -> Nat
   VZero -> Zero
   VSuc n -> Suc `App` quote lvl n
+  VEq a x y -> Eq `App` quote lvl a `App` quote lvl x `App` quote lvl y
+  VRefl a x -> Refl `App` quote lvl a `App` quote lvl x
 
 quoteElim :: Level -> Term -> Elim -> Term
 quoteElim lvl t = \case
@@ -289,6 +322,7 @@ quoteElim lvl t = \case
   EFst -> Fst t
   ESnd -> Snd t
   ENatElim p s z -> NatElim `App` quote lvl p `App` quote lvl s `App` quote lvl z `App` t
+  EEqElim a x p r y -> EqElim `App` quote lvl a `App` quote lvl x `App` quote lvl p `App` quote lvl r `App` quote lvl y `App` t
 
 -- | Convert a spine into a term.
 quoteSpine :: Level -> Term -> Spine -> Term
@@ -323,6 +357,8 @@ deepForce topEnv subst = go
       VNat -> VNat
       VZero -> VZero
       VSuc n -> VSuc (go n)
+      VEq a x y -> VEq (go a) (go x) (go y)
+      VRefl a x -> VRefl (go a) (go x)
       VStuck u sp -> VStuck (go u) (goSpine sp)
 
     goSpine = fmap goElim
@@ -332,6 +368,7 @@ deepForce topEnv subst = go
       EFst -> EFst
       ESnd -> ESnd
       ENatElim p s z -> ENatElim (go p) (go s) (go z)
+      EEqElim a x p r y -> EEqElim (go a) (go x) (go p) (go r) (go y)
 
 --------------------------------------------------------------------------------
 -- Create top-level environment from modules
