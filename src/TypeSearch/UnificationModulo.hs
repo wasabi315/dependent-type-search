@@ -30,16 +30,16 @@ normalise1 :: TopEnv -> MetaSubst -> Value -> Value
 normalise1 topEnv subst t = case force topEnv subst t of
   -- (x : (y : A) * B[y]) * C[x] ~> (x : A) * (y : B[x]) * C[(x, y)]
   VSigma x (force topEnv subst -> VSigma y va vb) vc ->
-    normalise1 topEnv subst $ VSigma x va \v -> VSigma y (vb v) \u -> vc (VPair v u)
+    normalise1 topEnv subst $ VSigma x va \ ~v -> VSigma y (vb v) \ ~u -> vc (VPair v u)
   -- (x : (y : A) * B[y]) -> C[x] ~> (x : A) -> (y : B[x]) -> C[(x, y)]
   VPi x (force topEnv subst -> VSigma y va vb) vc ->
-    normalise1 topEnv subst $ VPi x va \v -> VPi y (vb v) \u -> vc (VPair v u)
+    normalise1 topEnv subst $ VPi x va \ ~v -> VPi y (vb v) \ ~u -> vc (VPair v u)
   VSigma x va vb ->
     -- DO NOT RECURSE ON va
-    VSigma x va \v -> normalise1 topEnv subst $ vb v
+    VSigma x va \ ~v -> normalise1 topEnv subst $ vb v
   VPi x va vb ->
     -- DO NOT RECURSE ON va
-    VPi x va \v -> normalise1 topEnv subst $ vb v
+    VPi x va \ ~v -> normalise1 topEnv subst $ vb v
   -- DO NOT RECURSE
   v -> v
 
@@ -54,12 +54,12 @@ normalise2 topEnv subst lvl t = case force topEnv subst t of
   VSigma x va vb -> case normalise2 topEnv subst (lvl + 1) (vb $ VVar lvl) of
     VUnit -> normalise2 topEnv subst lvl va
     -- DO NOT RECURSE ON va
-    _ -> VSigma x va \v -> normalise2 topEnv subst (lvl + 1) (vb v)
+    _ -> VSigma x va \ ~v -> normalise2 topEnv subst (lvl + 1) (vb v)
   -- (x : A) -> Unit ~> Unit
   VPi x va vb -> case normalise2 topEnv subst (lvl + 1) (vb $ VVar lvl) of
     VUnit -> VUnit
     -- DO NOT RECURSE ON va
-    _ -> VPi x va \v -> normalise2 topEnv subst (lvl + 1) (vb v)
+    _ -> VPi x va \ ~v -> normalise2 topEnv subst (lvl + 1) (vb v)
   -- DO NOT RECURSE
   v -> v
 
@@ -69,18 +69,18 @@ normalise3 topEnv subst lvl t = case force topEnv subst t of
   -- (x : A) -> (y : B[x]) * C[x, y] ~> (y : (x : A) -> B[x]) * ((x : A) -> C[x, y x])
   VPi x va vb -> case normalise3 topEnv subst (lvl + 1) (vb $ VVar lvl) of
     VSigma y _ _ ->
-      let vb1 v = case normalise3 topEnv subst (lvl + 1) (vb v) of
+      let vb1 ~v = case normalise3 topEnv subst (lvl + 1) (vb v) of
             -- This pattern match should always succeed because
             -- no rewrite rule eliminates Σs in @normalise3@.
             -- Such rewrites are already done in @normalise1@ and @normalise2@.
             ~(VSigma _ u _) -> u
-          vb2 f v = case normalise3 topEnv subst (lvl + 1) (vb v) of
+          vb2 ~f ~v = case normalise3 topEnv subst (lvl + 1) (vb v) of
             ~(VSigma _ _ u) -> u (vapp f v)
-       in normalise3 topEnv subst lvl $ VSigma y (VPi x va vb1) \f -> VPi x va (vb2 f)
+       in normalise3 topEnv subst lvl $ VSigma y (VPi x va vb1) \ ~f -> VPi x va (vb2 f)
     -- DO NOT RECURSE ON va
-    _ -> VPi x va \v -> normalise3 topEnv subst (lvl + 1) (vb v)
+    _ -> VPi x va \ ~v -> normalise3 topEnv subst (lvl + 1) (vb v)
   -- DO NOT RECURSE ON va
-  VSigma x va vb -> VSigma x va \v -> normalise3 topEnv subst (lvl + 1) (vb v)
+  VSigma x va vb -> VSigma x va \ ~v -> normalise3 topEnv subst (lvl + 1) (vb v)
   -- DO NOT RECURSE
   v -> v
 

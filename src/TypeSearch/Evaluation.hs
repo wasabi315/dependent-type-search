@@ -154,10 +154,10 @@ evaluateRaw topEnv env = \case
   RVar n -> lookupWithQName topEnv env n
   RMetaApp m ts -> VMetaApp m $ map (evaluateRaw topEnv env) ts
   RType -> VType
-  RPi x a b -> VPi x (evaluateRaw topEnv env a) \v -> evaluateRaw topEnv (HM.insert x v env) b
+  RPi x a b -> VPi x (evaluateRaw topEnv env a) \ ~v -> evaluateRaw topEnv (HM.insert x v env) b
   RAbs x t -> VAbs x \v -> evaluateRaw topEnv (HM.insert x v env) t
   RApp t u -> vapp (evaluateRaw topEnv env t) (evaluateRaw topEnv env u)
-  RSigma x a b -> VSigma x (evaluateRaw topEnv env a) \v -> evaluateRaw topEnv (HM.insert x v env) b
+  RSigma x a b -> VSigma x (evaluateRaw topEnv env a) \ ~v -> evaluateRaw topEnv (HM.insert x v env) b
   RPair a b -> VPair (evaluateRaw topEnv env a) (evaluateRaw topEnv env b)
   RFst t -> vfst $ evaluateRaw topEnv env t
   RSnd t -> vsnd $ evaluateRaw topEnv env t
@@ -172,10 +172,10 @@ evaluate topEnv env = \case
   MetaApp m ts -> VMetaApp m $ map (evaluate topEnv env) ts
   Top ms n -> lookupPossibleModules topEnv ms n
   Type -> VType
-  Pi x a b -> VPi x (evaluate topEnv env a) \v -> evaluate topEnv (v : env) b
+  Pi x a b -> VPi x (evaluate topEnv env a) \ ~v -> evaluate topEnv (v : env) b
   Abs x t -> VAbs x \v -> evaluate topEnv (v : env) t
   App t u -> vapp (evaluate topEnv env t) (evaluate topEnv env u)
-  Sigma x a b -> VSigma x (evaluate topEnv env a) \v -> evaluate topEnv (v : env) b
+  Sigma x a b -> VSigma x (evaluate topEnv env a) \ ~v -> evaluate topEnv (v : env) b
   Pair t u -> VPair (evaluate topEnv env t) (evaluate topEnv env u)
   Fst t -> vfst $ evaluate topEnv env t
   Snd t -> vsnd $ evaluate topEnv env t
@@ -275,9 +275,9 @@ deepForce topEnv subst = go
       VRigid l sp -> VRigid l (goSpine sp)
       VTop n sp vs -> VTop n (goSpine sp) (fmap go <$> vs)
       VType -> VType
-      VPi x a b -> VPi x (go a) (go . b)
-      VAbs x f -> VAbs x (go . f)
-      VSigma x a b -> VSigma x (go a) (go . b)
+      VPi x a b -> VPi x (go a) \ ~u -> go (b u)
+      VAbs x f -> VAbs x \u -> go (f u)
+      VSigma x a b -> VSigma x (go a) \ ~u -> go (b u)
       VPair a b -> VPair (go a) (go b)
       VUnit -> VUnit
       VTT -> VTT
