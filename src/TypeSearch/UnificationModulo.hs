@@ -525,9 +525,8 @@ decomposeMetaArgs cm lvl lhs rhs todos = case (lhs, rhs) of
 
 -- | Guess a metavariable from how they are eliminated.
 guessMeta :: Constraint -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
-guessMeta todo@(Constraint _ cm _ lhs rhs) subst todos = do
-  guard (cm /= Flex)
-  -- tell 1
+guessMeta todo@(Constraint _ _ _ lhs rhs) subst todos = do
+  tell 1
   (m, mabs) <- helper lhs <|> helper rhs
   let subst' = HM.insert m mabs subst
   pure (subst', todo : todos)
@@ -543,8 +542,8 @@ guessMeta todo@(Constraint _ cm _ lhs rhs) subst todos = do
 -- | Like @guessMeta@, but for type isomorphisms.
 -- Π and Σ types act as "eliminators" when considering type isomorphisms!
 guessMetaIso :: TopEnv -> Constraint -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
-guessMetaIso topEnv todo@(Constraint lvl cm iso lhs rhs) subst todos = do
-  guard (iso && cm /= Flex)
+guessMetaIso topEnv todo@(Constraint lvl _ iso lhs rhs) subst todos = do
+  guard iso
   tell 1
   (m, mabs) <- helper lhs <|> helper rhs
   let subst' = HM.insert m mabs subst
@@ -553,14 +552,14 @@ guessMetaIso topEnv todo@(Constraint lvl cm iso lhs rhs) subst todos = do
     helper = \case
       -- Σ x : M[t0, ..., tn]. B[x]
       VSigma _ (force topEnv subst -> VFlex m ar _ _) _ ->
-        -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y] or
-        -- M[x0, ..., xn] ↦ Unit
-        (m,) <$> (imitation (ISigma "x") ar <|> imitation IUnit ar)
+        -- M[x0, ..., xn] ↦ Unit or
+        -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
+        (m,) <$> (imitation IUnit ar <|> imitation (ISigma "x") ar)
       -- (x : M[t0, ..., tn]) → B[x]
       VPi _ (force topEnv subst -> VFlex m ar _ _) _ ->
-        -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y] or
-        -- M[x0, ..., xn] ↦ Unit
-        (m,) <$> (imitation (ISigma "x") ar <|> imitation IUnit ar)
+        -- M[x0, ..., xn] ↦ Unit or
+        -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
+        (m,) <$> (imitation IUnit ar <|> imitation (ISigma "x") ar)
       -- Σ x : A. M[t0, ..., tn]
       VSigma _ _ b
         | VFlex m ar _ _ <- force topEnv subst (b $ VVar lvl) ->
@@ -569,9 +568,9 @@ guessMetaIso topEnv todo@(Constraint lvl cm iso lhs rhs) subst todos = do
       -- (x0 : A0) ... (xn : An) → M[t0, ..., tn]
       VPi _ _ b
         | VFlex m ar _ _ <- go lvl b ->
-            -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y] or
-            -- M[x0, ..., xn] ↦ Unit
-            (m,) <$> (imitation (ISigma "x") ar <|> imitation IUnit ar)
+            -- M[x0, ..., xn] ↦ Unit or
+            -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
+            (m,) <$> (imitation IUnit ar <|> imitation (ISigma "x") ar)
       _ -> empty
 
     go x f = case force topEnv subst (f $ VVar x) of
@@ -580,9 +579,8 @@ guessMetaIso topEnv todo@(Constraint lvl cm iso lhs rhs) subst todos = do
 
 -- | Go through candidate solutions for flex-rigid constraints
 flexRigid :: Constraint -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
-flexRigid todo@(Constraint _ cm _ lhs rhs) subst todos = do
-  guard (cm /= Flex)
-  -- tell 1
+flexRigid todo@(Constraint _ _ _ lhs rhs) subst todos = do
+  tell 1
   case (lhs, rhs) of
     (VFlex {}, VFlex {}) -> empty
     (VFlex m ar _ SNil, t') -> do
@@ -598,9 +596,8 @@ flexRigid todo@(Constraint _ cm _ lhs rhs) subst todos = do
 -- | Go through candidate solutions for flex-flex constraints
 -- Iteration binding is not supported yet.
 flexFlex :: Constraint -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
-flexFlex todo@(Constraint _ cm _ lhs rhs) subst todos = do
-  guard (cm /= Flex)
-  -- tell 2
+flexFlex todo@(Constraint _ _ _ lhs rhs) subst todos = do
+  tell 2
   case (lhs, rhs) of
     (VFlex m ar _ SNil, VFlex m' ar' _ SNil)
       | m == m' -> do
