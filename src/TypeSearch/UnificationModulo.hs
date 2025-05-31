@@ -115,10 +115,17 @@ data Constraint = Constraint
 
 forceConstraint :: TopEnv -> MetaSubst -> Constraint -> Constraint
 forceConstraint topEnv subst constraint =
-  constraint
-    { lhs = force topEnv subst constraint.lhs,
-      rhs = force topEnv subst constraint.rhs
-    }
+  if constraint.moduloIso
+    then
+      constraint
+        { lhs = normalise topEnv subst constraint.level constraint.lhs,
+          rhs = normalise topEnv subst constraint.level constraint.rhs
+        }
+    else
+      constraint
+        { lhs = force topEnv subst constraint.lhs,
+          rhs = force topEnv subst constraint.rhs
+        }
 
 -- | Monad for unification.
 -- @HeapT@ is like list transformer with priority.
@@ -552,9 +559,7 @@ printConstraint (Constraint lvl _ iso lhs rhs) = do
 unify :: TopEnv -> ChosenDefs -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
 unify topEnv chosenDefs subst = \case
   [] -> pure (subst, [])
-  (forceConstraint topEnv subst -> Constraint lvl cm iso lhs rhs) : todos -> do
-    let norm = if iso then normalise topEnv subst lvl else id
-        todo = Constraint lvl cm iso (norm lhs) (norm rhs)
+  (forceConstraint topEnv subst -> todo) : todos -> do
     -- lift $ printConstraint todo
     (subst', todos', chosenDefs') <-
       asum
