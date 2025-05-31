@@ -74,7 +74,7 @@ normalise3 topEnv subst lvl t = case force topEnv subst t of
             -- no rewrite rule eliminates Σs in @normalise3@.
             -- Such rewrites are already done in @normalise1@ and @normalise2@.
             ~(VSigma _ u _) -> u
-          vb2 ~f ~v = case normalise3 topEnv subst (lvl + 1) (vb v) of
+          vb2 ~f ~v = case normalise3 topEnv subst (lvl + 2) (vb v) of
             ~(VSigma _ _ u) -> u (vapp f v)
        in normalise3 topEnv subst lvl $ VSigma y (VPi x va vb1) \ ~f -> VPi x va (vb2 f)
     -- DO NOT RECURSE ON va
@@ -207,15 +207,17 @@ huetProjectionHelper t arity params params' = go $ spine t
       VTT -> pure ITT
       VStuck {} -> empty
 
-    go = \case
-      SNil ->
-        (kind >>= \k -> imitationHelper k params params') <|> jpProjectionHelper arity
-      SApp sp _ -> do
-        m <- lift freshMeta
-        let u = MetaApp m params
-        flip App u <$> (go sp <|> jpProjectionHelper arity)
-      SFst sp -> Fst <$> (go sp <|> jpProjectionHelper arity)
-      SSnd sp -> Snd <$> (go sp <|> jpProjectionHelper arity)
+    go sp =
+      ( case sp of
+          SNil -> kind >>= \k -> imitationHelper k params params'
+          SApp sp' _ -> do
+            m <- lift freshMeta
+            let u = MetaApp m params
+            flip App u <$> go sp'
+          SFst sp' -> Fst <$> go sp'
+          SSnd sp' -> Snd <$> go sp'
+      )
+        <|> jpProjectionHelper arity
 
 identification :: Int -> Int -> UnifyM (MetaAbs, MetaAbs)
 identification arity arity' = lift do
