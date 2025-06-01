@@ -54,12 +54,11 @@ main = do
                 let sig' = instantiate topEnv ty' sig
                 msubst <- liftIO $ timeout 500000 $ unifyTerm topEnv sig' ty'
                 case msubst of
-                  Nothing -> outputStrLn $ "timeout for " ++ show x
-                  Just Nothing -> pure ()
                   Just (Just subst) -> do
                     outputStrLn $ show x ++ " : " ++ prettyRaw 0 sig ""
                     when (HM.size subst > 0) do
                       outputStrLn $ "  by instantiating " ++ prettyMetaSubst subst ""
+                  _ -> pure ()
               loop
 
 prepare :: [Module] -> (TopEnv, [(QName, Raw)])
