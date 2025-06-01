@@ -25,7 +25,6 @@ import Witherable
 
 --------------------------------------------------------------------------------
 -- Untyped version of the rewrite system STR^{Coq} presented in the paper by Delahaye (2000).
--- TODO: Is this rewrite system confluent?
 
 -- | Σ associativity and currying
 normalise1 :: TopEnv -> MetaSubst -> Value -> Value
@@ -158,15 +157,15 @@ data ImitationKind
 
 imitation :: ImitationKind -> Int -> UnifyM MetaAbs
 imitation kind arity =
-  MetaAbs arity <$> imitationHelper kind params params'
+  MetaAbs arity <$> imitation' kind params params'
   where
     -- [x0, ..., xn]
     params = map Var $ down (Index arity - 1) 0
     -- x. [x0, ..., xn, x]
     params' = map Var $ down (Index arity) 0
 
-imitationHelper :: ImitationKind -> [Term] -> [Term] -> UnifyM Term
-imitationHelper kind params params' = lift case kind of
+imitation' :: ImitationKind -> [Term] -> [Term] -> UnifyM Term
+imitation' kind params params' = lift case kind of
   -- M[x0, ..., xn] ↦ n
   ITop ms n -> pure $ Top ms n
   -- M[x0, ..., xn] ↦ Type
@@ -214,18 +213,18 @@ imitationHelper kind params params' = lift case kind of
     m2 <- freshMeta
     pure $ Refl `App` MetaApp m1 params `App` MetaApp m2 params
 
-jpProjectionHelper :: Int -> UnifyM Term
-jpProjectionHelper arity = Var <$> choose [0 .. Index arity - 1]
+jpProjection' :: Int -> UnifyM Term
+jpProjection' arity = Var <$> choose [0 .. Index arity - 1]
 
 huetProjection :: Value -> Int -> UnifyM MetaAbs
 huetProjection t arity =
-  MetaAbs arity <$> huetProjectionHelper t arity params params'
+  MetaAbs arity <$> huetProjection' t arity params params'
   where
     params = map Var $ down (Index arity - 1) 0
     params' = map Var $ down (Index arity) 0
 
-huetProjectionHelper :: Value -> Int -> [Term] -> [Term] -> UnifyM Term
-huetProjectionHelper t arity params params' = go $ spine t
+huetProjection' :: Value -> Int -> [Term] -> [Term] -> UnifyM Term
+huetProjection' t arity params params' = go $ spine t
   where
     kind = case t of
       VRigid {} -> empty
@@ -247,7 +246,7 @@ huetProjectionHelper t arity params params' = go $ spine t
 
     go sp =
       ( case sp of
-          SNil -> kind >>= \k -> imitationHelper k params params'
+          SNil -> kind >>= \k -> imitation' k params params'
           SApp sp' _ -> do
             m <- lift freshMeta
             let u = MetaApp m params
@@ -261,7 +260,8 @@ huetProjectionHelper t arity params params' = go $ spine t
             let p = MetaApp m1 params
                 s = MetaApp m2 params
                 z = MetaApp m3 params
-            (\n -> NatElim `App` p `App` s `App` z `App` n) <$> go sp'
+            n <- go sp'
+            pure $ NatElim `App` p `App` s `App` z `App` n
           SEqElim _ _ _ _ _ sp' -> do
             m1 <- lift freshMeta
             m2 <- lift freshMeta
@@ -273,9 +273,10 @@ huetProjectionHelper t arity params params' = go $ spine t
                 p = MetaApp m3 params
                 r = MetaApp m4 params
                 y = MetaApp m5 params
-            (\eq -> EqElim `App` a `App` x `App` p `App` r `App` y `App` eq) <$> go sp'
+            eq <- go sp'
+            pure $ EqElim `App` a `App` x `App` p `App` r `App` y `App` eq
       )
-        <|> jpProjectionHelper arity
+        <|> jpProjection' arity
 
 identification :: Int -> Int -> UnifyM (MetaAbs, MetaAbs)
 identification arity arity' = lift do
@@ -309,19 +310,19 @@ liftPRen (PRen dom cod ren) = PRen (dom + 1) (cod + 1) (HM.insert cod dom ren)
 
 invert :: TopEnv -> MetaSubst -> Level -> [Value] -> UnifyM PartialRenaming
 invert topEnv subst lvl args = do
-  let go dom ren = \case
-        [] -> pure (dom, ren)
-        t : ts -> case force topEnv subst t of
-          VVar l
-            | not (HM.member l ren) -> go (dom + 1) (HM.insert l dom ren) ts
-          _ -> empty
   (dom, ren) <- go 0 HM.empty args
   pure $ PRen dom lvl ren
+  where
+    go dom ren = \case
+      [] -> pure (dom, ren)
+      t : ts -> case force topEnv subst t of
+        VVar l
+          | not (HM.member l ren) -> go (dom + 1) (HM.insert l dom ren) ts
+        _ -> empty
 
 rename :: TopEnv -> MetaSubst -> Meta -> PartialRenaming -> Value -> UnifyM Term
 rename topEnv metaSubst m = go
   where
-    go :: PartialRenaming -> Value -> UnifyM Term
     go pren t = case force topEnv metaSubst t of
       VFlex m' _ ts sp
         | m == m' -> empty -- occurs check
@@ -353,10 +354,8 @@ rename topEnv metaSubst m = go
         pure $ Refl `App` a' `App` x'
       VStuck {} -> empty
 
-    goSpine :: PartialRenaming -> Term -> Spine -> UnifyM Term
     goSpine pren = foldM (goElim pren)
 
-    goElim :: PartialRenaming -> Term -> Elim -> UnifyM Term
     goElim pren t = \case
       EApp u -> App t <$> go pren u
       EFst -> pure $ Fst t
@@ -380,11 +379,11 @@ rename topEnv metaSubst m = go
 solve :: TopEnv -> MetaSubst -> Constraint -> UnifyM MetaSubst
 solve topEnv subst (Constraint lvl _ _ lhs rhs) = do
   case (lhs, rhs) of
-    (VFlex m ar ts SNil, t') -> helper m ar ts t'
-    (t, VFlex m ar ts' SNil) -> helper m ar ts' t
+    (VFlex m ar ts SNil, t') -> solve' m ar ts t'
+    (t, VFlex m ar ts' SNil) -> solve' m ar ts' t
     _ -> empty
   where
-    helper m ar ts t = do
+    solve' m ar ts t = do
       pren <- invert topEnv subst lvl ts
       body <- rename topEnv subst m pren t
       let mabs = MetaAbs ar body
@@ -524,15 +523,28 @@ decomposeMetaArgs cm lvl lhs rhs todos = case (lhs, rhs) of
     decomposeMetaArgs cm lvl vs vs' (Constraint lvl cm False v v' : todos)
   _ -> empty
 
+decomposeIso :: Constraint -> [Constraint] -> UnifyM [Constraint]
+decomposeIso (Constraint lvl cm iso lhs rhs) todos = do
+  tell 1
+  guard iso
+  case (lhs, rhs) of
+    -- swap the sides of the equality
+    (VEq a t u, VEq a' t' u') -> do
+      let todo' = Constraint lvl cm False a a'
+          todo'' = Constraint lvl cm False t u'
+          todo''' = Constraint lvl cm False u t'
+      pure (todo' : todo'' : todo''' : todos)
+    _ -> empty
+
 -- | Guess a metavariable from how they are eliminated.
 guessMeta :: Constraint -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
 guessMeta todo@(Constraint _ _ _ lhs rhs) subst todos = do
   tell 1
-  (m, mabs) <- helper lhs <|> helper rhs
+  (m, mabs) <- guessMeta' lhs <|> guessMeta' rhs
   let subst' = HM.insert m mabs subst
   pure (subst', todo : todos)
   where
-    helper = \case
+    guessMeta' = \case
       VFlex m arity _ (SApp' {}) -> (m,) <$> imitation (IAbs "x") arity
       VFlex m arity _ (SFst' {}) -> (m,) <$> imitation IPair arity
       VFlex m arity _ (SSnd' {}) -> (m,) <$> imitation IPair arity
@@ -546,11 +558,11 @@ guessMetaIso :: TopEnv -> Constraint -> MetaSubst -> [Constraint] -> UnifyM (Met
 guessMetaIso topEnv todo@(Constraint lvl _ iso lhs rhs) subst todos = do
   guard iso
   tell 1
-  (m, mabs) <- helper lhs <|> helper rhs
+  (m, mabs) <- guessMetaIso' lhs <|> guessMetaIso' rhs
   let subst' = HM.insert m mabs subst
   pure (subst', todo : todos)
   where
-    helper = \case
+    guessMetaIso' = \case
       -- Σ x : M[t0, ..., tn]. B[x]
       VSigma _ (force topEnv subst -> VFlex m ar _ _) _ ->
         -- M[x0, ..., xn] ↦ Unit or
@@ -715,7 +727,8 @@ unify topEnv chosenDefs subst = \case
             pure (subst', todos', chosenDefs),
           do
             (todos', chosenDefs') <- unfold todo todos chosenDefs
-            pure (subst, todos', chosenDefs')
+            pure (subst, todos', chosenDefs'),
+          (subst,,chosenDefs) <$> decomposeIso todo todos
         ]
     unify topEnv chosenDefs' subst' todos'
 
