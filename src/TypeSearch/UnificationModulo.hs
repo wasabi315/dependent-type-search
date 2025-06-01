@@ -426,15 +426,15 @@ decompose (Constraint lvl cm iso lhs rhs) todos = case (lhs, rhs) of
     pure (todo' : todo'' : todos)
   (VPi _ a b, VArr a' b') -> do
     let todo' = Constraint lvl cm False a a'
-        todo'' = Constraint lvl cm False (b $ VVar lvl) b'
+        todo'' = Constraint (lvl + 1) cm iso (b $ VVar lvl) b'
     pure (todo' : todo'' : todos)
   (VArr a b, VPi _ a' b') -> do
     let todo' = Constraint lvl cm False a a'
-        todo'' = Constraint lvl cm False b (b' $ VVar lvl)
+        todo'' = Constraint (lvl + 1) cm iso b (b' $ VVar lvl)
     pure (todo' : todo'' : todos)
   (VArr a b, VArr a' b') -> do
-    let todo' = Constraint lvl cm False a a'
-        todo'' = Constraint lvl cm False b b'
+    let todo' = Constraint lvl cm iso a a'
+        todo'' = Constraint lvl cm iso b b'
     pure (todo' : todo'' : todos)
   (VAbs _ f, VAbs _ f') -> do
     let todo' = Constraint (lvl + 1) cm False (f $ VVar lvl) (f' $ VVar lvl)
@@ -452,15 +452,15 @@ decompose (Constraint lvl cm iso lhs rhs) todos = case (lhs, rhs) of
     pure (todo' : todo'' : todos)
   (VSigma _ a b, VProd a' b') -> do
     let todo' = Constraint lvl cm False a a'
-        todo'' = Constraint lvl cm False (b $ VVar lvl) b'
+        todo'' = Constraint (lvl + 1) cm iso (b $ VVar lvl) b'
     pure (todo' : todo'' : todos)
   (VProd a b, VSigma _ a' b') -> do
     let todo' = Constraint lvl cm False a a'
-        todo'' = Constraint lvl cm False b (b' $ VVar lvl)
+        todo'' = Constraint (lvl + 1) cm iso b (b' $ VVar lvl)
     pure (todo' : todo'' : todos)
   (VProd a b, VProd a' b') -> do
-    let todo' = Constraint lvl cm False a a'
-        todo'' = Constraint lvl cm False b b'
+    let todo' = Constraint lvl cm iso a a'
+        todo'' = Constraint lvl cm iso b b'
     pure (todo' : todo'' : todos)
   (VPair t u, VPair t' u') -> do
     let todo' = Constraint lvl cm False t t'

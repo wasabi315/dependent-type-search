@@ -49,10 +49,10 @@ main = do
               outputStrLn "Parse error"
               loop
             Right ty -> do
-              let ty' = rawToTerm topEnv ty
+              -- let ty' = rawToTerm topEnv ty
               for_ sigs \(x, sig) -> do
-                let sig' = instantiate topEnv ty' sig
-                msubst <- liftIO $ timeout 500000 $ unifyTerm topEnv sig' ty'
+                -- let sig' = instantiate topEnv ty' sig
+                msubst <- liftIO $ timeout 500000 $ unifyRaw topEnv sig ty
                 case msubst of
                   Just (Just subst) -> do
                     outputStrLn $ show x ++ " : " ++ prettyRaw 0 sig ""
@@ -91,10 +91,9 @@ instantiate :: TopEnv -> Term -> Raw -> Term
 instantiate topEnv query sig = bar $ quote n $ baz $ evaluateRaw topEnv mempty sig
   where
     foo = \case
-      Pi x a b
-        | x /= "_" ->
-            let (f, i) = foo b
-             in (Pi x a . f, i + 1)
+      Pi x a b ->
+        let (f, i) = foo b
+         in (Pi x a . f, i + 1)
       _ -> (id, Level 0)
 
     (bar, n) = foo query
@@ -102,7 +101,7 @@ instantiate topEnv query sig = bar $ quote n $ baz $ evaluateRaw topEnv mempty s
     args = map VVar [0 .. n - 1]
 
     baz = \case
-      VPi x _ b -- Throwing away the domain type currently
-        | x /= "_" -> baz (b $ VMetaApp (Src x) args)
+      -- Throwing away the domain type currently
+      VPi x _ b -> baz (b $ VMetaApp (Src x) args)
       VTop _ _ [(_, t)] -> baz t
       t -> t
