@@ -31,15 +31,36 @@ normalise1 topEnv subst t = case force topEnv subst t of
   -- (x : (y : A) * B[y]) * C[x] ~> (x : A) * (y : B[x]) * C[(x, y)]
   VSigma x (force topEnv subst -> VSigma y va vb) vc ->
     normalise1 topEnv subst $ VSigma x va \ ~v -> VSigma y (vb v) \ ~u -> vc (VPair v u)
+  -- (x : A * B) * C[x] ~> (x : A) * (y : B) * C[(x, y)]
+  VSigma x (force topEnv subst -> VProd va vb) vc ->
+    normalise1 topEnv subst $ VSigma x va \ ~v -> VSigma "x" vb \ ~u -> vc (VPair v u)
+  -- ((x : A) * B[x]) * C ~> (x : A) * B[x] * C
+  VProd (normalise1 topEnv subst -> VSigma y va vb) vc ->
+    normalise1 topEnv subst $ VSigma y va \ ~v -> VProd (vb v) vc
+  VProd (normalise1 topEnv subst -> VProd va vb) vc ->
+    normalise1 topEnv subst $ VProd va (VProd vb vc)
   -- (x : (y : A) * B[y]) -> C[x] ~> (x : A) -> (y : B[x]) -> C[(x, y)]
   VPi x (force topEnv subst -> VSigma y va vb) vc ->
     normalise1 topEnv subst $ VPi x va \ ~v -> VPi y (vb v) \ ~u -> vc (VPair v u)
+  -- (x : A * B) -> C[x] ~> (x : A) (y : B) -> C[(x, y)]
+  VPi x (force topEnv subst -> VProd va vb) vc ->
+    normalise1 topEnv subst $ VPi x va \ ~v -> VPi "x" vb \ ~u -> vc (VPair v u)
+  -- (x : A) * B[x] -> C ~> (x : A) -> B[x] -> C
+  VArr (normalise1 topEnv subst -> VSigma y va vb) vc ->
+    normalise1 topEnv subst $ VPi y va \ ~v -> VArr (vb v) vc
+  -- A * B -> C ~> A -> B -> C
+  VArr (normalise1 topEnv subst -> VProd va vb) vc ->
+    normalise1 topEnv subst $ VArr va (VArr vb vc)
   VSigma x va vb ->
     -- DO NOT RECURSE ON va
     VSigma x va \ ~v -> normalise1 topEnv subst $ vb v
+  VProd va vb ->
+    VProd (normalise1 topEnv subst va) (normalise1 topEnv subst vb)
   VPi x va vb ->
     -- DO NOT RECURSE ON va
     VPi x va \ ~v -> normalise1 topEnv subst $ vb v
+  VArr va vb ->
+    VArr (normalise1 topEnv subst va) (normalise1 topEnv subst vb)
   -- DO NOT RECURSE
   v -> v
 
@@ -48,15 +69,20 @@ normalise2 :: TopEnv -> MetaSubst -> Level -> Value -> Value
 normalise2 topEnv subst lvl t = case force topEnv subst t of
   -- (x : Unit) * B[x] ~> B[tt]
   VSigma _ (force topEnv subst -> VUnit) vb -> normalise2 topEnv subst lvl $ vb VTT
+  VProd (normalise2 topEnv subst lvl -> VUnit) vb -> normalise2 topEnv subst lvl vb
   -- (x : Unit) -> B[x] ~> B[tt]
   VPi _ (force topEnv subst -> VUnit) vb -> normalise2 topEnv subst lvl $ vb VTT
+  VArr (normalise2 topEnv subst lvl -> VUnit) vb -> normalise2 topEnv subst lvl vb
   -- (x : A) * Unit ~> A
   VSigma x va vb -> case normalise2 topEnv subst (lvl + 1) (vb $ VVar lvl) of
     VUnit -> normalise2 topEnv subst lvl va
     -- DO NOT RECURSE ON va
     _ -> VSigma x va \ ~v -> normalise2 topEnv subst (lvl + 1) (vb v)
+  VProd va (normalise2 topEnv subst lvl -> VUnit) -> normalise2 topEnv subst lvl va
+  VProd va vb -> VProd (normalise2 topEnv subst lvl va) (normalise2 topEnv subst lvl vb)
   -- DO NOT RECURSE ON va
   VPi x va vb -> VPi x va \ ~v -> normalise2 topEnv subst (lvl + 1) (vb v)
+  VArr va vb -> VArr (normalise2 topEnv subst lvl va) (normalise2 topEnv subst lvl vb)
   -- DO NOT RECURSE
   v -> v
 
@@ -709,7 +735,7 @@ unify :: TopEnv -> ChosenDefs -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst,
 unify topEnv chosenDefs subst = \case
   [] -> pure (subst, [])
   (forceConstraint topEnv subst -> todo) : todos -> do
-    -- lift $ printConstraint todo
+    lift $ printConstraint todo
     (subst', todos', chosenDefs') <-
       asum
         [ do
