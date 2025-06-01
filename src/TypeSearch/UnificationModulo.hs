@@ -160,7 +160,7 @@ imitation' kind params params' = lift case kind of
   IPair -> do
     m1 <- freshMeta
     m2 <- freshMeta
-    pure $ Pair (MetaApp m1 params) (MetaApp m2 params')
+    pure $ Pair (MetaApp m1 params) (MetaApp m2 params)
   -- M[x0, ..., xn] ↦ Unit
   IUnit -> pure Unit
   -- M[x0, ..., xn] ↦ tt
