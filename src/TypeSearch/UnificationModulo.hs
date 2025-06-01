@@ -24,7 +24,6 @@ import TypeSearch.Term
 import Witherable
 
 --------------------------------------------------------------------------------
--- Untyped version of the rewrite system STR^{Coq} presented in the paper by Delahaye (2000).
 
 -- | Σ associativity and currying
 normalise1 :: TopEnv -> MetaSubst -> Value -> Value
@@ -56,51 +55,24 @@ normalise2 topEnv subst lvl t = case force topEnv subst t of
     VUnit -> normalise2 topEnv subst lvl va
     -- DO NOT RECURSE ON va
     _ -> VSigma x va \ ~v -> normalise2 topEnv subst (lvl + 1) (vb v)
-  -- (x : A) -> Unit ~> Unit
-  VPi x va vb -> case normalise2 topEnv subst (lvl + 1) (vb $ VVar lvl) of
-    VUnit -> VUnit
-    -- DO NOT RECURSE ON va
-    _ -> VPi x va \ ~v -> normalise2 topEnv subst (lvl + 1) (vb v)
-  -- DO NOT RECURSE
-  v -> v
-
--- | Π distribution over Σ
-normalise3 :: TopEnv -> MetaSubst -> Level -> Value -> Value
-normalise3 topEnv subst lvl t = case force topEnv subst t of
-  -- (x : A) -> (y : B[x]) * C[x, y] ~> (y : (x : A) -> B[x]) * ((x : A) -> C[x, y x])
-  VPi x va vb -> case normalise3 topEnv subst (lvl + 1) (vb $ VVar lvl) of
-    VSigma y _ _ ->
-      let vb1 ~v = case normalise3 topEnv subst (lvl + 1) (vb v) of
-            -- This pattern match should always succeed because
-            -- no rewrite rule eliminates Σs in @normalise3@.
-            -- Such rewrites are already done in @normalise1@ and @normalise2@.
-            ~(VSigma _ u _) -> u
-          vb2 ~f ~v = case normalise3 topEnv subst (lvl + 2) (vb v) of
-            ~(VSigma _ _ u) -> u (vapp f v)
-       in normalise3 topEnv subst lvl $ VSigma y (VPi x va vb1) \ ~f -> VPi x va (vb2 f)
-    -- DO NOT RECURSE ON va
-    _ -> VPi x va \ ~v -> normalise3 topEnv subst (lvl + 1) (vb v)
   -- DO NOT RECURSE ON va
-  VSigma x va vb -> VSigma x va \ ~v -> normalise3 topEnv subst (lvl + 1) (vb v)
+  VPi x va vb -> VPi x va \ ~v -> normalise2 topEnv subst (lvl + 1) (vb v)
   -- DO NOT RECURSE
   v -> v
 
 -- | Normalise a type into an isomorphic type.
 normalise :: TopEnv -> MetaSubst -> Level -> Value -> Value
 normalise topEnv subst lvl t =
-  normalise3 topEnv subst lvl $
-    normalise2 topEnv subst lvl $
-      normalise1 topEnv subst t
+  normalise2 topEnv subst lvl $
+    normalise1 topEnv subst t
 
 --------------------------------------------------------------------------------
 -- Unification procedure modulo βη-equivalence and type isomorphisms related to Π and Σ:
 --   - (x : (y : A) * B[y]) * C[x]     ~ (x : A) * (y : B[x]) * C[(x, y)]
 --   - (x : (y : A) * B[y]) -> C[x]    ~ (x : A) -> (y : B[x]) -> C[(x, y)]
 --   - (x : A) * B                     ~ (x : B) * A
---   - (x : A) -> (y : B[x]) * C[x, y] ~ (y : (x : A) -> B[x]) * ((x : A) -> C[x, y x])
 --   - (x : A) * Unit                  ~ A
 --   - (x : Unit) * A[x]               ~ A[tt]
---   - (x : A) -> Unit                 ~ Unit
 --   - (x : Unit) -> A[x]              ~ A[tt]
 -- Constraints are solved from left to right (static unification).
 
@@ -579,17 +551,7 @@ guessMetaIso topEnv todo@(Constraint lvl _ iso lhs rhs) subst todos = do
         | VFlex m ar _ _ <- force topEnv subst (b $ VVar lvl) ->
             -- M[x0, ..., xn] ↦ Unit
             (m,) <$> imitation IUnit ar
-      -- (x0 : A0) ... (xn : An) → M[t0, ..., tn]
-      VPi _ _ b
-        | VFlex m ar _ _ <- go lvl b ->
-            -- M[x0, ..., xn] ↦ Unit or
-            -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
-            (m,) <$> (imitation IUnit ar <|> imitation (ISigma "x") ar)
       _ -> empty
-
-    go x f = case force topEnv subst (f $ VVar x) of
-      VPi _ _ f' -> go (x + 1) f'
-      t -> t
 
 -- | Go through candidate solutions for flex-rigid constraints
 flexRigid :: Constraint -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
