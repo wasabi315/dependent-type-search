@@ -116,8 +116,10 @@ data ImitationKind
   = ITop [ModuleName] Name
   | IType
   | IPi Name
+  | IArr
   | IAbs Name
   | ISigma Name
+  | IProd
   | IPair
   | IUnit
   | ITT
@@ -147,6 +149,11 @@ imitation' kind params params' = lift case kind of
     m1 <- freshMeta
     m2 <- freshMeta
     pure $ Pi x (MetaApp m1 params) (MetaApp m2 params')
+  -- M[x0, ..., xn] ↦ M1[x0, ..., xn] -> M2[x0, ..., xn]
+  IArr -> do
+    m1 <- freshMeta
+    m2 <- freshMeta
+    pure $ Arr (MetaApp m1 params) (MetaApp m2 params)
   -- M[x0, ..., xn] ↦ λx. M'[x0, ..., xn, x]
   IAbs x -> do
     m' <- freshMeta
@@ -156,6 +163,11 @@ imitation' kind params params' = lift case kind of
     m1 <- freshMeta
     m2 <- freshMeta
     pure $ Sigma x (MetaApp m1 params) (MetaApp m2 params')
+  -- M[x0, ..., xn] ↦ M1[x0, ..., xn] * M2[x0, ..., xn]
+  IProd -> do
+    m1 <- freshMeta
+    m2 <- freshMeta
+    pure $ Prod (MetaApp m1 params) (MetaApp m2 params)
   -- M[x0, ..., xn] ↦ (M1[x0, ..., xn], M2[x0, ..., xn])
   IPair -> do
     m1 <- freshMeta
@@ -204,8 +216,10 @@ huetProjection' t arity params params' = go $ spine t
       VTop n _ ts -> pure $ ITop (fst <$> ts) n
       VType -> pure IType
       VPi x _ _ -> pure $ IPi x
+      VArr {} -> pure IArr
       VAbs x _ -> pure $ IAbs x
       VSigma x _ _ -> pure $ ISigma x
+      VProd {} -> pure IProd
       VPair {} -> pure IPair
       VUnit -> pure IUnit
       VTT -> pure ITT
@@ -308,8 +322,10 @@ rename topEnv metaSubst m = go
       VTop n sp ts -> goSpine pren (Top (map fst ts) n) sp
       VType -> pure Type
       VPi x a b -> Pi x <$> go pren a <*> go (liftPRen pren) (b $ VVar pren.cod)
+      VArr a b -> Arr <$> go pren a <*> go pren b
       VAbs x f -> Abs x <$> go (liftPRen pren) (f $ VVar pren.cod)
       VSigma x a b -> Sigma x <$> go pren a <*> go (liftPRen pren) (b $ VVar pren.cod)
+      VProd a b -> Prod <$> go pren a <*> go pren b
       VPair u v -> Pair <$> go pren u <*> go pren v
       VUnit -> pure Unit
       VTT -> pure TT
@@ -408,6 +424,18 @@ decompose (Constraint lvl cm iso lhs rhs) todos = case (lhs, rhs) of
     let todo' = Constraint lvl cm False a a'
         todo'' = Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl)
     pure (todo' : todo'' : todos)
+  (VPi _ a b, VArr a' b') -> do
+    let todo' = Constraint lvl cm False a a'
+        todo'' = Constraint lvl cm False (b $ VVar lvl) b'
+    pure (todo' : todo'' : todos)
+  (VArr a b, VPi _ a' b') -> do
+    let todo' = Constraint lvl cm False a a'
+        todo'' = Constraint lvl cm False b (b' $ VVar lvl)
+    pure (todo' : todo'' : todos)
+  (VArr a b, VArr a' b') -> do
+    let todo' = Constraint lvl cm False a a'
+        todo'' = Constraint lvl cm False b b'
+    pure (todo' : todo'' : todos)
   (VAbs _ f, VAbs _ f') -> do
     let todo' = Constraint (lvl + 1) cm False (f $ VVar lvl) (f' $ VVar lvl)
     pure (todo' : todos)
@@ -421,6 +449,18 @@ decompose (Constraint lvl cm iso lhs rhs) todos = case (lhs, rhs) of
   (VSigma _ a b, VSigma _ a' b') -> do
     let todo' = Constraint lvl cm False a a'
         todo'' = Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl)
+    pure (todo' : todo'' : todos)
+  (VSigma _ a b, VProd a' b') -> do
+    let todo' = Constraint lvl cm False a a'
+        todo'' = Constraint lvl cm False (b $ VVar lvl) b'
+    pure (todo' : todo'' : todos)
+  (VProd a b, VSigma _ a' b') -> do
+    let todo' = Constraint lvl cm False a a'
+        todo'' = Constraint lvl cm False b (b' $ VVar lvl)
+    pure (todo' : todo'' : todos)
+  (VProd a b, VProd a' b') -> do
+    let todo' = Constraint lvl cm False a a'
+        todo'' = Constraint lvl cm False b b'
     pure (todo' : todo'' : todos)
   (VPair t u, VPair t' u') -> do
     let todo' = Constraint lvl cm False t t'

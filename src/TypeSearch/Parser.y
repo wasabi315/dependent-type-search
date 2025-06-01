@@ -94,9 +94,10 @@ Pair1
 
 Component :: { Located Raw }
 Component
-  : Domain '->' Pair                    { foldr (uncurry RPi . value) (RLoc $3) $1 :@ mergePosition (head $1) $3 }
-  | '\\' SpaceBinds '->' Pair           { foldr (RAbs . value) (RLoc $4) $2 :@ mergePosition $1 $4 }
-  | Sigma                 { $1 }
+  : Sigma '->' Pair            { RArr (RLoc $1) (RLoc $3) :@ mergePosition $1 $3 }
+  | Telescope '->' Pair        { foldr (uncurry RPi . value) (RLoc $3) $1 :@ mergePosition (head $1) $3 }
+  | '\\' SpaceBinds '->' Pair  { foldr (RAbs . value) (RLoc $4) $2 :@ mergePosition $1 $4 }
+  | Sigma                      { $1 }
 
 Telescope :: { [Located (Name, Raw)] }
 Telescope
@@ -107,16 +108,11 @@ Telescope
                                                     in [ (value n, t) :@ pos | n <- $2 ] ++ $6
                                                  }
 
-Domain :: { [Located (Name, Raw)] }
-Domain
-  : Sigma      { [fmap ("_",) $1] }
-  | Telescope  { $1 }
-
 Sigma :: { Located Raw }
 Sigma
   : Application                           { $1 }
   | sigma Name ':' Application '.' Sigma  { RSigma (value $2) (RLoc $4) (RLoc $6) :@ mergePosition $1 $6 }
-  | Application '*' Sigma                 { RSigma "_" (RLoc $1) (RLoc $3) :@ mergePosition $1 $3 }
+  | Application '*' Sigma                 { RProd (RLoc $1) (RLoc $3) :@ mergePosition $1 $3 }
 
 Application :: { Located Raw }
 Application : Application1  { let f : args = reverse $1

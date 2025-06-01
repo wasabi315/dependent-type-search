@@ -60,12 +60,11 @@ prettyRaw = go
       RType -> showString "Type"
       RUnit -> showString "Unit"
       RTT -> showString "tt"
-      RPi "_" a b -> par p piP $ go sigmaP a . showString " → " . go piP b
       RPi n a b -> par p piP $ piBind n a . goPi b
+      RArr a b -> par p piP $ go sigmaP a . showString " → " . go piP b
       RAbs n b -> par p absP $ showString "λ " . shows n . goAbs b
       RApp RSuc n -> goSuc p 1 n
       RApp a b -> par p appP $ go appP a . showChar ' ' . go projP b
-      RSigma "_" a b -> par p sigmaP $ go appP a . showString " × " . go sigmaP b
       RSigma n a b ->
         par p sigmaP $
           showString "Σ "
@@ -74,6 +73,7 @@ prettyRaw = go
             . go appP a
             . showString ". "
             . go sigmaP b
+      RProd a b -> par p sigmaP $ go appP a . showString " × " . go sigmaP b
       RPair a b -> par p pairP $ go absP a . showString ", " . go absP b
       RFst a -> par p projP $ go projP a . showString ".1"
       RSnd a -> par p projP $ go projP a . showString ".2"
@@ -99,8 +99,6 @@ prettyRaw = go
         . showChar ')'
 
     goPi = \case
-      (unRLoc -> RPi "_" a b) ->
-        showString " → " . go sigmaP a . showString " → " . go piP b
       (unRLoc -> RPi n a b) ->
         showChar ' ' . piBind n a . goPi b
       b -> showString " → " . go piP b
@@ -119,19 +117,14 @@ prettyTerm = go
         shows m . showChar '[' . punctuate (showChar ',') (map (go ns absP) ts) . showChar ']'
       Top _ n -> shows n
       Type -> showString "Type"
-      Pi "_" a b ->
-        par p piP $
-          go ns sigmaP a . showString " → " . go ("_" : ns) piP b
       Pi (freshen ns -> n) a b ->
         par p piP $ piBind n ns a . goPi (n : ns) b
+      Arr a b -> par p piP $ go ns sigmaP a . showString " → " . go ns piP b
       Abs (freshen ns -> n) t ->
         par p absP $
           showString "λ " . shows n . goAbs (n : ns) t
       Suc `App` n -> goSuc p ns 1 n
       App t u -> par p appP $ go ns appP t . showChar ' ' . go ns projP u
-      Sigma "_" a b ->
-        par p sigmaP $
-          go ns appP a . showString " × " . go ("_" : ns) sigmaP b
       Sigma (freshen ns -> n) a b ->
         par p sigmaP $
           showString "Σ "
@@ -140,6 +133,7 @@ prettyTerm = go
             . go ns appP a
             . showString ". "
             . go (n : ns) sigmaP b
+      Prod a b -> par p sigmaP $ go ns appP a . showString " × " . go ns sigmaP b
       Fst t -> par p projP $ go ns projP t . showString ".1"
       Snd t -> par p projP $ go ns projP t . showString ".2"
       Pair t u -> par p pairP $ go ns absP t . showString ", " . go ns pairP u
@@ -166,8 +160,6 @@ prettyTerm = go
         . showChar ')'
 
     goPi ns = \case
-      Pi "_" a b ->
-        showString " → " . go ns sigmaP a . showString " → " . go ("_" : ns) piP b
       Pi (freshen ns -> n) a b ->
         showChar ' ' . piBind n ns a . goPi (n : ns) b
       b -> showString " → " . go ns piP b

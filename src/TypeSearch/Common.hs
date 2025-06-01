@@ -109,11 +109,9 @@ instance Show QName where
     Qual m n -> shows m . showChar '.' . shows n
 
 freshen :: [Name] -> Name -> Name
-freshen ns = \case
-  "_" -> "_"
-  n@(Name n')
-    | n `elem` ns -> freshen ns (Name $ T.snoc n' '\'')
-    | otherwise -> n
+freshen ns n@(Name n')
+  | n `elem` ns = freshen ns (Name $ T.snoc n' '\'')
+  | otherwise = n
 
 --------------------------------------------------------------------------------
 

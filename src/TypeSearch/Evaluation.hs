@@ -75,8 +75,10 @@ data Value
   | VTop Name Spine [(ModuleName, Value)]
   | VType
   | VPi Name Value (Value -> Value)
+  | VArr Value Value
   | VAbs Name (Value -> Value)
   | VSigma Name Value (Value -> Value)
+  | VProd Value Value
   | VPair Value Value
   | VUnit
   | VTT
@@ -149,8 +151,10 @@ spine = \case
   VStuck _ sp -> sp
   VType -> SNil
   VPi {} -> SNil
+  VArr {} -> SNil
   VAbs {} -> SNil
   VSigma {} -> SNil
+  VProd {} -> SNil
   VPair {} -> SNil
   VUnit -> SNil
   VTT -> SNil
@@ -187,9 +191,11 @@ evaluateRaw topEnv env = \case
   RMetaApp m ts -> VMetaApp m $ map (evaluateRaw topEnv env) ts
   RType -> VType
   RPi x a b -> VPi x (evaluateRaw topEnv env a) \ ~v -> evaluateRaw topEnv (HM.insert x v env) b
+  RArr a b -> VArr (evaluateRaw topEnv env a) (evaluateRaw topEnv env b)
   RAbs x t -> VAbs x \v -> evaluateRaw topEnv (HM.insert x v env) t
   RApp t u -> vapp (evaluateRaw topEnv env t) (evaluateRaw topEnv env u)
   RSigma x a b -> VSigma x (evaluateRaw topEnv env a) \ ~v -> evaluateRaw topEnv (HM.insert x v env) b
+  RProd a b -> VProd (evaluateRaw topEnv env a) (evaluateRaw topEnv env b)
   RPair a b -> VPair (evaluateRaw topEnv env a) (evaluateRaw topEnv env b)
   RFst t -> vfst $ evaluateRaw topEnv env t
   RSnd t -> vsnd $ evaluateRaw topEnv env t
@@ -212,9 +218,11 @@ evaluate topEnv env = \case
   Top ms n -> lookupPossibleModules topEnv ms n
   Type -> VType
   Pi x a b -> VPi x (evaluate topEnv env a) \ ~v -> evaluate topEnv (v : env) b
+  Arr a b -> VArr (evaluate topEnv env a) (evaluate topEnv env b)
   Abs x t -> VAbs x \v -> evaluate topEnv (v : env) t
   App t u -> vapp (evaluate topEnv env t) (evaluate topEnv env u)
   Sigma x a b -> VSigma x (evaluate topEnv env a) \ ~v -> evaluate topEnv (v : env) b
+  Prod a b -> VProd (evaluate topEnv env a) (evaluate topEnv env b)
   Pair t u -> VPair (evaluate topEnv env t) (evaluate topEnv env u)
   Fst t -> vfst $ evaluate topEnv env t
   Snd t -> vsnd $ evaluate topEnv env t
@@ -305,8 +313,10 @@ quote lvl = \case
   VTop n sp vs -> quoteSpine lvl (Top (fst <$> vs) n) sp
   VType -> Type
   VPi x va vb -> Pi x (quote lvl va) (quote (lvl + 1) $ vb (VVar lvl))
+  VArr va vb -> Arr (quote lvl va) (quote lvl vb)
   VAbs x v -> Abs x $ quote (lvl + 1) $ v (VVar lvl)
   VSigma x va vb -> Sigma x (quote lvl va) (quote (lvl + 1) $ vb (VVar lvl))
+  VProd va vb -> Prod (quote lvl va) (quote lvl vb)
   VPair vt vu -> Pair (quote lvl vt) (quote lvl vu)
   VUnit -> Unit
   VTT -> TT
@@ -350,8 +360,10 @@ deepForce topEnv subst = go
       VTop n sp vs -> VTop n (goSpine sp) (fmap go <$> vs)
       VType -> VType
       VPi x a b -> VPi x (go a) \ ~u -> go (b u)
+      VArr a b -> VArr (go a) (go b)
       VAbs x f -> VAbs x \u -> go (f u)
       VSigma x a b -> VSigma x (go a) \ ~u -> go (b u)
+      VProd a b -> VProd (go a) (go b)
       VPair a b -> VPair (go a) (go b)
       VUnit -> VUnit
       VTT -> VTT

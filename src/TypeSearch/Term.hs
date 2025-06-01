@@ -18,9 +18,11 @@ data Term
   | Top [ModuleName] Name -- f
   | Type -- Type
   | Pi Name Term Term -- (x : A) -> B
+  | Arr Term Term -- A -> B
   | Abs Name Term -- \x -> t
   | App Term Term -- t1 t2
   | Sigma Name Term Term -- (x : A) * B
+  | Prod Term Term -- A * B
   | Pair Term Term -- (t1, t2)
   | Fst Term -- fst t
   | Snd Term -- snd t

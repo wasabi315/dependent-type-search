@@ -5,8 +5,6 @@ module TypeSearch.Raw
 
     -- * Raw terms
     Raw (..),
-    pattern (:->),
-    pattern (:*),
     rnatLit,
     unRLoc,
   )
@@ -34,9 +32,11 @@ data Raw
   | RMetaApp Meta [Raw]
   | RType
   | RPi Name Raw Raw
+  | RArr Raw Raw -- non-dependent pi
   | RAbs Name Raw
   | RApp Raw Raw
   | RSigma Name Raw Raw
+  | RProd Raw Raw -- non-dependent sigma
   | RPair Raw Raw
   | RFst Raw
   | RSnd Raw
@@ -51,12 +51,6 @@ data Raw
   | REqElim
   | RLoc (Located Raw)
   deriving stock (Show)
-
-pattern (:->) :: Raw -> Raw -> Raw
-pattern t :-> u = RPi "_" t u
-
-pattern (:*) :: Raw -> Raw -> Raw
-pattern t :* u = RSigma "_" t u
 
 rnatLit :: Int -> Raw
 rnatLit = \case

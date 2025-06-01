@@ -8,7 +8,7 @@ let flip : (A B C : Type) → (A → B → C) → B → A → C = λ A B C f x y
 
 let comp : (A B C : Type) → (B → C) → (A → B) → A → C = λ A B C f g x → f (g x)
 
-let app : (A : Type) (B : (x : A) → Type) (f : (x : A) → B x) (x : A) → B x = λ A B f x → f x
+let app : (A : Type) (B : (x : A) → Type) → ((x : A) → B x) → (x : A) → B x = λ A B f x → f x
 
 let swap : (A B : Type) → A * B → B * A = λ A B p → p.2 , p.1
 
