@@ -93,6 +93,7 @@ library
     , containers
     , diagnose
     , hashable
+    , haskeline
     , monus-weighted-search
     , mtl
     , text
@@ -162,6 +163,7 @@ executable dependent-type-search-exe
     , dependent-type-search
     , diagnose
     , hashable
+    , haskeline
     , monus-weighted-search
     , mtl
     , text
@@ -232,6 +234,7 @@ test-suite dependent-type-search-test
     , dependent-type-search
     , diagnose
     , hashable
+    , haskeline
     , monus-weighted-search
     , mtl
     , text

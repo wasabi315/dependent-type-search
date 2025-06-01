@@ -39,9 +39,6 @@ module TypeSearch.Evaluation
     -- * Forcing
     force,
     deepForce,
-
-    -- * Top-level environment
-    modulesEnv,
   )
 where
 
@@ -371,30 +368,3 @@ deepForce topEnv subst = go
       ESnd -> ESnd
       ENatElim p s z -> ENatElim (go p) (go s) (go z)
       EEqElim a x p r y -> EEqElim (go a) (go x) (go p) (go r) (go y)
-
---------------------------------------------------------------------------------
--- Create top-level environment from modules
-
--- | Create a top-level environment from modules.
-modulesEnv :: HM.HashMap ModuleName Module -> TopEnv
-modulesEnv mods = go HM.empty (HM.keys mods)
-  where
-    go topEnv = \case
-      [] -> topEnv
-      m : todos ->
-        let mod' = mods HM.! m
-            deps = mod'.imports
-         in if any (`elem` todos) deps
-              then go topEnv (todos ++ [m])
-              else go (goModule topEnv mod') todos
-
-    goModule topEnv (Module m _ decls) = foldl' (goDecl m) topEnv decls
-
-    goDecl m topEnv = \case
-      DLoc (d :@ _) -> goDecl m topEnv d
-      DLet x _ t ->
-        HM.insertWith
-          (<>)
-          x
-          (HM.singleton m (evaluateRaw topEnv HM.empty t))
-          topEnv

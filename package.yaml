@@ -26,6 +26,7 @@ dependencies:
   - containers
   - diagnose
   - hashable
+  - haskeline
   - monus-weighted-search
   - mtl
   - text
