@@ -47,47 +47,47 @@ let add-id-l : (n : Nat) → Eq Nat (add 0 n) n = refl Nat
 let add-id-r : (n : Nat) → Eq Nat (add n 0) n =
   natElim
     (λ n → Eq Nat (add n 0) n)
-    (refl Nat 0)
     (λ n → cong Nat Nat suc (add n 0) n)
+    (refl Nat 0)
 
 let add-suc : (m n : Nat) → Eq Nat (add m (suc n)) (suc (add m n)) =
   natElim (λ m → (n : Nat) → Eq Nat (add m (suc n)) (suc (add m n)))
-    (λ n → refl Nat (suc n))
     (λ m ih n → cong Nat Nat suc (add m (suc n)) (suc (add m n)) (ih n))
+    (λ n → refl Nat (suc n))
 
 let add-comm : (m n : Nat) → Eq Nat (add m n) (add n m) =
   natElim (λ m → (n : Nat) → Eq Nat (add m n) (add n m))
-    (λ n → sym Nat (add n 0) n (add-id-r n))
     (λ m ih n →
       trans Nat (suc (add m n)) (suc (add n m)) (add n (suc m))
         (cong Nat Nat suc (add m n) (add n m) (ih n))
         (sym Nat (add n (suc m)) (suc (add n m)) (add-suc n m)))
+    (λ n → sym Nat (add n 0) n (add-id-r n))
 
 let add-assoc : (l m n : Nat) → Eq Nat (add (add l m) n) (add l (add m n)) =
   natElim (λ l → (m n : Nat) → Eq Nat (add (add l m) n) (add l (add m n)))
-    (λ m n → refl Nat (add m n))
     (λ l ih m n →
       cong Nat Nat suc (add (add l m) n) (add l (add m n)) (ih m n))
+    (λ m n → refl Nat (add m n))
 
 let mul : Nat → Nat → Nat =
-  λ m n → natElim (λ _ → Nat) (λ _ → Basic.add n) 0 m
+  λ m n → natElim (λ _ → Nat) 0 (λ _ → Basic.add n) m
 
 let mul-zero-l : (n : Nat) → Eq Nat (mul 0 n) 0 =
   λ n → refl Nat 0
 
 let mul-zero-r : (n : Nat) → Eq Nat (mul n 0) 0 =
   natElim (λ n → Eq Nat (mul n 0) 0)
-    (refl Nat 0)
     (λ n ih → ih)
+    (refl Nat 0)
 
 let mul-id-l : (n : Nat) → Eq Nat (mul 1 n) n =
   natElim
     (λ n → Eq Nat (mul 1 n) n)
-    (refl Nat 0)
     (λ n → cong Nat Nat suc (add n 0) n)
+    (refl Nat 0)
 
 let mul-id-r : (n : Nat) → Eq Nat (mul n 1) n =
   natElim
     (λ n → Eq Nat (mul n 1) n)
-    (refl Nat 0)
     (λ n → cong Nat Nat suc (add n 0) n)
+    (refl Nat 0)
