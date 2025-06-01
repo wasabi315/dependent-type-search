@@ -1,5 +1,6 @@
 module TypeSearch.UnificationModulo
   ( -- * Unification
+    unifyTerm,
     unifyRaw,
     unifiable,
   )
@@ -732,13 +733,6 @@ unify topEnv chosenDefs subst = \case
         ]
     unify topEnv chosenDefs' subst' todos'
 
--- | Unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
-unifyRaw' :: TopEnv -> Raw -> Raw -> UnifyM (MetaSubst, [Constraint])
-unifyRaw' topEnv t t' = do
-  let initTodo =
-        Constraint 0 Rigid True (evaluateRaw topEnv HM.empty t) (evaluateRaw topEnv HM.empty t')
-  unify topEnv HM.empty HM.empty [initTodo]
-
 --------------------------------------------------------------------------------
 -- Zonking (unfold all metavariables in terms)
 
@@ -758,6 +752,24 @@ zonkMetaSubst topEnv subst = flip imapMaybe subst \m mabs ->
 
 --------------------------------------------------------------------------------
 -- Entry points
+
+unifyTerm' :: TopEnv -> Term -> Term -> UnifyM (MetaSubst, [Constraint])
+unifyTerm' topEnv t t' = do
+  let initTodo =
+        Constraint 0 Rigid True (evaluate topEnv [] t) (evaluate topEnv [] t')
+  unify topEnv HM.empty HM.empty [initTodo]
+
+unifyTerm :: TopEnv -> Term -> Term -> IO (Maybe MetaSubst)
+unifyTerm topEnv t t' =
+  fmap (zonkMetaSubst topEnv . fst . snd)
+    <$> bestT (unifyTerm' topEnv t t')
+
+-- | Unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
+unifyRaw' :: TopEnv -> Raw -> Raw -> UnifyM (MetaSubst, [Constraint])
+unifyRaw' topEnv t t' = do
+  let initTodo =
+        Constraint 0 Rigid True (evaluateRaw topEnv HM.empty t) (evaluateRaw topEnv HM.empty t')
+  unify topEnv HM.empty HM.empty [initTodo]
 
 unifyRaw :: TopEnv -> Raw -> Raw -> IO (Maybe MetaSubst)
 unifyRaw topEnv t t' =

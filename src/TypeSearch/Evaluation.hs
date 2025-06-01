@@ -169,14 +169,16 @@ lookupWithQName topEnv env = \case
     Just v -> v
     Nothing -> case HM.lookup n topEnv of
       Just vs -> VTop n SNil (HM.toList vs)
-      Nothing -> error $ "Variable not found: " ++ show n
+      Nothing -> VTop n SNil [] -- act as an unknown constant
   m@(Qual q n) -> case HM.lookup n topEnv >>= HM.lookup q of
     Just v -> VTop n SNil [(q, v)]
     Nothing -> error $ "Variable not found: " ++ show m
 
 lookupPossibleModules :: TopEnv -> [ModuleName] -> Name -> Value
 lookupPossibleModules topEnv ms n = case HM.lookup n topEnv of
-  Nothing -> error $ "Variable not found: " ++ show n
+  Nothing -> case ms of
+    [] -> VTop n SNil [] -- act as an unknown constant
+    _ -> error $ "Variable not found: " ++ show n
   Just vs -> VTop n SNil (map (\m -> (m, vs HM.! m)) ms)
 
 evaluateRaw :: TopEnv -> RawEnv -> Raw -> Value

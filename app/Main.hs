@@ -1,4 +1,4 @@
-module Main (main) where
+module Main where
 
 import Control.Monad
 import Control.Monad.Except
@@ -20,7 +20,6 @@ import TypeSearch.Pretty
 import TypeSearch.Raw
 import TypeSearch.Term
 import TypeSearch.UnificationModulo
-import Witherable
 
 orDie :: ExceptT Error IO a -> IO a
 orDie (ExceptT m) =
@@ -50,8 +49,10 @@ main = do
               outputStrLn "Parse error"
               loop
             Right ty -> do
+              let ty' = rawToTerm topEnv ty
               for_ sigs \(x, sig) -> do
-                msubst <- liftIO $ timeout 500000 $ unifyRaw topEnv sig ty
+                let sig' = instantiate topEnv ty' sig
+                msubst <- liftIO $ timeout 500000 $ unifyTerm topEnv sig' ty'
                 case msubst of
                   Nothing -> outputStrLn $ "timeout for " ++ show x
                   Just Nothing -> pure ()
@@ -83,3 +84,26 @@ prepare mods = go (HM.empty, []) (HM.keys modMap)
         let topEnv' = HM.insertWith (<>) x (HM.singleton m (evaluateRaw topEnv HM.empty t)) topEnv
             sigs' = (Qual m x, a) : sigs
          in (topEnv', sigs')
+
+rawToTerm :: TopEnv -> Raw -> Term
+rawToTerm topEnv = quote 0 . evaluateRaw topEnv mempty
+
+instantiate :: TopEnv -> Term -> Raw -> Term
+instantiate topEnv query sig = bar $ quote n $ baz $ evaluateRaw topEnv mempty sig
+  where
+    foo = \case
+      Pi x a b
+        | x /= "_" ->
+            let (f, i) = foo b
+             in (Pi x a . f, i + 1)
+      _ -> (id, Level 0)
+
+    (bar, n) = foo query
+
+    args = map VVar [0 .. n - 1]
+
+    baz = \case
+      VPi x _ b -- Throwing away the domain type currently
+        | x /= "_" -> baz (b $ VMetaApp (Src x) args)
+      VTop _ _ [(_, t)] -> baz t
+      t -> t
