@@ -9,11 +9,9 @@ module TypeSearch.Raw
     pattern (:*),
     rnatLit,
     unRLoc,
-    metaVarSet,
   )
 where
 
-import Data.HashSet qualified as HS
 import TypeSearch.Common
 
 --------------------------------------------------------------------------------
@@ -69,26 +67,3 @@ unRLoc :: Raw -> Raw
 unRLoc = \case
   RLoc (t :@ _) -> unRLoc t
   t -> t
-
-metaVarSet :: Raw -> HS.HashSet Meta
-metaVarSet = \case
-  RVar _ -> HS.empty
-  RMetaApp m ts -> HS.insert m (foldr (HS.union . metaVarSet) HS.empty ts)
-  RType -> HS.empty
-  RPi _ a b -> HS.union (metaVarSet a) (metaVarSet b)
-  RAbs _ t -> metaVarSet t
-  RApp a b -> HS.union (metaVarSet a) (metaVarSet b)
-  RSigma _ a b -> HS.union (metaVarSet a) (metaVarSet b)
-  RPair a b -> HS.union (metaVarSet a) (metaVarSet b)
-  RFst t -> metaVarSet t
-  RSnd t -> metaVarSet t
-  RUnit -> HS.empty
-  RTT -> HS.empty
-  RNat -> HS.empty
-  RZero -> HS.empty
-  RSuc -> HS.empty
-  RNatElim -> HS.empty
-  REq -> HS.empty
-  RRefl -> HS.empty
-  REqElim -> HS.empty
-  RLoc (t :@ _) -> metaVarSet t

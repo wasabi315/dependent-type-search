@@ -38,6 +38,7 @@ import TypeSearch.Lexer
 id      { (atTId -> Just $$) }
 qid     { (atTQId -> Just $$) }
 num     { (atTNum -> Just $$) }
+meta    { (atTMeta -> Just $$) }
 module  { TModule :@ _ }
 where   { TWhere :@ _ }
 import  { TImport :@ _ }
@@ -49,11 +50,10 @@ sigma   { TSigma :@ _ }
 '='     { TEq :@ _ }
 '('     { TLParen :@ _ }
 ')'     { TRParen :@ _ }
-'{'     { TLBrace :@ _ }
-'}'     { TRBrace :@ _ }
+'['     { TLBracket :@ _ }
+']'     { TRBracket :@ _ }
 '->'    { TArrow :@ _ }
 ':'     { TColon :@ _ }
-';'     { TSemiColon :@ _ }
 '_'     { TUnderscore :@ _ }
 ','     { TComma :@ _ }
 '.'     { TDot :@ _ }
@@ -67,7 +67,7 @@ Module
 
 Imports :: { [ModuleName] }
 Imports
-  : {- empty -}        { [] }
+  : {- empty -}                { [] }
   | Imports import ModuleName  { value $3 : $1 }
 
 Decls :: { [Decl] }
@@ -79,17 +79,17 @@ Decl :: { Decl }
 Decl : let Bind ':' Raw '=' Raw  { DLoc (DLet (value $2) (RLoc $4) (RLoc $6) :@ mergePosition $1 $6) }
 
 RawEntry :: { Raw }
-RawEntry : Raw { RLoc $1 }
+RawEntry : Raw  { RLoc $1 }
 
 Raw :: { Located Raw }
-Raw : Pair { $1 }
+Raw : Pair  { $1 }
 
 Pair :: { Located Raw }
 Pair : Pair1 { foldl1 (flip RPair) (map RLoc $1) :@ mergePosition (last $1) (head $1) }
 
 Pair1 :: { [Located Raw] }
 Pair1
-  : Component           { [$1] }
+  : Component            { [$1] }
   | Pair1 ',' Component  { $3 : $1 }
 
 Component :: { Located Raw }
@@ -130,28 +130,40 @@ Application1
 
 Projection :: { Located Raw }
 Projection
-  : Atom            { $1 }
-  | Projection ".1" { RFst (RLoc $1) :@ mergePosition $1 $2 }
-  | Projection ".2" { RSnd (RLoc $1) :@ mergePosition $1 $2 }
+  : Atom             { $1 }
+  | Projection ".1"  { RFst (RLoc $1) :@ mergePosition $1 $2 }
+  | Projection ".2"  { RSnd (RLoc $1) :@ mergePosition $1 $2 }
+
+MetaApplication :: { Located Raw }
+MetaApplication
+  : Meta                        { RMetaApp (value $1) [] :@ position $1 }
+  | Meta '[' MetaArguments ']'  { RMetaApp (value $1) (reverse (map RLoc $3)) :@ mergePosition $1 $4 }
+
+MetaArguments :: { [Located Raw] }
+MetaArguments
+  : {- empty -}                  { [] }
+  | Component                    { [$1] }
+  | MetaArguments ',' Component  { $3 : $1 }
 
 Atom :: { Located Raw }
 Atom
-  : '(' Pair ')'  { RLoc $2 :@ mergePosition $1 $3 }
-  | Name          { case value $1 of
-                      "Type" -> fmap (const RType) $1
-                      "Unit" -> fmap (const RUnit) $1
-                      "tt" -> fmap (const RTT) $1
-                      "Nat" -> fmap (const RNat) $1
-                      "zero" -> fmap (const RZero) $1
-                      "suc" -> fmap (const RSuc) $1
-                      "natElim" -> fmap (const RNatElim) $1
-                      "Eq" -> fmap (const REq) $1
-                      "refl" -> fmap (const RRefl) $1
-                      "eqElim" -> fmap (const REqElim) $1
-                      _ -> fmap (RVar . Unqual) $1
-                  }
-  | QName         { fmap RVar $1 }
-  | num           { fmap rnatLit $1 }
+  : '(' Pair ')'        { RLoc $2 :@ mergePosition $1 $3 }
+  | Name                { case value $1 of
+                            "Type" -> fmap (const RType) $1
+                            "Unit" -> fmap (const RUnit) $1
+                            "tt" -> fmap (const RTT) $1
+                            "Nat" -> fmap (const RNat) $1
+                            "zero" -> fmap (const RZero) $1
+                            "suc" -> fmap (const RSuc) $1
+                            "natElim" -> fmap (const RNatElim) $1
+                            "Eq" -> fmap (const REq) $1
+                            "refl" -> fmap (const RRefl) $1
+                            "eqElim" -> fmap (const REqElim) $1
+                            _ -> fmap (RVar . Unqual) $1
+                        }
+  | QName               { fmap RVar $1 }
+  | MetaApplication     { $1 }
+  | num                 { fmap rnatLit $1 }
 
 SpaceBinds :: { [Located Name] }
 SpaceBinds
@@ -177,6 +189,9 @@ Name : id  { fmap Name $1 }
 QName :: { Located QName }
 QName : qid  { fmap (uncurry Qual . bimap ModuleName Name) $1 }
 
+Meta :: { Located Meta }
+Meta : meta  { fmap (Src . Name) $1 }
+
 Bind :: { Located Name }
 Bind
   : id   { fmap Name $1 }
@@ -189,6 +204,9 @@ atTId _ = Nothing
 
 atTQId (TQId i :@ p) = Just (i :@ p)
 atTQId _ = Nothing
+
+atTMeta (TMeta i :@ p) = Just (i :@ p)
+atTMeta _ = Nothing
 
 atTNum (TNum i :@ p) = Just (i :@ p)
 atTNum _ = Nothing

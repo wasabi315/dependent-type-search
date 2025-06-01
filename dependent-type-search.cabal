@@ -48,6 +48,7 @@ library
       ConstraintKinds
       DataKinds
       DerivingVia
+      DeriveAnyClass
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -115,6 +116,7 @@ executable dependent-type-search-exe
       ConstraintKinds
       DataKinds
       DerivingVia
+      DeriveAnyClass
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -184,6 +186,7 @@ test-suite dependent-type-search-test
       ConstraintKinds
       DataKinds
       DerivingVia
+      DeriveAnyClass
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts

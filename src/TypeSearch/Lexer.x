@@ -30,6 +30,7 @@ import TypeSearch.Error
 $digit = [0-9]
 $alpha = [a-zA-Z]
 @ident = $alpha ($alpha | $digit | \- | \_ | \')*
+@meta  = \? $alpha ($alpha | $digit | \- | \_ | \')*
 
 tokens :-
 
@@ -50,14 +51,13 @@ tokens :-
 
 <0>                \(                { tok \_ -> TLParen }
 <0>                \)                { tok \_ -> TRParen }
-<0>                \{                { tok \_ -> TLBrace }
-<0>                \}                { tok \_ -> TRBrace }
+<0>                \[                { tok \_ -> TLBracket }
+<0>                \]                { tok \_ -> TRBracket }
 <0>                "->"              { tok \_ -> TArrow }
 <0>                →                 { tok \_ -> TArrow }
 <0>                \\                { tok \_ -> TLam }
 <0>                λ                 { tok \_ -> TLam }
 <0>                \:                { tok \_ -> TColon }
-<0>                \;                { tok \_ -> TSemiColon }
 <0>                \_                { tok \_ -> TUnderscore }
 <0>                \,                { tok \_ -> TComma }
 <0>                \.                { tok \_ -> TDot }
@@ -68,6 +68,7 @@ tokens :-
 <0>                [$digit]+         { tok \s -> TNum (read (T.unpack s)) }
 <0>                @ident            { tok \s -> TId s }
 <0>                @ident \. @ident  { tok \s -> TQId (T.tail <$> T.breakOn "." s)  }
+<0>                @meta             { tok \s -> TMeta s }
 
 <0>                .                 { \inp _ -> throwError $ ParseError (currentPosition inp) [] }
 <0>                \n                ;
@@ -135,6 +136,7 @@ runParser fname inp p = evalStateT p (initState fname inp)
 data Token
   = TId !T.Text
   | TQId (T.Text, T.Text)
+  | TMeta !T.Text
   | TNum !Int
   | TModule
   | TWhere
@@ -147,11 +149,10 @@ data Token
   | TSigma
   | TLParen
   | TRParen
-  | TLBrace
-  | TRBrace
+  | TLBracket
+  | TRBracket
   | TArrow
   | TColon
-  | TSemiColon
   | TUnderscore
   | TComma
   | TDot

@@ -11,7 +11,6 @@ import Control.Monad.Heap
 import Control.Monad.Trans
 import Control.Monad.Writer
 import Data.HashMap.Lazy qualified as HM
-import Data.HashSet qualified as HS
 import Data.List (subsequences)
 import Data.Maybe
 import Data.Monus.Dist
@@ -138,7 +137,7 @@ data ConvMode
   deriving stock (Eq, Show)
 
 --------------------------------------------------------------------------------
--- Functions for creating bindings
+-- Projections
 
 data ImitationKind
   = ITop [ModuleName] Name
@@ -298,6 +297,7 @@ elimination arity = do
   pure mabs
 
 --------------------------------------------------------------------------------
+-- Solving constraints in solved form
 
 data PartialRenaming = PRen
   { dom :: Level,
@@ -739,23 +739,29 @@ unifyRaw' topEnv t t' = do
         Constraint 0 Rigid True (evaluateRaw topEnv HM.empty t) (evaluateRaw topEnv HM.empty t')
   unify topEnv HM.empty HM.empty [initTodo]
 
-deepForceMetaAbs :: TopEnv -> MetaSubst -> MetaAbs -> MetaAbs
-deepForceMetaAbs topEnv subst mabs = mabs {body = body'}
+--------------------------------------------------------------------------------
+-- Zonking (unfold all metavariables in terms)
+
+zonkMetaAbs :: TopEnv -> MetaSubst -> MetaAbs -> MetaAbs
+zonkMetaAbs topEnv subst mabs = mabs {body = body'}
   where
     vbody =
       deepForce topEnv subst $
         vmetaApp topEnv mabs [VVar l | l <- [0 .. Level mabs.arity - 1]]
     body' = quote (Level mabs.arity) vbody
 
-deepForceMetaSubst :: TopEnv -> HS.HashSet Meta -> MetaSubst -> MetaSubst
-deepForceMetaSubst topEnv mvars subst = flip imapMaybe subst \m mabs ->
-  if m `HS.member` mvars
-    then Just $ deepForceMetaAbs topEnv subst mabs
-    else Nothing
+zonkMetaSubst :: TopEnv -> MetaSubst -> MetaSubst
+zonkMetaSubst topEnv subst = flip imapMaybe subst \m mabs ->
+  case m of
+    Src _ -> Just $ zonkMetaAbs topEnv subst mabs
+    Gen _ -> Nothing
+
+--------------------------------------------------------------------------------
+-- Entry points
 
 unifyRaw :: TopEnv -> Raw -> Raw -> IO (Maybe MetaSubst)
 unifyRaw topEnv t t' =
-  fmap (deepForceMetaSubst topEnv (metaVarSet t <> metaVarSet t') . fst . snd)
+  fmap (zonkMetaSubst topEnv . fst . snd)
     <$> bestT (unifyRaw' topEnv t t')
 
 unifiable :: TopEnv -> Raw -> Raw -> IO Bool

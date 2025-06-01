@@ -72,7 +72,9 @@ type TopEnv = HM.HashMap Name (HM.HashMap ModuleName Value)
 -- | Values support efficient β-reduction and substitution.
 data Value
   = VRigid Level Spine
-  | VFlex Meta Int [Value] Spine -- metavariables are parametarised in SOAS
+  | -- metavariables are parametarised in SOAS
+    -- TODO: make strict in the arguments
+    VFlex Meta Int [Value] Spine
   | VTop Name Spine [(ModuleName, Value)]
   | VType
   | VPi Name Value (Value -> Value)

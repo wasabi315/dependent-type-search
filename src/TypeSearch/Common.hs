@@ -31,6 +31,7 @@ import Data.String
 import Data.Text qualified as T
 import Data.Unique
 import Error.Diagnose
+import GHC.Generics (Generic)
 
 --------------------------------------------------------------------------------
 -- Utils
@@ -63,15 +64,21 @@ enclose open close x = open . x . close
 newtype Index = Index Int
   deriving newtype (Num, Eq, Ord, Show, Hashable, Enum)
 
--- | Meta variables
-newtype Meta = Meta Unique
-  deriving newtype (Eq, Ord, Hashable)
+-- | Metavariables
+data Meta
+  = Src Name
+  | Gen Unique
+  deriving stock (Eq, Ord, Generic)
+  deriving anyclass (Hashable)
 
 instance Show Meta where
-  showsPrec _ (Meta u) = showString "$M" . shows (hashUnique u)
+  showsPrec _ = \case
+    Src n -> shows n
+    Gen u -> showString "?M$" . shows (hashUnique u)
 
+-- | Generate a fresh metavariable.
 freshMeta :: IO Meta
-freshMeta = Meta <$> newUnique
+freshMeta = Gen <$> newUnique
 
 -- | Names
 newtype Name = Name T.Text
