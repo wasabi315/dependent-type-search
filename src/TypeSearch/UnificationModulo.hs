@@ -12,7 +12,7 @@ import Control.Monad.Heap
 import Control.Monad.Trans
 import Control.Monad.Writer
 import Data.HashMap.Lazy qualified as HM
-import Data.List (subsequences)
+import Data.List (permutations, subsequences)
 import Data.Maybe
 import Data.Monus.Dist
 import Data.Text qualified as T
@@ -39,7 +39,7 @@ normalise1 topEnv subst t = case force topEnv subst t of
     normalise1 topEnv subst $ VSigma y va \ ~v -> VProd (vb v) vc
   VProd (normalise1 topEnv subst -> VProd va vb) vc ->
     normalise1 topEnv subst $ VProd va (VProd vb vc)
-  -- (x : (y : A) * B[y]) -> C[x] ~> (x : A) -> (y : B[x]) -> C[(x, y)]
+  -- (x : (y : A) * B[y]) -> C[x] ~> (x : A) (y : B[x]) -> C[(x, y)]
   VPi x (force topEnv subst -> VSigma y va vb) vc ->
     normalise1 topEnv subst $ VPi x va \ ~v -> VPi y (vb v) \ ~u -> vc (VPair v u)
   -- (x : A * B) -> C[x] ~> (x : A) (y : B) -> C[(x, y)]
@@ -134,6 +134,28 @@ data ConvMode
   | Flex
   | Full
   deriving stock (Eq, Show)
+
+--------------------------------------------------------------------------------
+-- Swapping arguments and components
+-- TODO: Consider pi and sigma
+
+swapArgs :: Value -> UnifyM Value
+swapArgs = go []
+  where
+    go as = \case
+      VArr a b -> go (a : as) b
+      t -> do
+        as' <- choose $ permutations as
+        pure $ foldr VArr t as'
+
+swapComponents :: Value -> UnifyM Value
+swapComponents = go []
+  where
+    go as = \case
+      VProd a b -> go (a : as) b
+      t -> do
+        as' <- choose $ permutations as
+        pure $ foldr VProd t as'
 
 --------------------------------------------------------------------------------
 -- Projections
@@ -564,8 +586,8 @@ decomposeMetaArgs cm lvl lhs rhs todos = case (lhs, rhs) of
 
 decomposeIso :: Constraint -> [Constraint] -> UnifyM [Constraint]
 decomposeIso (Constraint lvl cm iso lhs rhs) todos = do
-  tell 1
   guard iso
+  tell 1
   case (lhs, rhs) of
     -- swap the sides of the equality
     (VEq a t u, VEq a' t' u') -> do
@@ -573,6 +595,25 @@ decomposeIso (Constraint lvl cm iso lhs rhs) todos = do
           todo'' = Constraint lvl cm False t u'
           todo''' = Constraint lvl cm False u t'
       pure (todo' : todo'' : todo''' : todos)
+    _ -> empty
+
+swap :: Constraint -> [Constraint] -> UnifyM [Constraint]
+swap (Constraint lvl cm iso lhs rhs) todos = do
+  guard iso
+  tell 1
+  case (lhs, rhs) of
+    (a@VArr {}, _) -> do
+      a' <- swapArgs a
+      pure (Constraint lvl cm iso a' rhs : todos)
+    (_, a@VArr {}) -> do
+      a' <- swapArgs a
+      pure (Constraint lvl cm iso lhs a' : todos)
+    (a@VProd {}, _) -> do
+      a' <- swapComponents a
+      pure (Constraint lvl cm iso lhs a' : todos)
+    (_, a@VProd {}) -> do
+      a' <- swapComponents a
+      pure (Constraint lvl cm iso a' rhs : todos)
     _ -> empty
 
 -- | Guess a metavariable from how they are eliminated.
@@ -735,7 +776,7 @@ unify :: TopEnv -> ChosenDefs -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst,
 unify topEnv chosenDefs subst = \case
   [] -> pure (subst, [])
   (forceConstraint topEnv subst -> todo) : todos -> do
-    lift $ printConstraint todo
+    -- lift $ printConstraint todo
     (subst', todos', chosenDefs') <-
       asum
         [ do
@@ -757,7 +798,8 @@ unify topEnv chosenDefs subst = \case
           do
             (todos', chosenDefs') <- unfold todo todos chosenDefs
             pure (subst, todos', chosenDefs'),
-          (subst,,chosenDefs) <$> decomposeIso todo todos
+          (subst,,chosenDefs) <$> decomposeIso todo todos,
+          (subst,,chosenDefs) <$> swap todo todos
         ]
     unify topEnv chosenDefs' subst' todos'
 
