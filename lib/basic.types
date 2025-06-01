@@ -39,12 +39,24 @@ let subst : (A : Type) (B : (x : A) → Type) (x y : A) → Eq A x y → B x →
 let transport : (A B : Type) → Eq Type A B → A → B =
   λ A B eq x → subst Type (id Type) A B eq x
 
+let LeftIdentity : (A : Type) (op : A → A → A) (e : A) → Type =
+  λ A op e → (x : A) → Eq A (op e x) x
+
+let RightIdentity : (A : Type) (op : A → A → A) (e : A) → Type =
+  λ A op e → (x : A) → Eq A (op x e) x
+
+let Commutativity : (A : Type) (op : A → A → A) → Type =
+  λ A op → (x y : A) → Eq A (op x y) (op y x)
+
+let Associativity : (A : Type) (op : A → A → A) → Type =
+  λ A op → (x y z : A) → Eq A (op x (op y z)) (op (op x y) z)
+
 let add : Nat → Nat → Nat =
   λ m n → natElim (Basic.const Type Nat Nat) (λ _ → suc) n m
 
-let add-id-l : (n : Nat) → Eq Nat (add 0 n) n = refl Nat
+let add-id-l : LeftIdentity Nat add 0 = refl Nat
 
-let add-id-r : (n : Nat) → Eq Nat (add n 0) n =
+let add-id-r : RightIdentity Nat add 0 =
   natElim
     (λ n → Eq Nat (add n 0) n)
     (λ n → cong Nat Nat suc (add n 0) n)
@@ -55,7 +67,7 @@ let add-suc : (m n : Nat) → Eq Nat (add m (suc n)) (suc (add m n)) =
     (λ m ih n → cong Nat Nat suc (add m (suc n)) (suc (add m n)) (ih n))
     (λ n → refl Nat (suc n))
 
-let add-comm : (m n : Nat) → Eq Nat (add m n) (add n m) =
+let add-comm : Commutativity Nat add =
   natElim (λ m → (n : Nat) → Eq Nat (add m n) (add n m))
     (λ m ih n →
       trans Nat (suc (add m n)) (suc (add n m)) (add n (suc m))
@@ -63,7 +75,7 @@ let add-comm : (m n : Nat) → Eq Nat (add m n) (add n m) =
         (sym Nat (add n (suc m)) (suc (add n m)) (add-suc n m)))
     (λ n → sym Nat (add n 0) n (add-id-r n))
 
-let add-assoc : (l m n : Nat) → Eq Nat (add (add l m) n) (add l (add m n)) =
+let add-assoc : Associativity Nat add =
   natElim (λ l → (m n : Nat) → Eq Nat (add (add l m) n) (add l (add m n)))
     (λ l ih m n →
       cong Nat Nat suc (add (add l m) n) (add l (add m n)) (ih m n))
@@ -80,13 +92,13 @@ let mul-zero-r : (n : Nat) → Eq Nat (mul n 0) 0 =
     (λ n ih → ih)
     (refl Nat 0)
 
-let mul-id-l : (n : Nat) → Eq Nat (mul 1 n) n =
+let mul-id-l : LeftIdentity Nat mul 0 =
   natElim
     (λ n → Eq Nat (mul 1 n) n)
     (λ n → cong Nat Nat suc (add n 0) n)
     (refl Nat 0)
 
-let mul-id-r : (n : Nat) → Eq Nat (mul n 1) n =
+let mul-id-r : RightIdentity Nat mul 0 =
   natElim
     (λ n → Eq Nat (mul n 1) n)
     (λ n → cong Nat Nat suc (add n 0) n)
