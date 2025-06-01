@@ -46,6 +46,7 @@ tokens :-
 <0>                import            { tok \_ -> TImport }
 <0>                let               { tok \_ -> TLet }
 <0>                Σ                 { tok \_ -> TSigma }
+<0>                S                 { tok \_ -> TSigma }
 <0>                ".1"              { tok \_ -> TDot1 }
 <0>                ".2"              { tok \_ -> TDot2 }
 
