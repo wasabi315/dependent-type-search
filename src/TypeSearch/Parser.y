@@ -6,7 +6,8 @@
 {-# LANGUAGE NoStrictData #-}
 
 module TypeSearch.Parser
-  ( parse,
+  ( parseModule,
+    parseRaw,
   )
 where
 
@@ -22,7 +23,8 @@ import TypeSearch.Lexer
 
 }
 
-%name moduleParser
+%name moduleParser Module
+%name rawParser RawEntry
 %tokentype { Located Token }
 
 %monad { Parser } { (>>=) } { pure }
@@ -75,6 +77,9 @@ Decls
 
 Decl :: { Decl }
 Decl : let Bind ':' Raw '=' Raw  { DLoc (DLet (value $2) (RLoc $4) (RLoc $6) :@ mergePosition $1 $6) }
+
+RawEntry :: { Raw }
+RawEntry : Raw { RLoc $1 }
 
 Raw :: { Located Raw }
 Raw : Pair { $1 }
@@ -194,7 +199,10 @@ parseErrorAt exps pos = throwError $ ParseError pos exps
 parseError :: [String] -> Parser a
 parseError x = getCurrentPosition >>= parseErrorAt x
 
-parse :: FilePath -> Text -> Either Error Module
-parse fname src = runParser fname src moduleParser
+parseModule :: FilePath -> Text -> Either Error Module
+parseModule fname src = runParser fname src moduleParser
+
+parseRaw :: FilePath -> Text -> Either Error Raw
+parseRaw fname src = runParser fname src rawParser
 
 }
