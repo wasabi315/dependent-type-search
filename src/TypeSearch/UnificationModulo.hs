@@ -3,9 +3,7 @@ module TypeSearch.UnificationModulo
     normalise,
     normaliseRaw,
     freeVarSet,
-    depGraphSigma,
-    deleteArr,
-    deletePi,
+    possibleComponentHoists',
 
     -- * Unification
     unifyTerm,
@@ -599,15 +597,30 @@ decomposeIso :: TopEnv -> MetaSubst -> Constraint -> [Constraint] -> UnifyM [Con
 decomposeIso topEnv subst (Constraint lvl cm iso lhs rhs) todos = do
   guard iso
   case (lhs, rhs) of
+    -- Hoist one of the domains respecting dependencies
     (isPi -> True, VPi _ a' b') -> do
-      (a, cod) <- possiblePiHoists topEnv subst lvl lhs
+      (a, cod) <- possibleDomainHoists topEnv subst lvl lhs
       let todo1 = Constraint lvl cm False a a'
           todo2 = case cod of
             Left b -> Constraint (lvl + 1) cm iso b (b' $ VVar lvl)
             Right (_, b) -> Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl)
       pure (todo1 : todo2 : todos)
     (isPi -> True, VArr a' b') -> do
-      (a, cod) <- possiblePiHoists topEnv subst lvl lhs
+      (a, cod) <- possibleDomainHoists topEnv subst lvl lhs
+      let (todo1, todo2) = case cod of
+            Left b -> (Constraint lvl cm iso a a', Constraint lvl cm iso b b')
+            Right (_, b) -> (Constraint lvl cm False a a', Constraint (lvl + 1) cm iso (b $ VVar lvl) b')
+      pure (todo1 : todo2 : todos)
+    -- Hoist one of the components respecting dependencies
+    (isSigma -> True, VSigma _ a' b') -> do
+      (a, cod) <- possibleComponentHoists topEnv subst lvl lhs
+      let todo1 = Constraint lvl cm False a a'
+          todo2 = case cod of
+            Left b -> Constraint (lvl + 1) cm iso b (b' $ VVar lvl)
+            Right (_, b) -> Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl)
+      pure (todo1 : todo2 : todos)
+    (isSigma -> True, VProd a' b') -> do
+      (a, cod) <- possibleComponentHoists topEnv subst lvl lhs
       let (todo1, todo2) = case cod of
             Left b -> (Constraint lvl cm iso a a', Constraint lvl cm iso b b')
             Right (_, b) -> (Constraint lvl cm False a a', Constraint (lvl + 1) cm iso (b $ VVar lvl) b')
@@ -660,24 +673,28 @@ isPi = \case
   VArr {} -> True
   _ -> False
 
-possiblePiHoists :: (MonadPlus m) => TopEnv -> MetaSubst -> Level -> Value -> m (Value, Either Value (Name, Value -> Value))
-possiblePiHoists topEnv subst lvl t = do
+possibleDomainHoists :: (MonadPlus m) => TopEnv -> MetaSubst -> Level -> Value -> m (Value, Either Value (Name, Value -> Value))
+possibleDomainHoists topEnv subst lvl t = do
   guard $ isPi t
   choose $ tail $ go HS.empty 0 lvl t
   where
     go :: HS.HashSet Level -> Int -> Level -> Value -> [(Value, Either Value (Name, Value -> Value))]
     go lvls i lvl' u = case force topEnv subst u of
-      VPi x a b ->
-        let deps = freeVarSet topEnv subst lvl a
-         in if HS.null (HS.intersection deps lvls)
-              then (a, Right (x, \ ~v -> deletePi topEnv subst i v t)) : go (HS.insert lvl' lvls) (i + 1) (lvl' + 1) (b $ VVar lvl')
-              else go (HS.insert lvl' lvls) (i + 1) (lvl' + 1) (b $ VVar lvl')
-      VArr a b ->
-        let deps = freeVarSet topEnv subst lvl a
-         in if HS.null (HS.intersection deps lvls)
-              then (a, Left $ deleteArr topEnv subst i t) : go lvls (i + 1) lvl' b
-              else go lvls (i + 1) lvl' b
+      VPi x a b
+        | hoistable a ->
+            (a, Right (x, \ ~v -> deletePi topEnv subst i v t))
+              : go (HS.insert lvl' lvls) (i + 1) (lvl' + 1) (b $ VVar lvl')
+        | otherwise ->
+            go (HS.insert lvl' lvls) (i + 1) (lvl' + 1) (b $ VVar lvl')
+      VArr a b
+        | hoistable a ->
+            (a, Left $ deleteArr topEnv subst i t)
+              : go lvls (i + 1) lvl' b
+        | otherwise ->
+            go lvls (i + 1) lvl' b
       _ -> []
+      where
+        hoistable a = HS.null (HS.intersection (freeVarSet topEnv subst lvl a) lvls)
 
 deleteArr :: TopEnv -> MetaSubst -> Int -> Value -> Value
 deleteArr topEnv subst i t = case (i, force topEnv subst t) of
@@ -695,11 +712,62 @@ deletePi topEnv subst i t u = case (i, force topEnv subst u) of
   (_, VArr a b) -> VArr a (deletePi topEnv subst (i - 1) t b)
   _ -> error "deletePi: not a pi"
 
-depGraphSigma :: TopEnv -> MetaSubst -> Level -> Value -> [HS.HashSet Level]
-depGraphSigma topEnv subst lvl t = case force topEnv subst t of
-  VSigma _ a b -> freeVarSet topEnv subst lvl a : depGraphSigma topEnv subst (lvl + 1) (b $ VVar lvl)
-  VProd a b -> freeVarSet topEnv subst lvl a : depGraphSigma topEnv subst lvl b
-  t' -> [freeVarSet topEnv subst lvl t']
+isSigma :: Value -> Bool
+isSigma = \case
+  VSigma {} -> True
+  VProd {} -> True
+  _ -> False
+
+possibleComponentHoists' :: (MonadPlus m) => TopEnv -> MetaSubst -> Level -> Value -> m Value
+possibleComponentHoists' topEnv subst lvl t = do
+  (a, cod) <- possibleComponentHoists topEnv subst lvl t
+  case cod of
+    Left b -> pure $ VProd a b
+    Right (x, b) -> pure $ VSigma x a b
+
+possibleComponentHoists :: (MonadPlus m) => TopEnv -> MetaSubst -> Level -> Value -> m (Value, Either Value (Name, Value -> Value))
+possibleComponentHoists topEnv subst lvl t = do
+  guard $ isSigma t
+  choose $ tail $ go HS.empty 0 lvl t
+  where
+    go :: HS.HashSet Level -> Int -> Level -> Value -> [(Value, Either Value (Name, Value -> Value))]
+    go lvls i lvl' u = case force topEnv subst u of
+      VSigma x a b
+        | hoistable a ->
+            (a, Right (x, \ ~v -> deleteSigma topEnv subst i v t))
+              : go (HS.insert lvl' lvls) (i + 1) (lvl' + 1) (b $ VVar lvl')
+        | otherwise ->
+            go (HS.insert lvl' lvls) (i + 1) (lvl' + 1) (b $ VVar lvl')
+      VProd a b
+        | hoistable a ->
+            (a, Left $ deleteProd topEnv subst i t)
+              : go lvls (i + 1) lvl' b
+        | otherwise ->
+            go lvls (i + 1) lvl' b
+      a
+        | hoistable a -> [(a, Left $ deleteProd topEnv subst i t)]
+        | otherwise -> []
+      where
+        hoistable a = HS.null (HS.intersection (freeVarSet topEnv subst lvl a) lvls)
+
+deleteProd :: TopEnv -> MetaSubst -> Int -> Value -> Value
+deleteProd topEnv subst i t = case (i, force topEnv subst t) of
+  (0, VProd _ b) -> b
+  (0, _) -> error "deleteProd: not a prod"
+  (1, VProd a b) -> case force topEnv subst b of
+    b'@VProd {} -> VProd a (deleteProd topEnv subst (i - 1) b')
+    _ -> a
+  (_, VSigma x a b) -> VSigma x a (deleteProd topEnv subst (i - 1) . b)
+  (_, VProd a b) -> VProd a (deleteProd topEnv subst (i - 1) b)
+  _ -> error $ "deleteProd: not a prod: " <> show i
+
+deleteSigma :: TopEnv -> MetaSubst -> Int -> Value -> Value -> Value
+deleteSigma topEnv subst i t u = case (i, force topEnv subst u) of
+  (0, VSigma _ _ b) -> b t
+  (0, _) -> error "deleteSigma: not a sigma"
+  (_, VSigma x a b) -> VSigma x a (deleteSigma topEnv subst (i - 1) t . b)
+  (_, VProd a b) -> VProd a (deleteSigma topEnv subst (i - 1) t b)
+  _ -> error "deleteSigma: not a sigma"
 
 -- | Guess a metavariable from how they are eliminated.
 guessMeta :: Constraint -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst, [Constraint])

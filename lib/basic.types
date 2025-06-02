@@ -14,6 +14,8 @@ let swap : (A B : Type) → A * B → B * A = λ A B p → p.2 , p.1
 
 let assoc : (A : Type) (B : (x : A) → Type) (C : Σ x : A. B x → Type) → Σ p : (Σ x : A. B x). C p → Σ x : A. Σ y : B x. C (x , y) = λ p → p.1.1 , p.1.2 , p.2
 
+let assocs : (A B C : Type) -> (A * B) * C -> A * (B * C) = λ A B C p → p.1.1 , p.1.2 , p.2
+
 let sym : (A : Type) (x y : A) → Eq A x y → Eq A y x =
   λ A x → eqElim A x (λ y _ → Eq A y x) (refl A x)
 
