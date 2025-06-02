@@ -2,6 +2,14 @@ module TypeSearch.UnificationModulo
   ( -- * Normalisation
     normalise,
     normaliseRaw,
+    freeVarSet,
+    depGraphPi,
+    depGraphSigma,
+    hoistableDomains,
+    hoist,
+    indexDom,
+    deleteArr,
+    deletePi,
 
     -- * Unification
     unifyTerm,
@@ -15,11 +23,14 @@ import Control.Monad
 import Control.Monad.Heap
 import Control.Monad.Trans
 import Control.Monad.Writer
+import Data.Foldable
 import Data.HashMap.Lazy qualified as HM
+import Data.HashSet qualified as HS
 import Data.List (permutations, subsequences)
 import Data.Maybe
 import Data.Monus.Dist
 import Data.Text qualified as T
+import Debug.Trace
 import TypeSearch.Common
 import TypeSearch.Evaluation
 import TypeSearch.Pretty
@@ -395,10 +406,10 @@ rename topEnv metaSubst m = go
         Just l' -> goSpine pren (Var $ levelToIndex pren.dom l') sp
       VTop n sp ts -> goSpine pren (Top (map fst ts) n) sp
       VType -> pure Type
-      VPi x a b -> Pi x <$> go pren a <*> go (liftPRen pren) (b $ VVar pren.cod)
+      VPi x a b -> Pi x <$> go pren a <*> goScope pren b
       VArr a b -> Arr <$> go pren a <*> go pren b
-      VAbs x f -> Abs x <$> go (liftPRen pren) (f $ VVar pren.cod)
-      VSigma x a b -> Sigma x <$> go pren a <*> go (liftPRen pren) (b $ VVar pren.cod)
+      VAbs x f -> Abs x <$> goScope pren f
+      VSigma x a b -> Sigma x <$> go pren a <*> goScope pren b
       VProd a b -> Prod <$> go pren a <*> go pren b
       VPair u v -> Pair <$> go pren u <*> go pren v
       VUnit -> pure Unit
@@ -416,6 +427,8 @@ rename topEnv metaSubst m = go
         x' <- go pren x
         pure $ Refl `App` a' `App` x'
       VStuck {} -> empty
+
+    goScope pren f = go (liftPRen pren) (f $ VVar pren.cod)
 
     goSpine pren = foldM (goElim pren)
 
@@ -610,11 +623,62 @@ decomposeMetaArgs cm lvl lhs rhs todos = case (lhs, rhs) of
     decomposeMetaArgs cm lvl vs vs' (Constraint lvl cm False v v' : todos)
   _ -> empty
 
-decomposeIso :: Constraint -> [Constraint] -> UnifyM [Constraint]
-decomposeIso (Constraint lvl cm iso lhs rhs) todos = do
+decomposeIso :: TopEnv -> MetaSubst -> Constraint -> [Constraint] -> UnifyM [Constraint]
+decomposeIso topEnv subst (Constraint lvl cm iso lhs rhs) todos = do
   guard iso
-  tell 1
   case (lhs, rhs) of
+    (VPi {}, VPi _ a' b') -> do
+      let dgraph = depGraphPi topEnv subst lvl lhs
+          hds = hoistableDomains dgraph
+      (i, a, mn) <- choose hds
+      case hoist topEnv subst i mn lhs of
+        Left b -> do
+          let todo1 = Constraint lvl cm False a a'
+              todo2 = Constraint (lvl + 1) cm iso b (b' $ VVar lvl)
+          pure (todo1 : todo2 : todos)
+        Right (_, b) -> do
+          let todo1 = Constraint lvl cm False a a'
+              todo2 = Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl)
+          pure (todo1 : todo2 : todos)
+    (VPi {}, VArr a' b') -> do
+      let dgraph = depGraphPi topEnv subst lvl lhs
+          hds = hoistableDomains dgraph
+      (i, a, mn) <- choose hds
+      case hoist topEnv subst i mn lhs of
+        Left b -> do
+          let todo1 = Constraint lvl cm iso a a'
+              todo2 = Constraint lvl cm iso b b'
+          pure (todo1 : todo2 : todos)
+        Right (_, b) -> do
+          let todo1 = Constraint lvl cm False a a'
+              todo2 = Constraint (lvl + 1) cm iso (b $ VVar lvl) b'
+          pure (todo1 : todo2 : todos)
+    (VArr {}, VPi _ a' b') -> do
+      let dgraph = depGraphPi topEnv subst lvl lhs
+          hds = hoistableDomains dgraph
+      (i, a, mn) <- choose hds
+      case hoist topEnv subst i mn lhs of
+        Left b -> do
+          let todo1 = Constraint lvl cm False a a'
+              todo2 = Constraint (lvl + 1) cm iso b (b' $ VVar lvl)
+          pure (todo1 : todo2 : todos)
+        Right (_, b) -> do
+          let todo1 = Constraint lvl cm False a a'
+              todo2 = Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl)
+          pure (todo1 : todo2 : todos)
+    (VArr {}, VArr a' b') -> do
+      let dgraph = depGraphPi topEnv subst lvl lhs
+          hds = hoistableDomains dgraph
+      (i, a, mn) <- choose hds
+      case hoist topEnv subst i mn lhs of
+        Left b -> do
+          let todo1 = Constraint lvl cm iso a a'
+              todo2 = Constraint lvl cm iso b b'
+          pure (todo1 : todo2 : todos)
+        Right (_, b) -> do
+          let todo1 = Constraint lvl cm False a a'
+              todo2 = Constraint (lvl + 1) cm iso (b $ VVar lvl) b'
+          pure (todo1 : todo2 : todos)
     -- swap the sides of the equality
     (VEq a t u, VEq a' t' u') -> do
       let todo' = Constraint lvl cm False a a'
@@ -623,24 +687,93 @@ decomposeIso (Constraint lvl cm iso lhs rhs) todos = do
       pure (todo' : todo'' : todo''' : todos)
     _ -> empty
 
-swap :: Constraint -> [Constraint] -> UnifyM [Constraint]
-swap (Constraint lvl cm iso lhs rhs) todos = do
-  guard iso
-  tell 1
-  case (lhs, rhs) of
-    (a@VArr {}, _) -> do
-      a' <- swapArgs a
-      pure (Constraint lvl cm iso a' rhs : todos)
-    (_, a@VArr {}) -> do
-      a' <- swapArgs a
-      pure (Constraint lvl cm iso lhs a' : todos)
-    (a@VProd {}, _) -> do
-      a' <- swapComponents a
-      pure (Constraint lvl cm iso lhs a' : todos)
-    (_, a@VProd {}) -> do
-      a' <- swapComponents a
-      pure (Constraint lvl cm iso a' rhs : todos)
-    _ -> empty
+freeVarSet :: TopEnv -> MetaSubst -> Level -> Value -> HS.HashSet Level
+freeVarSet topEnv subst = go
+  where
+    go lvl t = case force topEnv subst t of
+      VRigid l sp -> HS.insert l (goSpine lvl sp)
+      VFlex _ _ ts sp -> foldMap (go lvl) ts <> goSpine lvl sp
+      VTop _ sp _ -> goSpine lvl sp
+      VType -> HS.empty
+      VPi _ a b -> go lvl a <> goScope lvl b
+      VArr a b -> go lvl a <> go lvl b
+      VAbs _ b -> goScope lvl b
+      VSigma _ a b -> go lvl a <> goScope lvl b
+      VProd a b -> go lvl a <> go lvl b
+      VPair a b -> go lvl a <> go lvl b
+      VUnit -> HS.empty
+      VTT -> HS.empty
+      VNat -> HS.empty
+      VZero -> HS.empty
+      VSuc u -> go lvl u
+      VEq a u v -> go lvl a <> go lvl u <> go lvl v
+      VRefl a u -> go lvl a <> go lvl u
+      VStuck {} -> HS.empty
+
+    goScope lvl f = HS.delete lvl $ go (lvl + 1) (f $ VVar lvl)
+
+    goSpine lvl = foldMap (goElim lvl)
+
+    goElim lvl = \case
+      EApp t -> go lvl t
+      EFst -> HS.empty
+      ESnd -> HS.empty
+      ENatElim p s z -> go lvl p <> go lvl s <> go lvl z
+      EEqElim a x p r y -> go lvl a <> go lvl x <> go lvl p <> go lvl r <> go lvl y
+
+type DepGraph = [(Value, HS.HashSet Level, Maybe (Name, Level))]
+
+depGraphPi :: TopEnv -> MetaSubst -> Level -> Value -> DepGraph
+depGraphPi topEnv subst lvl t = case force topEnv subst t of
+  VPi x a b -> (a, freeVarSet topEnv subst lvl a, Just (x, lvl)) : depGraphPi topEnv subst (lvl + 1) (b $ VVar lvl)
+  VArr a b -> (a, freeVarSet topEnv subst lvl a, Nothing) : depGraphPi topEnv subst lvl b
+  _ -> []
+
+hoistableDomains :: DepGraph -> [(Int, Value, Maybe Name)]
+hoistableDomains dgraph = tail $ go HS.empty 0 dgraph
+  where
+    go lvls i = \case
+      [] -> []
+      (a, deps, mlvl) : rest
+        | HS.null (HS.intersection deps lvls) -> case mlvl of
+            Just (n, lvl') -> (i, a, Just n) : go (HS.insert lvl' lvls) (i + 1) rest
+            Nothing -> (i, a, Nothing) : go lvls (i + 1) rest
+        | otherwise -> go lvls (i + 1) rest
+
+hoist :: TopEnv -> MetaSubst -> Int -> Maybe Name -> Value -> Either Value (Name, Value -> Value)
+hoist topEnv subst i mn t = case mn of
+  Just n -> Right (n, \v -> deletePi topEnv subst i v t)
+  Nothing -> Left (deleteArr topEnv subst i t)
+
+indexDom :: TopEnv -> MetaSubst -> Int -> Level -> Value -> Value
+indexDom topEnv subst i lvl t = case (i, force topEnv subst t) of
+  (0, VPi _ a _) -> a
+  (0, VArr a _) -> a
+  (_, VPi _ _ b) -> indexDom topEnv subst (i - 1) (lvl + 1) (b $ VVar lvl)
+  (_, VArr _ b) -> indexDom topEnv subst (i - 1) lvl b
+  _ -> error "index: not a pi or arr"
+
+deleteArr :: TopEnv -> MetaSubst -> Int -> Value -> Value
+deleteArr topEnv subst i t = case (i, force topEnv subst t) of
+  (0, VArr _ b) -> b
+  (0, _) -> error "deleteArr: not an arrow"
+  (_, VPi x a b) -> VPi x a (deleteArr topEnv subst (i - 1) . b)
+  (_, VArr a b) -> VArr a (deleteArr topEnv subst (i - 1) b)
+  _ -> error "deleteArr: not an arrow"
+
+deletePi :: TopEnv -> MetaSubst -> Int -> Value -> Value -> Value
+deletePi topEnv subst i t u = case (i, force topEnv subst u) of
+  (0, VPi _ _ b) -> b t
+  (0, _) -> error "deletePi: not a pi"
+  (_, VPi x a b) -> VPi x a (deletePi topEnv subst (i - 1) t . b)
+  (_, VArr a b) -> VArr a (deletePi topEnv subst (i - 1) t b)
+  _ -> error "deletePi: not a pi"
+
+depGraphSigma :: TopEnv -> MetaSubst -> Level -> Value -> [HS.HashSet Level]
+depGraphSigma topEnv subst lvl t = case force topEnv subst t of
+  VSigma _ a b -> freeVarSet topEnv subst lvl a : depGraphSigma topEnv subst (lvl + 1) (b $ VVar lvl)
+  VProd a b -> freeVarSet topEnv subst lvl a : depGraphSigma topEnv subst lvl b
+  t' -> [freeVarSet topEnv subst lvl t']
 
 -- | Guess a metavariable from how they are eliminated.
 guessMeta :: Constraint -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
@@ -782,7 +915,6 @@ printConstraint (Constraint lvl _ iso lhs rhs) = do
   let lhs' = quote lvl lhs
       rhs' = quote lvl rhs
       vars = map (\i -> Name $ "x" <> T.pack (show i)) [0 .. lvl - 1]
-  putStrLn "--------------------------------------------------"
   putStrLn $
     concat
       [ if lvl > 0 then "∀ " ++ unwords (map show vars) ++ ". " else "",
@@ -802,7 +934,9 @@ unify :: TopEnv -> ChosenDefs -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst,
 unify topEnv chosenDefs subst = \case
   [] -> pure (subst, [])
   (forceConstraint topEnv subst -> todo) : todos -> do
+    -- lift $ putStrLn "--------------------------------------------------"
     -- lift $ printConstraint todo
+    -- lift $ traverse_ printConstraint todos
     (subst', todos', chosenDefs') <-
       asum
         [ do
@@ -824,8 +958,7 @@ unify topEnv chosenDefs subst = \case
           do
             (todos', chosenDefs') <- unfold todo todos chosenDefs
             pure (subst, todos', chosenDefs'),
-          (subst,,chosenDefs) <$> decomposeIso todo todos,
-          (subst,,chosenDefs) <$> swap todo todos
+          (subst,,chosenDefs) <$> decomposeIso topEnv subst todo todos
         ]
     unify topEnv chosenDefs' subst' todos'
 
