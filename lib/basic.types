@@ -10,11 +10,11 @@ let comp : (A B C : Type) → (B → C) → (A → B) → A → C = λ A B C f g
 
 let app : (A : Type) (B : (x : A) → Type) → ((x : A) → B x) → (x : A) → B x = λ A B f x → f x
 
-let swap : (A B : Type) → A * B → B * A = λ A B p → p.2 , p.1
+let swap : (A B : Type) → A × B → B × A = λ A B p → p.2 , p.1
 
 let assoc : (A : Type) (B : (x : A) → Type) (C : Σ x : A. B x → Type) → Σ p : (Σ x : A. B x). C p → Σ x : A. Σ y : B x. C (x , y) = λ p → p.1.1 , p.1.2 , p.2
 
-let assocs : (A B C : Type) -> (A * B) * C -> A * (B * C) = λ A B C p → p.1.1 , p.1.2 , p.2
+let assocs : (A B C : Type) → (A × B) × C → A × (B × C) = λ A B C p → p.1.1 , p.1.2 , p.2
 
 let sym : (A : Type) (x y : A) → Eq A x y → Eq A y x =
   λ A x → eqElim A x (λ y _ → Eq A y x) (refl A x)
@@ -111,3 +111,7 @@ let nil : (A : Type) → List A = λ A → λ X n c → n
 let cons : (A : Type) → A → List A → List A = λ A x xs X n c → c x (xs X n c)
 
 let foldr : (A B : Type) → (A → B → B) → B → List A → B = λ A B f z xs → xs B z f
+
+let Lens : (A B : Type) → Type = λ A B → (A → B) × (A → B → A)
+
+let getSet : (A B : Type) → Lens A B → A → (B × (B → A)) = λ A B l x → l.1 x , l.2 x
