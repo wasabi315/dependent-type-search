@@ -3,11 +3,7 @@ module TypeSearch.UnificationModulo
     normalise,
     normaliseRaw,
     freeVarSet,
-    depGraphPi,
     depGraphSigma,
-    hoistableDomains,
-    hoist,
-    indexDom,
     deleteArr,
     deletePi,
 
@@ -23,14 +19,12 @@ import Control.Monad
 import Control.Monad.Heap
 import Control.Monad.Trans
 import Control.Monad.Writer
-import Data.Foldable
 import Data.HashMap.Lazy qualified as HM
 import Data.HashSet qualified as HS
-import Data.List (permutations, subsequences)
+import Data.List (subsequences)
 import Data.Maybe
 import Data.Monus.Dist
 import Data.Text qualified as T
-import Debug.Trace
 import TypeSearch.Common
 import TypeSearch.Evaluation
 import TypeSearch.Pretty
@@ -171,28 +165,6 @@ data ConvMode
   | Flex
   | Full
   deriving stock (Eq, Show)
-
---------------------------------------------------------------------------------
--- Swapping arguments and components
--- TODO: Consider pi and sigma
-
-swapArgs :: Value -> UnifyM Value
-swapArgs = go []
-  where
-    go as = \case
-      VArr a b -> go (a : as) b
-      t -> do
-        as' <- choose $ permutations as
-        pure $ foldr VArr t as'
-
-swapComponents :: Value -> UnifyM Value
-swapComponents = go []
-  where
-    go as = \case
-      VProd a b -> go (a : as) b
-      t -> do
-        as' <- choose $ permutations as
-        pure $ foldr VProd t as'
 
 --------------------------------------------------------------------------------
 -- Projections
@@ -627,58 +599,19 @@ decomposeIso :: TopEnv -> MetaSubst -> Constraint -> [Constraint] -> UnifyM [Con
 decomposeIso topEnv subst (Constraint lvl cm iso lhs rhs) todos = do
   guard iso
   case (lhs, rhs) of
-    (VPi {}, VPi _ a' b') -> do
-      let dgraph = depGraphPi topEnv subst lvl lhs
-          hds = hoistableDomains dgraph
-      (i, a, mn) <- choose hds
-      case hoist topEnv subst i mn lhs of
-        Left b -> do
-          let todo1 = Constraint lvl cm False a a'
-              todo2 = Constraint (lvl + 1) cm iso b (b' $ VVar lvl)
-          pure (todo1 : todo2 : todos)
-        Right (_, b) -> do
-          let todo1 = Constraint lvl cm False a a'
-              todo2 = Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl)
-          pure (todo1 : todo2 : todos)
-    (VPi {}, VArr a' b') -> do
-      let dgraph = depGraphPi topEnv subst lvl lhs
-          hds = hoistableDomains dgraph
-      (i, a, mn) <- choose hds
-      case hoist topEnv subst i mn lhs of
-        Left b -> do
-          let todo1 = Constraint lvl cm iso a a'
-              todo2 = Constraint lvl cm iso b b'
-          pure (todo1 : todo2 : todos)
-        Right (_, b) -> do
-          let todo1 = Constraint lvl cm False a a'
-              todo2 = Constraint (lvl + 1) cm iso (b $ VVar lvl) b'
-          pure (todo1 : todo2 : todos)
-    (VArr {}, VPi _ a' b') -> do
-      let dgraph = depGraphPi topEnv subst lvl lhs
-          hds = hoistableDomains dgraph
-      (i, a, mn) <- choose hds
-      case hoist topEnv subst i mn lhs of
-        Left b -> do
-          let todo1 = Constraint lvl cm False a a'
-              todo2 = Constraint (lvl + 1) cm iso b (b' $ VVar lvl)
-          pure (todo1 : todo2 : todos)
-        Right (_, b) -> do
-          let todo1 = Constraint lvl cm False a a'
-              todo2 = Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl)
-          pure (todo1 : todo2 : todos)
-    (VArr {}, VArr a' b') -> do
-      let dgraph = depGraphPi topEnv subst lvl lhs
-          hds = hoistableDomains dgraph
-      (i, a, mn) <- choose hds
-      case hoist topEnv subst i mn lhs of
-        Left b -> do
-          let todo1 = Constraint lvl cm iso a a'
-              todo2 = Constraint lvl cm iso b b'
-          pure (todo1 : todo2 : todos)
-        Right (_, b) -> do
-          let todo1 = Constraint lvl cm False a a'
-              todo2 = Constraint (lvl + 1) cm iso (b $ VVar lvl) b'
-          pure (todo1 : todo2 : todos)
+    (isPi -> True, VPi _ a' b') -> do
+      (a, cod) <- possiblePiHoists topEnv subst lvl lhs
+      let todo1 = Constraint lvl cm False a a'
+          todo2 = case cod of
+            Left b -> Constraint (lvl + 1) cm iso b (b' $ VVar lvl)
+            Right (_, b) -> Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl)
+      pure (todo1 : todo2 : todos)
+    (isPi -> True, VArr a' b') -> do
+      (a, cod) <- possiblePiHoists topEnv subst lvl lhs
+      let (todo1, todo2) = case cod of
+            Left b -> (Constraint lvl cm iso a a', Constraint lvl cm iso b b')
+            Right (_, b) -> (Constraint lvl cm False a a', Constraint (lvl + 1) cm iso (b $ VVar lvl) b')
+      pure (todo1 : todo2 : todos)
     -- swap the sides of the equality
     (VEq a t u, VEq a' t' u') -> do
       let todo' = Constraint lvl cm False a a'
@@ -721,37 +654,30 @@ freeVarSet topEnv subst = go
       ENatElim p s z -> go lvl p <> go lvl s <> go lvl z
       EEqElim a x p r y -> go lvl a <> go lvl x <> go lvl p <> go lvl r <> go lvl y
 
-type DepGraph = [(Value, HS.HashSet Level, Maybe (Name, Level))]
+isPi :: Value -> Bool
+isPi = \case
+  VPi {} -> True
+  VArr {} -> True
+  _ -> False
 
-depGraphPi :: TopEnv -> MetaSubst -> Level -> Value -> DepGraph
-depGraphPi topEnv subst lvl t = case force topEnv subst t of
-  VPi x a b -> (a, freeVarSet topEnv subst lvl a, Just (x, lvl)) : depGraphPi topEnv subst (lvl + 1) (b $ VVar lvl)
-  VArr a b -> (a, freeVarSet topEnv subst lvl a, Nothing) : depGraphPi topEnv subst lvl b
-  _ -> []
-
-hoistableDomains :: DepGraph -> [(Int, Value, Maybe Name)]
-hoistableDomains dgraph = tail $ go HS.empty 0 dgraph
+possiblePiHoists :: (MonadPlus m) => TopEnv -> MetaSubst -> Level -> Value -> m (Value, Either Value (Name, Value -> Value))
+possiblePiHoists topEnv subst lvl t = do
+  guard $ isPi t
+  choose $ tail $ go HS.empty 0 lvl t
   where
-    go lvls i = \case
-      [] -> []
-      (a, deps, mlvl) : rest
-        | HS.null (HS.intersection deps lvls) -> case mlvl of
-            Just (n, lvl') -> (i, a, Just n) : go (HS.insert lvl' lvls) (i + 1) rest
-            Nothing -> (i, a, Nothing) : go lvls (i + 1) rest
-        | otherwise -> go lvls (i + 1) rest
-
-hoist :: TopEnv -> MetaSubst -> Int -> Maybe Name -> Value -> Either Value (Name, Value -> Value)
-hoist topEnv subst i mn t = case mn of
-  Just n -> Right (n, \v -> deletePi topEnv subst i v t)
-  Nothing -> Left (deleteArr topEnv subst i t)
-
-indexDom :: TopEnv -> MetaSubst -> Int -> Level -> Value -> Value
-indexDom topEnv subst i lvl t = case (i, force topEnv subst t) of
-  (0, VPi _ a _) -> a
-  (0, VArr a _) -> a
-  (_, VPi _ _ b) -> indexDom topEnv subst (i - 1) (lvl + 1) (b $ VVar lvl)
-  (_, VArr _ b) -> indexDom topEnv subst (i - 1) lvl b
-  _ -> error "index: not a pi or arr"
+    go :: HS.HashSet Level -> Int -> Level -> Value -> [(Value, Either Value (Name, Value -> Value))]
+    go lvls i lvl' u = case force topEnv subst u of
+      VPi x a b ->
+        let deps = freeVarSet topEnv subst lvl a
+         in if HS.null (HS.intersection deps lvls)
+              then (a, Right (x, \ ~v -> deletePi topEnv subst i v t)) : go (HS.insert lvl' lvls) (i + 1) (lvl' + 1) (b $ VVar lvl')
+              else go (HS.insert lvl' lvls) (i + 1) (lvl' + 1) (b $ VVar lvl')
+      VArr a b ->
+        let deps = freeVarSet topEnv subst lvl a
+         in if HS.null (HS.intersection deps lvls)
+              then (a, Left $ deleteArr topEnv subst i t) : go lvls (i + 1) lvl' b
+              else go lvls (i + 1) lvl' b
+      _ -> []
 
 deleteArr :: TopEnv -> MetaSubst -> Int -> Value -> Value
 deleteArr topEnv subst i t = case (i, force topEnv subst t) of
