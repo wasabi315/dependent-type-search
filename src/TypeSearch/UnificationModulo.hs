@@ -1,5 +1,9 @@
 module TypeSearch.UnificationModulo
-  ( -- * Unification
+  ( -- * Normalisation
+    normalise,
+    normaliseRaw,
+
+    -- * Unification
     unifyTerm,
     unifyRaw,
     unifiable,
@@ -25,72 +29,94 @@ import Witherable
 
 --------------------------------------------------------------------------------
 
--- | Σ associativity and currying
+-- | Σ associativity and currying.
 normalise1 :: TopEnv -> MetaSubst -> Value -> Value
-normalise1 topEnv subst t = case force topEnv subst t of
-  -- (x : (y : A) * B[y]) * C[x] ~> (x : A) * (y : B[x]) * C[(x, y)]
-  VSigma x (force topEnv subst -> VSigma y va vb) vc ->
-    normalise1 topEnv subst $ VSigma x va \ ~v -> VSigma y (vb v) \ ~u -> vc (VPair v u)
-  -- (x : A * B) * C[x] ~> (x : A) * (y : B) * C[(x, y)]
-  VSigma x (force topEnv subst -> VProd va vb) vc ->
-    normalise1 topEnv subst $ VSigma x va \ ~v -> VSigma "x" vb \ ~u -> vc (VPair v u)
-  -- ((x : A) * B[x]) * C ~> (x : A) * B[x] * C
-  VProd (normalise1 topEnv subst -> VSigma y va vb) vc ->
-    normalise1 topEnv subst $ VSigma y va \ ~v -> VProd (vb v) vc
-  VProd (normalise1 topEnv subst -> VProd va vb) vc ->
-    normalise1 topEnv subst $ VProd va (VProd vb vc)
-  -- (x : (y : A) * B[y]) -> C[x] ~> (x : A) (y : B[x]) -> C[(x, y)]
-  VPi x (force topEnv subst -> VSigma y va vb) vc ->
-    normalise1 topEnv subst $ VPi x va \ ~v -> VPi y (vb v) \ ~u -> vc (VPair v u)
-  -- (x : A * B) -> C[x] ~> (x : A) (y : B) -> C[(x, y)]
-  VPi x (force topEnv subst -> VProd va vb) vc ->
-    normalise1 topEnv subst $ VPi x va \ ~v -> VPi "x" vb \ ~u -> vc (VPair v u)
-  -- (x : A) * B[x] -> C ~> (x : A) -> B[x] -> C
-  VArr (normalise1 topEnv subst -> VSigma y va vb) vc ->
-    normalise1 topEnv subst $ VPi y va \ ~v -> VArr (vb v) vc
-  -- A * B -> C ~> A -> B -> C
-  VArr (normalise1 topEnv subst -> VProd va vb) vc ->
-    normalise1 topEnv subst $ VArr va (VArr vb vc)
-  VSigma x va vb ->
-    -- DO NOT RECURSE ON va
-    VSigma x va \ ~v -> normalise1 topEnv subst $ vb v
-  VProd va vb ->
-    VProd (normalise1 topEnv subst va) (normalise1 topEnv subst vb)
-  VPi x va vb ->
-    -- DO NOT RECURSE ON va
-    VPi x va \ ~v -> normalise1 topEnv subst $ vb v
-  VArr va vb ->
-    VArr (normalise1 topEnv subst va) (normalise1 topEnv subst vb)
-  -- DO NOT RECURSE
-  v -> v
+normalise1 topEnv subst = go
+  where
+    go t = case force topEnv subst t of
+      VSigma x va vb -> goSigma x va (go . vb)
+      VProd va vb -> goProd va (go vb)
+      VPi x va vb -> goPi x va (go . vb)
+      VArr va vb -> goArr va (go vb)
+      v -> v
 
--- | Unit elimination
+    goSigma x va vb = case force topEnv subst va of
+      -- (x : (y : A) * B[y]) * C[x] ~> (x : A) * (y : B[x]) * C[(x, y)]
+      VSigma y va' vb' -> goSigma x va' \ ~v -> goSigma y (vb' v) \ ~u -> vb (VPair v u)
+      -- (x : A * B) * C[x] ~> (x : A) * (y : B) * C[(x, y)]
+      VProd va' vb' -> goSigma x va' \ ~v -> goSigma "x" vb' \ ~u -> vb (VPair v u)
+      -- DO NOT RECURSE on va'
+      va' -> VSigma x va' vb
+
+    goProd va vb = case force topEnv subst va of
+      -- ((x : A) * B[x]) * C ~> (x : A) * B[x] * C
+      VSigma y va' vb' -> goSigma y va' \ ~v -> goProd (vb' v) vb
+      -- (A * B) * C ~> A * (B * C)
+      VProd va' vb' -> goProd va' (goProd vb' vb)
+      va' -> VProd (go va') vb
+
+    goPi x va vb = case force topEnv subst va of
+      -- (x : (y : A) * B[y]) -> C[x] ~> (x : A) (y : B[x]) -> C[(x, y)]
+      VSigma y va' vb' -> goPi x va' \ ~v -> goPi y (vb' v) \ ~u -> vb (VPair v u)
+      -- (x : A * B) -> C[x] ~> (x : A) (y : B) -> C[(x, y)]
+      VProd va' vb' -> goPi x va' \ ~v -> goPi "x" vb' \ ~u -> vb (VPair v u)
+      -- DO NOT RECURSE on va'
+      va' -> VPi x va' vb
+
+    goArr va vb = case force topEnv subst va of
+      -- ((y : A) * B[y]) -> C ~> (y : A) -> B[y] -> C
+      VSigma y va' vb' -> goPi y va' \ ~v -> goArr (vb' v) vb
+      -- (A * B) -> C ~> A -> B -> C
+      VProd va' vb' -> goArr va' (goArr vb' vb)
+      va' -> VArr (go va') vb
+
+-- | Unit elimination. Potentially unblocks normalise1.
 normalise2 :: TopEnv -> MetaSubst -> Level -> Value -> Value
-normalise2 topEnv subst lvl t = case force topEnv subst t of
-  -- (x : Unit) * B[x] ~> B[tt]
-  VSigma _ (force topEnv subst -> VUnit) vb -> normalise2 topEnv subst lvl $ vb VTT
-  VProd (normalise2 topEnv subst lvl -> VUnit) vb -> normalise2 topEnv subst lvl vb
-  -- (x : Unit) -> B[x] ~> B[tt]
-  VPi _ (force topEnv subst -> VUnit) vb -> normalise2 topEnv subst lvl $ vb VTT
-  VArr (normalise2 topEnv subst lvl -> VUnit) vb -> normalise2 topEnv subst lvl vb
-  -- (x : A) * Unit ~> A
-  VSigma x va vb -> case normalise2 topEnv subst (lvl + 1) (vb $ VVar lvl) of
-    VUnit -> normalise2 topEnv subst lvl va
-    -- DO NOT RECURSE ON va
-    _ -> VSigma x va \ ~v -> normalise2 topEnv subst (lvl + 1) (vb v)
-  VProd va (normalise2 topEnv subst lvl -> VUnit) -> normalise2 topEnv subst lvl va
-  VProd va vb -> VProd (normalise2 topEnv subst lvl va) (normalise2 topEnv subst lvl vb)
-  -- DO NOT RECURSE ON va
-  VPi x va vb -> VPi x va \ ~v -> normalise2 topEnv subst (lvl + 1) (vb v)
-  VArr va vb -> VArr (normalise2 topEnv subst lvl va) (normalise2 topEnv subst lvl vb)
-  -- DO NOT RECURSE
-  v -> v
+normalise2 topEnv subst = go
+  where
+    go lvl t = case force topEnv subst t of
+      VSigma x va vb -> goSigma lvl x va (go (lvl + 1) . vb)
+      VProd va vb -> goProd (go lvl va) (go lvl vb)
+      VPi x va vb -> goPi x va (go (lvl + 1) . vb)
+      VArr va vb -> goArr (go lvl va) (go lvl vb)
+      v -> v
 
--- | Normalise a type into an isomorphic type.
+    goSigma lvl x va vb = case (force topEnv subst va, vb (VVar lvl)) of
+      -- (x : Unit) * B[x] ~> B[tt]
+      (VUnit, _) -> vb VTT
+      -- (x : A) * Unit ~> A. Unblocks normalise1 on A.
+      (va', VUnit) -> normalise topEnv subst lvl va'
+      -- DO NOT RECURSE on va'
+      (va', _) -> VSigma x va' vb
+
+    goProd va vb = case (va, vb) of
+      -- Unit * B ~> B
+      (VUnit, vb') -> vb'
+      -- A * Unit ~> A
+      (va', VUnit) -> va'
+      (va', vb') -> VProd va' vb'
+
+    goPi x va vb = case force topEnv subst va of
+      -- (x : Unit) -> B[x] ~> B[tt]
+      VUnit -> vb VTT
+      -- DO NOT RECURSE on va'
+      va' -> VPi x va' vb
+
+    goArr va vb = case va of
+      -- Unit -> B ~> B
+      VUnit -> vb
+      va' -> VArr va' vb
+
+-- | Normalise a type into an isomorphic one.
 normalise :: TopEnv -> MetaSubst -> Level -> Value -> Value
 normalise topEnv subst lvl t =
   normalise2 topEnv subst lvl $
     normalise1 topEnv subst t
+
+-- | Normalise a type into an isomorphic one.
+normaliseRaw :: Raw -> Term
+normaliseRaw t =
+  quote 0 $ normalise mempty mempty 0 $ evaluateRaw mempty mempty t
 
 --------------------------------------------------------------------------------
 -- Unification procedure modulo βη-equivalence and type isomorphisms related to Π and Σ:
