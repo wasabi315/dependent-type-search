@@ -125,6 +125,7 @@ normaliseRaw t =
 
 data ImitationKind
   = ITop [ModuleName] Name
+  | IGenVar Name
   | IType
   | IPi Name
   | IArr
@@ -154,6 +155,8 @@ imitation' :: ImitationKind -> [Term] -> [Term] -> UnifyM Term
 imitation' kind params params' = lift case kind of
   -- M[x0, ..., xn] ↦ n
   ITop ms n -> pure $ Top ms n
+  -- M[x0, ..., xn] ↦ $x
+  IGenVar x -> pure $ GenVar x
   -- M[x0, ..., xn] ↦ Type
   IType -> pure Type
   -- M[x0, ..., xn] ↦ (x : M1[x0, ..., xn]) -> M2[x0, ..., xn, x]
@@ -226,6 +229,7 @@ huetProjection' t arity params params' = go $ spine t
     kind = case t of
       VRigid {} -> empty
       VFlex {} -> empty
+      VGenVar x _ -> pure $ IGenVar x
       VTop n _ ts -> pure $ ITop (fst <$> ts) n
       VType -> pure IType
       VPi x _ _ -> pure $ IPi x
@@ -335,6 +339,7 @@ rename topEnv metaSubst m = go
       VRigid l sp -> case HM.lookup l pren.ren of
         Nothing -> empty
         Just l' -> goSpine pren (Var $ levelToIndex pren.dom l') sp
+      VGenVar x sp -> goSpine pren (GenVar x) sp
       VTop n sp ts -> goSpine pren (Top (map fst ts) n) sp
       VType -> pure Type
       VPi x a b -> Pi x <$> go pren a <*> goScope pren b
@@ -389,6 +394,7 @@ freeVarSet topEnv subst = go
   where
     go lvl t = case force topEnv subst t of
       VRigid l sp -> HS.insert l (goSpine lvl sp)
+      VGenVar _ sp -> goSpine lvl sp
       VFlex _ _ ts sp -> foldMap (go lvl) ts <> goSpine lvl sp
       VTop _ sp _ -> goSpine lvl sp
       VType -> HS.empty
@@ -593,6 +599,7 @@ decompose (Constraint lvl cm iso lhs rhs) todos = case (lhs, rhs) of
   (VRigid x sp, VRigid x' sp')
     | x == x' -> decomposeSpine cm lvl sp sp' todos
     | otherwise -> empty
+  (VRigid _ _, VGenVar _ _) -> empty
   (VRigid x (SApp sp t), VFlex m' ar' ts' (SApp sp' t')) -> do
     let todo1 = Constraint lvl cm False (VRigid x sp) (VFlex m' ar' ts' sp')
         todo2 = Constraint lvl cm False t t'
@@ -603,6 +610,20 @@ decompose (Constraint lvl cm iso lhs rhs) todos = case (lhs, rhs) of
   (VRigid x (SSnd sp), VFlex m' ar' ts' (SSnd sp')) -> do
     let todo1 = Constraint lvl cm False (VRigid x sp) (VFlex m' ar' ts' sp')
     pure (todo1 : todos)
+  (VGenVar _ _, VRigid _ _) -> empty
+  (VGenVar g sp, VGenVar g' sp')
+    | g == g' -> decomposeSpine cm lvl sp sp' todos
+    | otherwise -> empty
+  (VGenVar g (SApp sp t), VFlex m' ar' ts' (SApp sp' t')) -> do
+    let todo1 = Constraint lvl cm False (VGenVar g sp) (VFlex m' ar' ts' sp')
+        todo2 = Constraint lvl cm False t t'
+    pure (todo1 : todo2 : todos)
+  (VGenVar g (SFst sp), VFlex m' ar' ts' (SFst sp')) -> do
+    let todo1 = Constraint lvl cm False (VGenVar g sp) (VFlex m' ar' ts' sp')
+    pure (todo1 : todos)
+  (VGenVar g (SSnd sp), VFlex m' ar' ts' (SSnd sp')) -> do
+    let todo1 = Constraint lvl cm False (VGenVar g sp) (VFlex m' ar' ts' sp')
+    pure (todo1 : todos)
   (VFlex m ar ts (SApp sp t), VRigid x' (SApp sp' t')) -> do
     let todo1 = Constraint lvl cm False (VFlex m ar ts sp) (VRigid x' sp')
         todo2 = Constraint lvl cm False t t'
@@ -612,6 +633,16 @@ decompose (Constraint lvl cm iso lhs rhs) todos = case (lhs, rhs) of
     pure (todo1 : todos)
   (VFlex m ar ts (SSnd sp), VRigid x' (SSnd sp')) -> do
     let todo1 = Constraint lvl cm False (VFlex m ar ts sp) (VRigid x' sp')
+    pure (todo1 : todos)
+  (VFlex m ar ts (SApp sp t), VGenVar g' (SApp sp' t')) -> do
+    let todo1 = Constraint lvl cm False (VFlex m ar ts sp) (VGenVar g' sp')
+        todo2 = Constraint lvl cm False t t'
+    pure (todo1 : todo2 : todos)
+  (VFlex m ar ts (SFst sp), VGenVar g' (SFst sp')) -> do
+    let todo1 = Constraint lvl cm False (VFlex m ar ts sp) (VGenVar g' sp')
+    pure (todo1 : todos)
+  (VFlex m ar ts (SSnd sp), VGenVar g' (SSnd sp')) -> do
+    let todo1 = Constraint lvl cm False (VFlex m ar ts sp) (VGenVar g' sp')
     pure (todo1 : todos)
   (VFlex m ar ts (SApp sp t), VFlex m' ar' ts' (SApp sp' t')) -> do
     let todo1 = Constraint lvl cm False (VFlex m ar ts sp) (VFlex m' ar' ts' sp')
@@ -934,11 +965,11 @@ unify :: TopEnv -> ChosenDefs -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst,
 unify topEnv chosenDefs subst = \case
   [] -> pure (subst, [])
   (forceConstraint topEnv subst -> todo) : todos -> do
-    -- lift do
-    --   putStrLn "--------------------------------------------------"
-    --   putStrLn $ prettyMetaSubst subst ""
-    --   putStrLn $ prettyConstraint todo ""
-    --   mapM_ (\todo' -> putStrLn $ prettyConstraint todo' "") todos
+    lift do
+      putStrLn "--------------------------------------------------"
+      putStrLn $ prettyMetaSubst subst ""
+      putStrLn $ prettyConstraint todo ""
+      mapM_ (\todo' -> putStrLn $ prettyConstraint todo' "") todos
     (subst', todos', chosenDefs') <-
       asum
         [ do

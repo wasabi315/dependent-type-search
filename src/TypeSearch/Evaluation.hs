@@ -69,6 +69,7 @@ type TopEnv = HM.HashMap Name (HM.HashMap ModuleName Value)
 -- | Values support efficient β-reduction and substitution.
 data Value
   = VRigid Level Spine
+  | VGenVar Name Spine
   | -- metavariables are parametarised in SOAS
     -- TODO: make strict in the arguments
     VFlex Meta Int [Value] Spine
@@ -146,6 +147,7 @@ pattern SEqElim' a x p r y sp = EEqElim a x p r y Seq.:<| sp
 spine :: Value -> Spine
 spine = \case
   VRigid _ sp -> sp
+  VGenVar _ sp -> sp
   VFlex _ _ _ sp -> sp
   VTop _ sp _ -> sp
   VStuck _ sp -> sp
@@ -188,6 +190,7 @@ lookupPossibleModules topEnv ms n = case HM.lookup n topEnv of
 evaluateRaw :: TopEnv -> RawEnv -> Raw -> Value
 evaluateRaw topEnv env = \case
   RVar n -> lookupWithQName topEnv env n
+  RGenVar n -> VGenVar n SNil
   RMetaApp m ts -> VMetaApp m $ map (evaluateRaw topEnv env) ts
   RType -> VType
   RPi x a b -> VPi x (evaluateRaw topEnv env a) \ ~v -> evaluateRaw topEnv (HM.insert x v env) b
@@ -214,6 +217,7 @@ evaluateRaw topEnv env = \case
 evaluate :: TopEnv -> Env -> Term -> Value
 evaluate topEnv env = \case
   Var (Index i) -> env !! i
+  GenVar n -> VGenVar n SNil
   MetaApp m ts -> VMetaApp m $ map (evaluate topEnv env) ts
   Top ms n -> lookupPossibleModules topEnv ms n
   Type -> VType
@@ -309,6 +313,7 @@ levelToIndex (Level l) (Level x) = Index (l - x - 1)
 quote :: Level -> Value -> Term
 quote lvl = \case
   VRigid x sp -> quoteSpine lvl (Var $ levelToIndex lvl x) sp
+  VGenVar n sp -> quoteSpine lvl (GenVar n) sp
   VFlex m _ vs sp -> quoteSpine lvl (MetaApp m $ map (quote lvl) vs) sp
   VTop n sp vs -> quoteSpine lvl (Top (fst <$> vs) n) sp
   VType -> Type
@@ -356,6 +361,7 @@ deepForce topEnv subst = go
   where
     go v = case force topEnv subst v of
       VFlex m ar vs sp -> VFlex m ar vs (goSpine sp)
+      VGenVar n sp -> VGenVar n (goSpine sp)
       VRigid l sp -> VRigid l (goSpine sp)
       VTop n sp vs -> VTop n (goSpine sp) (fmap go <$> vs)
       VType -> VType

@@ -29,6 +29,7 @@ data Decl
 -- | Raw terms
 data Raw
   = RVar QName
+  | RGenVar Name
   | RMetaApp Meta [Raw]
   | RType
   | RPi Name Raw Raw

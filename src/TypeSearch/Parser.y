@@ -38,6 +38,7 @@ import TypeSearch.Lexer
 id      { (atTId -> Just $$) }
 qid     { (atTQId -> Just $$) }
 num     { (atTNum -> Just $$) }
+genvar  { (atTGenVar -> Just $$) }
 meta    { (atTMeta -> Just $$) }
 module  { TModule :@ _ }
 where   { TWhere :@ _ }
@@ -158,6 +159,7 @@ Atom
                             _ -> fmap (RVar . Unqual) $1
                         }
   | QName               { fmap RVar $1 }
+  | GenVar              { fmap RGenVar $1 }
   | MetaApplication     { $1 }
   | num                 { fmap rnatLit $1 }
 
@@ -185,6 +187,9 @@ Name : id  { fmap Name $1 }
 QName :: { Located QName }
 QName : qid  { fmap (uncurry Qual . bimap ModuleName Name) $1 }
 
+GenVar :: { Located Name }
+GenVar : genvar  { fmap Name $1 }
+
 Meta :: { Located Meta }
 Meta : meta  { fmap (Src . Name) $1 }
 
@@ -200,6 +205,9 @@ atTId _ = Nothing
 
 atTQId (TQId i :@ p) = Just (i :@ p)
 atTQId _ = Nothing
+
+atTGenVar (TGenVar i :@ p) = Just (i :@ p)
+atTGenVar _ = Nothing
 
 atTMeta (TMeta i :@ p) = Just (i :@ p)
 atTMeta _ = Nothing

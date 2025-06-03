@@ -30,6 +30,7 @@ import TypeSearch.Error
 $digit = [0-9]
 $alpha = [a-zA-Z]
 @ident = $alpha ($alpha | $digit | \- | \_ | \')*
+@genvar = \$ $alpha ($alpha | $digit | \- | \_ | \')*
 @meta  = \? $alpha ($alpha | $digit | \- | \_ | \')*
 
 tokens :-
@@ -69,6 +70,7 @@ tokens :-
 <0>                [$digit]+         { tok \s -> TNum (read (T.unpack s)) }
 <0>                @ident            { tok \s -> TId s }
 <0>                @ident \. @ident  { tok \s -> TQId (T.tail <$> T.breakOn "." s)  }
+<0>                @genvar           { tok \s -> TGenVar s }
 <0>                @meta             { tok \s -> TMeta s }
 
 <0>                .                 { \inp _ -> throwError $ ParseError (currentPosition inp) [] }
@@ -137,6 +139,7 @@ runParser fname inp p = evalStateT p (initState fname inp)
 data Token
   = TId !T.Text
   | TQId (T.Text, T.Text)
+  | TGenVar !T.Text
   | TMeta !T.Text
   | TNum !Int
   | TModule

@@ -14,6 +14,7 @@ import TypeSearch.Common
 -- | Terms
 data Term
   = Var Index -- x
+  | GenVar Name -- x
   | MetaApp Meta [Term] -- M[t1, ..., tn]
   | Top [ModuleName] Name -- f
   | Type -- Type

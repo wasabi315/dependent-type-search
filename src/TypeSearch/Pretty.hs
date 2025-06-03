@@ -54,6 +54,7 @@ prettyRaw = go
   where
     go p = \case
       RVar n -> shows n
+      RGenVar n -> shows n
       RMetaApp m [] -> shows m
       RMetaApp m ts ->
         shows m . showChar '[' . punctuate (showChar ',') (map (go absP) ts) . showChar ']'
@@ -112,6 +113,7 @@ prettyTerm = go
   where
     go ns p = \case
       Var (Index i) -> shows (ns !! i)
+      GenVar n -> shows n
       MetaApp m [] -> shows m
       MetaApp m ts ->
         shows m . showChar '[' . punctuate (showChar ',') (map (go ns absP) ts) . showChar ']'
