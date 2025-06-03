@@ -53,7 +53,7 @@ main = do
               for_ sigs \(x, sig) -> do
                 let vsigs = instantiateRaw @[] topEnv sig
                 for_ vsigs \vsig -> do
-                  msubst <- liftIO $ timeout 1000 $ unifyValue topEnv vsig vty
+                  msubst <- liftIO $ timeout 1000 $ unifyValue BetaEtaIso topEnv vsig vty
                   case msubst of
                     Just (Just subst) -> do
                       let subst' =
