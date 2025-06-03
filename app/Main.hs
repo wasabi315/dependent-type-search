@@ -3,6 +3,7 @@ module Main (main) where
 import Control.Monad
 import Control.Monad.Except
 import Data.Foldable
+import Data.Function
 import Data.HashMap.Lazy qualified as HM
 import Data.Text qualified as T
 import Data.Text.IO qualified as T
@@ -55,9 +56,19 @@ main = do
                   msubst <- liftIO $ timeout 1000 $ unifyValue topEnv vsig vty
                   case msubst of
                     Just (Just subst) -> do
+                      let subst' =
+                            subst
+                              & HM.filterWithKey (\k _ -> case k of Src _ -> True; Gen _ -> False)
+                              & HM.mapKeys
+                                ( \case
+                                    Gen _ -> error "impossible"
+                                    Src (Name n)
+                                      | T.last n == '?' -> Src (Name $ T.init n)
+                                      | otherwise -> Src (Name n)
+                                )
                       outputStrLn $ show x ++ " : " ++ prettyRaw 0 sig ""
-                      when (HM.size subst > 0) do
-                        outputStrLn $ "  by instantiating " ++ prettyMetaSubst subst ""
+                      when (HM.size subst' > 0) do
+                        outputStrLn $ "  by instantiating " ++ prettyMetaSubst subst' ""
                     _ -> pure ()
               loop
 
@@ -83,3 +94,26 @@ prepare mods = go (HM.empty, []) (HM.keys modMap)
         let topEnv' = HM.insertWith (<>) x (HM.singleton m (evaluateRaw topEnv HM.empty t)) topEnv
             sigs' = (Qual m x, a) : sigs
          in (topEnv', sigs')
+
+instantiate :: (MonadPlus m) => TopEnv -> Value -> m Value
+instantiate topEnv = \case
+  VPi (Name x) _ b -> do
+    let m = Src (Name $ x <> "?") -- append ? back to the name so it will be fresh
+    pure $ instantiate' $ b (VMetaApp m [])
+  VArr a b -> pure $ VArr a (instantiate' b)
+  VTop _ _ vs -> do
+    (_, v) <- choose vs
+    instantiate topEnv v
+  t -> pure t
+
+instantiate' :: Value -> Value
+instantiate' = \case
+  VPi (Name x) _ b ->
+    -- throwing away the domain type currently
+    let m = Src (Name $ x <> "?") -- append ? back to the name so it will be fresh
+     in instantiate' $ b (VMetaApp m [])
+  VArr a b -> VArr a (instantiate' b)
+  t -> t
+
+instantiateRaw :: (MonadPlus m) => TopEnv -> Raw -> m Value
+instantiateRaw topEnv = instantiate topEnv . evaluateRaw topEnv mempty

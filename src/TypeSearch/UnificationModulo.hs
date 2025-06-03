@@ -1026,10 +1026,7 @@ zonkMetaAbs topEnv subst mabs = mabs {body = body'}
     body' = quote (Level mabs.arity) vbody
 
 zonkMetaSubst :: TopEnv -> MetaSubst -> MetaSubst
-zonkMetaSubst topEnv subst = flip imapMaybe subst \m mabs ->
-  case m of
-    Src _ -> Just $ zonkMetaAbs topEnv subst mabs
-    Gen _ -> Nothing
+zonkMetaSubst topEnv subst = fmap (zonkMetaAbs topEnv subst) subst
 
 --------------------------------------------------------------------------------
 -- Entry points

@@ -39,15 +39,9 @@ module TypeSearch.Evaluation
     -- * Forcing
     force,
     deepForce,
-
-    -- * Instantiation
-    instantiate,
-    instantiate',
-    instantiateRaw,
   )
 where
 
-import Control.Monad
 import Data.Foldable
 import Data.HashMap.Lazy qualified as HM
 import Data.Hashable
@@ -394,30 +388,3 @@ deepForce topEnv subst = go
       ESnd -> ESnd
       ENatElim p s z -> ENatElim (go p) (go s) (go z)
       EEqElim a x p r y -> EEqElim (go a) (go x) (go p) (go r) (go y)
-
---------------------------------------------------------------------------------
--- Instantiation
-
-instantiate :: (MonadPlus m) => TopEnv -> Value -> m Value
-instantiate topEnv = \case
-  VPi (Name x) _ b -> do
-    let m = Src (Name $ x <> "?") -- append ? back to the name so it will be fresh
-    pure $ instantiate' $ b (VMetaApp m [])
-  VArr a b -> pure $ VArr a (instantiate' b)
-  VTop _ _ vs -> do
-    (_, v) <- choose vs
-    instantiate topEnv v
-  t -> pure t
-
-instantiate' :: Value -> Value
-instantiate' = \case
-  VPi (Name x) _ b ->
-    -- throwing away the domain type currently
-    let m = Src (Name $ x <> "?") -- append ? back to the name so it will be fresh
-     in instantiate' $ b (VMetaApp m [])
-  VArr a b -> VArr a (instantiate' b)
-  t -> t
-
--- | Instantiate top-level pi types
-instantiateRaw :: (MonadPlus m) => TopEnv -> Raw -> m Value
-instantiateRaw topEnv = instantiate topEnv . evaluateRaw topEnv mempty
