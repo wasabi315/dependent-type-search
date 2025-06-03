@@ -1,5 +1,6 @@
 module Main (main) where
 
+import Control.Exception
 import Control.Monad
 import Control.Monad.Except
 import Data.Foldable
@@ -15,19 +16,17 @@ import System.IO
 import System.Timeout
 import Text.Read
 import TypeSearch.Common
-import TypeSearch.Error
 import TypeSearch.Evaluation
 import TypeSearch.Parser
 import TypeSearch.Pretty
 import TypeSearch.Raw
-import TypeSearch.Term
 import TypeSearch.UnificationModulo
 
-orDie :: ExceptT Error IO a -> IO a
+orDie :: (Exception e) => ExceptT e IO a -> IO a
 orDie (ExceptT m) =
   m >>= \case
-    Left (ParseError {}) -> do
-      hPutStrLn stderr "Parse error"
+    Left e -> do
+      hPutStrLn stderr $ displayException e
       exitFailure
     Right a -> pure a
 
@@ -206,12 +205,10 @@ prepare mods = go (HM.empty, []) (HM.keys modMap)
 
     goModule acc (Module m _ decls) = foldl' (goDecl m) acc decls
 
-    goDecl m acc@(topEnv, sigs) = \case
-      DLoc (d :@ _) -> goDecl m acc d
-      DLet x a t ->
-        let topEnv' = HM.insertWith (<>) x (HM.singleton m (evaluateRaw topEnv HM.empty t)) topEnv
-            sigs' = (Qual m x, a) : sigs
-         in (topEnv', sigs')
+    goDecl m (topEnv, sigs) (DLet _ x a t) =
+      let topEnv' = HM.insertWith (<>) x (HM.singleton m (evaluateRaw topEnv HM.empty t)) topEnv
+          sigs' = (Qual m x, a) : sigs
+       in (topEnv', sigs')
 
 instantiate :: (MonadPlus m) => TopEnv -> Value -> m Value
 instantiate topEnv = \case

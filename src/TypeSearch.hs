@@ -1,6 +1,5 @@
 module TypeSearch
   ( module TypeSearch.Common,
-    module TypeSearch.Error,
     module TypeSearch.Raw,
     module TypeSearch.Term,
     module TypeSearch.Evaluation,
@@ -11,7 +10,6 @@ module TypeSearch
 where
 
 import TypeSearch.Common
-import TypeSearch.Error
 import TypeSearch.Evaluation
 import TypeSearch.Parser
 import TypeSearch.Pretty

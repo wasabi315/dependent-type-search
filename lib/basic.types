@@ -12,7 +12,7 @@ let app : (A : Type) (B : (x : A) → Type) → ((x : A) → B x) → (x : A) �
 
 let swap : (A B : Type) → A × B → B × A = λ A B p → p.2 , p.1
 
-let assoc : (A : Type) (B : (x : A) → Type) (C : Σ x : A. B x → Type) → Σ p : (Σ x : A. B x). C p → Σ x : A. Σ y : B x. C (x , y) = λ p → p.1.1 , p.1.2 , p.2
+let assoc : (A : Type) (B : (x : A) → Type) (C : (x : A) × B x → Type) → (p : (x : A) × B x) × C p → (x : A) × (y : B x) × C (x , y) = λ p → p.1.1 , p.1.2 , p.2
 
 let assocs : (A B C : Type) → (A × B) × C → A × (B × C) = λ A B C p → p.1.1 , p.1.2 , p.2
 

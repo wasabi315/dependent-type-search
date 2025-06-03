@@ -6,7 +6,7 @@ module TypeSearch.Raw
     -- * Raw terms
     Raw (..),
     rnatLit,
-    unRLoc,
+    unRPos,
   )
 where
 
@@ -21,9 +21,7 @@ data Module = Module
   }
   deriving stock (Show)
 
-data Decl
-  = DLet Name Raw Raw
-  | DLoc (Located Decl)
+data Decl = DLet SourcePos Name Raw Raw
   deriving stock (Show)
 
 -- | Raw terms
@@ -50,7 +48,7 @@ data Raw
   | REq
   | RRefl
   | REqElim
-  | RLoc (Located Raw)
+  | RPos Raw SourcePos
   deriving stock (Show)
 
 rnatLit :: Int -> Raw
@@ -58,7 +56,7 @@ rnatLit = \case
   0 -> RZero
   n -> RSuc `RApp` rnatLit (n - 1)
 
-unRLoc :: Raw -> Raw
-unRLoc = \case
-  RLoc (t :@ _) -> unRLoc t
+unRPos :: Raw -> Raw
+unRPos = \case
+  RPos t _ -> unRPos t
   t -> t

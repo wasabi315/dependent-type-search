@@ -40,14 +40,13 @@ prettyModule (Module name imports decls) =
 
 prettyDecl :: Decl -> ShowS
 prettyDecl = \case
-  DLet n t u ->
+  DLet _ n t u ->
     showString "let "
       . shows n
       . showString " : "
       . prettyRaw pairP t
       . showString " = "
       . prettyRaw pairP u
-  DLoc (d :@ _) -> prettyDecl d
 
 prettyRaw :: Int -> Raw -> ShowS
 prettyRaw = go
@@ -85,7 +84,7 @@ prettyRaw = go
       REq -> showString "Eq"
       RRefl -> showString "refl"
       REqElim -> showString "eqElim"
-      RLoc (t :@ _) -> go p t
+      RPos t _ -> go p t
 
     goSuc p n = \case
       RZero -> shows n
@@ -100,12 +99,12 @@ prettyRaw = go
         . showChar ')'
 
     goPi = \case
-      (unRLoc -> RPi n a b) ->
+      (unRPos -> RPi n a b) ->
         showChar ' ' . piBind n a . goPi b
       b -> showString " → " . go piP b
 
     goAbs = \case
-      (unRLoc -> RAbs n t) -> showChar ' ' . shows n . goAbs t
+      (unRPos -> RAbs n t) -> showChar ' ' . shows n . goAbs t
       t -> showString " → " . go absP t
 
 prettyTerm :: [Name] -> Int -> Term -> ShowS

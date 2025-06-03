@@ -211,7 +211,7 @@ evaluateRaw topEnv env = \case
   REq -> VAbs "A" \a -> VAbs "x" \x -> VAbs "y" \y -> VEq a x y
   RRefl -> VAbs "A" \a -> VAbs "x" \x -> VRefl a x
   REqElim -> VAbs "A" \a -> VAbs "x" \x -> VAbs "p" \p -> VAbs "r" \r -> VAbs "y" \y -> VAbs "eq" \eq -> veqElim a x p r y eq
-  RLoc (t :@ _) -> evaluateRaw topEnv env t
+  RPos t _ -> evaluateRaw topEnv env t
 
 -- | Convert a term into a value.
 evaluate :: TopEnv -> Env -> Term -> Value

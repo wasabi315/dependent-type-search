@@ -21,22 +21,15 @@ description: Please see the README on GitHub at <https://github.com/githubuser/d
 
 dependencies:
   - base >= 4.7 && < 5
-  - array
-  - bytestring
   - containers
-  - diagnose
   - hashable
   - haskeline
+  - megaparsec
   - monus-weighted-search
   - mtl
   - text
   - unordered-containers
-  - utf8-string
   - witherable
-
-build-tools:
-  - alex
-  - happy
 
 language: GHC2021
 

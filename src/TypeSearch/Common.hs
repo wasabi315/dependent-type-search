@@ -17,10 +17,7 @@ module TypeSearch.Common
     freshen,
 
     -- * Position
-    Located (..),
-    HasPosition (..),
-    value,
-    mergePosition,
+    SourcePos (..),
   )
 where
 
@@ -30,8 +27,8 @@ import Data.List (intersperse)
 import Data.String
 import Data.Text qualified as T
 import Data.Unique
-import Error.Diagnose
 import GHC.Generics (Generic)
+import Text.Megaparsec
 
 --------------------------------------------------------------------------------
 -- Utils
@@ -112,23 +109,3 @@ freshen :: [Name] -> Name -> Name
 freshen ns n@(Name n')
   | n `elem` ns = freshen ns (Name $ T.snoc n' '\'')
   | otherwise = n
-
---------------------------------------------------------------------------------
-
-data Located a = a :@ Position
-  deriving stock (Functor, Foldable, Traversable, Show)
-
-class HasPosition a where
-  position :: a -> Position
-
-instance HasPosition (Located a) where
-  position (_ :@ p) = p
-
-instance HasPosition Position where
-  position = id
-
-value :: Located a -> a
-value (a :@ _) = a
-
-mergePosition :: (HasPosition a, HasPosition b) => a -> b -> Position
-mergePosition (position -> Position s _ f) (position -> Position _ e _) = Position s e f

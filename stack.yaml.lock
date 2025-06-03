@@ -5,13 +5,6 @@
 
 packages:
 - completed:
-    hackage: diagnose-2.0.0@sha256:fdd95a13cdb49465f1bd178827cc1090cde1493599c07673acb3e15e517731f5,5721
-    pantry-tree:
-      sha256: beb7ddcc72707373126cdfae46097ed849fd10a6965a2e84e49109e4d59b113d
-      size: 1402
-  original:
-    hackage: diagnose-2.0.0
-- completed:
     hackage: monus-weighted-search-0.1.0.0@sha256:7a0a5b36544067d774fce8d267eb0b23eb76ce46b6ca3e4446a78617765450c6,5012
     pantry-tree:
       sha256: 2e60df574c3e65085ec503c2c3c229dec40ccebee184394f4165c5576fa1e08c

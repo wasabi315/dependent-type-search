@@ -4,5 +4,4 @@ packages:
   - .
 
 extra-deps:
-  - diagnose-2.0.0
   - monus-weighted-search-0.1.0.0

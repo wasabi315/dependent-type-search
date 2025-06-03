@@ -27,9 +27,7 @@ library
   exposed-modules:
       TypeSearch
       TypeSearch.Common
-      TypeSearch.Error
       TypeSearch.Evaluation
-      TypeSearch.Lexer
       TypeSearch.Parser
       TypeSearch.Pretty
       TypeSearch.Raw
@@ -83,22 +81,16 @@ library
       UnboxedSums
       ViewPatterns
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -O2 -funbox-strict-fields
-  build-tools:
-      alex
-    , happy
   build-depends:
-      array
-    , base >=4.7 && <5
-    , bytestring
+      base >=4.7 && <5
     , containers
-    , diagnose
     , hashable
     , haskeline
+    , megaparsec
     , monus-weighted-search
     , mtl
     , text
     , unordered-containers
-    , utf8-string
     , witherable
   default-language: GHC2021
 
@@ -152,23 +144,17 @@ executable dependent-type-search-exe
       UnboxedSums
       ViewPatterns
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -O2 -funbox-strict-fields
-  build-tools:
-      alex
-    , happy
   build-depends:
-      array
-    , base >=4.7 && <5
-    , bytestring
+      base >=4.7 && <5
     , containers
     , dependent-type-search
-    , diagnose
     , hashable
     , haskeline
+    , megaparsec
     , monus-weighted-search
     , mtl
     , text
     , unordered-containers
-    , utf8-string
     , witherable
   default-language: GHC2021
 
@@ -223,22 +209,16 @@ test-suite dependent-type-search-test
       UnboxedSums
       ViewPatterns
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -O2 -funbox-strict-fields
-  build-tools:
-      alex
-    , happy
   build-depends:
-      array
-    , base >=4.7 && <5
-    , bytestring
+      base >=4.7 && <5
     , containers
     , dependent-type-search
-    , diagnose
     , hashable
     , haskeline
+    , megaparsec
     , monus-weighted-search
     , mtl
     , text
     , unordered-containers
-    , utf8-string
     , witherable
   default-language: GHC2021
