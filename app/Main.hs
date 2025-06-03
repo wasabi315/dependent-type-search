@@ -1,4 +1,4 @@
-module Main where
+module Main (main) where
 
 import Control.Monad
 import Control.Monad.Except
@@ -18,7 +18,6 @@ import TypeSearch.Evaluation
 import TypeSearch.Parser
 import TypeSearch.Pretty
 import TypeSearch.Raw
-import TypeSearch.Term
 import TypeSearch.UnificationModulo
 
 orDie :: ExceptT Error IO a -> IO a
@@ -49,16 +48,17 @@ main = do
               outputStrLn "Parse error"
               loop
             Right ty -> do
-              -- let ty' = rawToTerm topEnv ty
+              let vty = evaluateRaw topEnv mempty ty
               for_ sigs \(x, sig) -> do
-                -- let sig' = instantiate topEnv ty' sig
-                msubst <- liftIO $ timeout 500000 $ unifyRaw topEnv sig ty
-                case msubst of
-                  Just (Just subst) -> do
-                    outputStrLn $ show x ++ " : " ++ prettyRaw 0 sig ""
-                    when (HM.size subst > 0) do
-                      outputStrLn $ "  by instantiating " ++ prettyMetaSubst subst ""
-                  _ -> pure ()
+                let vsigs = instantiateRaw @[] topEnv sig
+                for_ vsigs \vsig -> do
+                  msubst <- liftIO $ timeout 1000 $ unifyValue topEnv vsig vty
+                  case msubst of
+                    Just (Just subst) -> do
+                      outputStrLn $ show x ++ " : " ++ prettyRaw 0 sig ""
+                      when (HM.size subst > 0) do
+                        outputStrLn $ "  by instantiating " ++ prettyMetaSubst subst ""
+                    _ -> pure ()
               loop
 
 prepare :: [Module] -> (TopEnv, [(QName, Raw)])
@@ -83,25 +83,3 @@ prepare mods = go (HM.empty, []) (HM.keys modMap)
         let topEnv' = HM.insertWith (<>) x (HM.singleton m (evaluateRaw topEnv HM.empty t)) topEnv
             sigs' = (Qual m x, a) : sigs
          in (topEnv', sigs')
-
-rawToTerm :: TopEnv -> Raw -> Term
-rawToTerm topEnv = quote 0 . evaluateRaw topEnv mempty
-
-instantiate :: TopEnv -> Term -> Raw -> Term
-instantiate topEnv query sig = bar $ quote n $ baz $ evaluateRaw topEnv mempty sig
-  where
-    foo = \case
-      Pi x a b ->
-        let (f, i) = foo b
-         in (Pi x a . f, i + 1)
-      _ -> (id, Level 0)
-
-    (bar, n) = foo query
-
-    args = map VVar [0 .. n - 1]
-
-    baz = \case
-      -- Throwing away the domain type currently
-      VPi x _ b -> baz (b $ VMetaApp (Src x) args)
-      VTop _ _ [(_, t)] -> baz t
-      t -> t

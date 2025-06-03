@@ -4,6 +4,7 @@ module TypeSearch.UnificationModulo
     normaliseRaw,
 
     -- * Unification
+    unifyValue,
     unifyTerm,
     unifyRaw,
     unifiable,
@@ -965,11 +966,11 @@ unify :: TopEnv -> ChosenDefs -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst,
 unify topEnv chosenDefs subst = \case
   [] -> pure (subst, [])
   (forceConstraint topEnv subst -> todo) : todos -> do
-    lift do
-      putStrLn "--------------------------------------------------"
-      putStrLn $ prettyMetaSubst subst ""
-      putStrLn $ prettyConstraint todo ""
-      mapM_ (\todo' -> putStrLn $ prettyConstraint todo' "") todos
+    -- lift do
+    --   putStrLn "--------------------------------------------------"
+    --   putStrLn $ prettyMetaSubst subst ""
+    --   putStrLn $ prettyConstraint todo ""
+    --   mapM_ (\todo' -> putStrLn $ prettyConstraint todo' "") todos
     (subst', todos', chosenDefs') <-
       asum
         [ do
@@ -1033,28 +1034,26 @@ zonkMetaSubst topEnv subst = flip imapMaybe subst \m mabs ->
 --------------------------------------------------------------------------------
 -- Entry points
 
-unifyTerm' :: TopEnv -> Term -> Term -> UnifyM (MetaSubst, [Constraint])
-unifyTerm' topEnv t t' = do
-  let initTodo =
-        Constraint 0 Rigid True (evaluate topEnv [] t) (evaluate topEnv [] t')
+unifyValue' :: TopEnv -> Value -> Value -> UnifyM (MetaSubst, [Constraint])
+unifyValue' topEnv v v' = do
+  let initTodo = Constraint 0 Rigid True v v'
   unify topEnv HM.empty HM.empty [initTodo]
-
-unifyTerm :: TopEnv -> Term -> Term -> IO (Maybe MetaSubst)
-unifyTerm topEnv t t' =
-  fmap (zonkMetaSubst topEnv . fst . snd)
-    <$> bestT (unifyTerm' topEnv t t')
 
 -- | Unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
-unifyRaw' :: TopEnv -> Raw -> Raw -> UnifyM (MetaSubst, [Constraint])
-unifyRaw' topEnv t t' = do
-  let initTodo =
-        Constraint 0 Rigid True (evaluateRaw topEnv HM.empty t) (evaluateRaw topEnv HM.empty t')
-  unify topEnv HM.empty HM.empty [initTodo]
+unifyValue :: TopEnv -> Value -> Value -> IO (Maybe MetaSubst)
+unifyValue topEnv v v' =
+  fmap (zonkMetaSubst topEnv . fst . snd)
+    <$> bestT (unifyValue' topEnv v v')
 
+-- | Unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
+unifyTerm :: TopEnv -> Term -> Term -> IO (Maybe MetaSubst)
+unifyTerm topEnv t t' =
+  unifyValue topEnv (evaluate topEnv [] t) (evaluate topEnv [] t')
+
+-- | Unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
 unifyRaw :: TopEnv -> Raw -> Raw -> IO (Maybe MetaSubst)
 unifyRaw topEnv t t' =
-  fmap (zonkMetaSubst topEnv . fst . snd)
-    <$> bestT (unifyRaw' topEnv t t')
+  unifyValue topEnv (evaluateRaw topEnv HM.empty t) (evaluateRaw topEnv HM.empty t')
 
 unifiable :: TopEnv -> Raw -> Raw -> IO Bool
-unifiable topEnv t t' = isJust <$> bestT (unifyRaw' topEnv t t')
+unifiable topEnv t t' = isJust <$> unifyRaw topEnv t t'

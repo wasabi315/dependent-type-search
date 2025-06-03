@@ -39,9 +39,15 @@ module TypeSearch.Evaluation
     -- * Forcing
     force,
     deepForce,
+
+    -- * Instantiation
+    instantiate,
+    instantiate',
+    instantiateRaw,
   )
 where
 
+import Control.Monad
 import Data.Foldable
 import Data.HashMap.Lazy qualified as HM
 import Data.Hashable
@@ -175,7 +181,7 @@ lookupWithQName topEnv env = \case
     Just v -> v
     Nothing -> case HM.lookup n topEnv of
       Just vs -> VTop n SNil (HM.toList vs)
-      Nothing -> VTop n SNil [] -- act as an unknown constant
+      Nothing -> error $ "Variable not found: " ++ show n
   m@(Qual q n) -> case HM.lookup n topEnv >>= HM.lookup q of
     Just v -> VTop n SNil [(q, v)]
     Nothing -> error $ "Variable not found: " ++ show m
@@ -183,7 +189,7 @@ lookupWithQName topEnv env = \case
 lookupPossibleModules :: TopEnv -> [ModuleName] -> Name -> Value
 lookupPossibleModules topEnv ms n = case HM.lookup n topEnv of
   Nothing -> case ms of
-    [] -> VTop n SNil [] -- act as an unknown constant
+    [] -> error $ "Variable not found: " ++ show n
     _ -> error $ "Variable not found: " ++ show n
   Just vs -> VTop n SNil (map (\m -> (m, vs HM.! m)) ms)
 
@@ -388,3 +394,30 @@ deepForce topEnv subst = go
       ESnd -> ESnd
       ENatElim p s z -> ENatElim (go p) (go s) (go z)
       EEqElim a x p r y -> EEqElim (go a) (go x) (go p) (go r) (go y)
+
+--------------------------------------------------------------------------------
+-- Instantiation
+
+instantiate :: (MonadPlus m) => TopEnv -> Value -> m Value
+instantiate topEnv = \case
+  VPi (Name x) _ b -> do
+    let m = Src (Name $ x <> "?") -- append ? back to the name so it will be fresh
+    pure $ instantiate' $ b (VMetaApp m [])
+  VArr a b -> pure $ VArr a (instantiate' b)
+  VTop _ _ vs -> do
+    (_, v) <- choose vs
+    instantiate topEnv v
+  t -> pure t
+
+instantiate' :: Value -> Value
+instantiate' = \case
+  VPi (Name x) _ b ->
+    -- throwing away the domain type currently
+    let m = Src (Name $ x <> "?") -- append ? back to the name so it will be fresh
+     in instantiate' $ b (VMetaApp m [])
+  VArr a b -> VArr a (instantiate' b)
+  t -> t
+
+-- | Instantiate top-level pi types
+instantiateRaw :: (MonadPlus m) => TopEnv -> Raw -> m Value
+instantiateRaw topEnv = instantiate topEnv . evaluateRaw topEnv mempty

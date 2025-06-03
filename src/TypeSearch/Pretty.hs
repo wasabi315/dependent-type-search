@@ -180,9 +180,14 @@ prettyMetaSubst = \subst ->
   where
     prettyMetaAbs m (MetaAbs arity body) =
       shows m
-        . showChar '['
-        . punctuate (showChar ',') (map shows params)
-        . showString "] ↦ "
+        . ( if arity > 0
+              then
+                showChar '['
+                  . punctuate (showChar ',') (map shows params)
+                  . showString "]"
+              else id
+          )
+        . showString " ↦ "
         . prettyTerm (reverse params) absP body
       where
         params = map (\i -> Name $ "x" <> T.pack (show i)) [0 .. arity - 1]
