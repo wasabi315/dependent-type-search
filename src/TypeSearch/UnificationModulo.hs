@@ -811,8 +811,18 @@ guessMetaIso topEnv todo@(Constraint lvl _ iso lhs rhs) subst todos = do
         -- M[x0, ..., xn] ↦ Unit or
         -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
         (m,) <$> (imitation IUnit ar <|> imitation (ISigma "x") ar)
+      -- M[t0, ..., tn] * B
+      VProd (force topEnv subst -> VFlex m ar _ _) _ ->
+        -- M[x0, ..., xn] ↦ Unit or
+        -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
+        (m,) <$> (imitation IUnit ar <|> imitation (ISigma "x") ar)
       -- (x : M[t0, ..., tn]) → B[x]
       VPi _ (force topEnv subst -> VFlex m ar _ _) _ ->
+        -- M[x0, ..., xn] ↦ Unit or
+        -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
+        (m,) <$> (imitation IUnit ar <|> imitation (ISigma "x") ar)
+      -- M[t0, ..., tn] → B
+      VArr (force topEnv subst -> VFlex m ar _ _) _ ->
         -- M[x0, ..., xn] ↦ Unit or
         -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
         (m,) <$> (imitation IUnit ar <|> imitation (ISigma "x") ar)
@@ -821,6 +831,9 @@ guessMetaIso topEnv todo@(Constraint lvl _ iso lhs rhs) subst todos = do
         | VFlex m ar _ _ <- force topEnv subst (b $ VVar lvl) ->
             -- M[x0, ..., xn] ↦ Unit
             (m,) <$> imitation IUnit ar
+      -- A * M[t0, ..., tn]
+      VProd _ (force topEnv subst -> VFlex m ar _ _) ->
+        (m,) <$> imitation IUnit ar
       _ -> empty
 
 -- | Go through candidate solutions for flex-rigid constraints
@@ -912,27 +925,16 @@ unfold (Constraint lvl cm iso lhs rhs) todos chosenDefs = do
       pure (todo1 : todos, chosenDefs')
     _ -> empty
 
-printConstraint :: Constraint -> IO ()
-printConstraint (Constraint lvl _ iso lhs rhs) = do
-  let lhs' = quote lvl lhs
-      rhs' = quote lvl rhs
-      vars = map (\i -> Name $ "x" <> T.pack (show i)) [0 .. lvl - 1]
-  putStrLn $
-    concat
-      [ if lvl > 0 then "∀ " ++ unwords (map show vars) ++ ". " else "",
-        prettyTerm (reverse vars) 0 lhs' "",
-        if iso then " ≅ " else " ≡ ",
-        prettyTerm (reverse vars) 0 rhs' ""
-      ]
-
 -- | Unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
 unify :: TopEnv -> ChosenDefs -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
 unify topEnv chosenDefs subst = \case
   [] -> pure (subst, [])
   (forceConstraint topEnv subst -> todo) : todos -> do
-    -- lift $ putStrLn "--------------------------------------------------"
-    -- lift $ printConstraint todo
-    -- lift $ traverse_ printConstraint todos
+    -- lift do
+    --   putStrLn "--------------------------------------------------"
+    --   putStrLn $ prettyMetaSubst subst ""
+    --   putStrLn $ prettyConstraint todo ""
+    --   mapM_ (\todo' -> putStrLn $ prettyConstraint todo' "") todos
     (subst', todos', chosenDefs') <-
       asum
         [ do
@@ -957,6 +959,24 @@ unify topEnv chosenDefs subst = \case
           (subst,,chosenDefs) <$> decomposeIso topEnv subst todo todos
         ]
     unify topEnv chosenDefs' subst' todos'
+
+prettyConstraint :: Constraint -> ShowS
+prettyConstraint (Constraint lvl _ iso lhs rhs) =
+  ( if lvl > 0
+      then
+        showString "∀ "
+          . punctuate (showString " ") (map shows $ reverse vars)
+          . showString ". "
+      else id
+  )
+    . prettyTerm vars 0 lhs'
+    . showString eq
+    . prettyTerm vars 0 rhs'
+  where
+    lhs' = quote lvl lhs
+    rhs' = quote lvl rhs
+    vars = map (\i -> Name $ "x" <> T.pack (show i)) $ down (lvl - 1) 0
+    eq = if iso then " ≅ " else " ≡ "
 
 --------------------------------------------------------------------------------
 -- Zonking (unfold all metavariables in terms)
