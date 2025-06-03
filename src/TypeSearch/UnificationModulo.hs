@@ -452,7 +452,9 @@ possibleDomainHoists topEnv subst lvl t = do
             go lvls (i + 1) lvl' b
       _ -> []
       where
-        hoistable a = HS.null (HS.intersection (freeVarSet topEnv subst lvl a) lvls)
+        hoistable a =
+          HS.null lvls
+            || HS.null (HS.intersection (freeVarSet topEnv subst lvl a) lvls)
 
     deleteArr i u = case (i, force topEnv subst u) of
       (0 :: Int, VArr _ b) -> b
@@ -497,7 +499,9 @@ possibleComponentHoists topEnv subst lvl t = do
         | hoistable a -> [(a, Left $ deleteProd i t)]
         | otherwise -> []
       where
-        hoistable a = HS.null (HS.intersection (freeVarSet topEnv subst lvl a) lvls)
+        hoistable a =
+          HS.null lvls
+            || HS.null (HS.intersection (freeVarSet topEnv subst lvl a) lvls)
 
     deleteProd i u = case (i, force topEnv subst u) of
       (0 :: Int, VProd _ b) -> b
