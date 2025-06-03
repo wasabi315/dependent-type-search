@@ -2,8 +2,6 @@ module TypeSearch.UnificationModulo
   ( -- * Normalisation
     normalise,
     normaliseRaw,
-    freeVarSet,
-    possibleComponentHoists',
 
     -- * Unification
     unifyTerm,
@@ -31,6 +29,7 @@ import TypeSearch.Term
 import Witherable
 
 --------------------------------------------------------------------------------
+-- Normalisation into isomorphic types
 
 -- | Σ associativity and currying.
 normalise1 :: TopEnv -> MetaSubst -> Value -> Value
@@ -110,59 +109,16 @@ normalise2 topEnv subst = go
       VUnit -> vb
       va' -> VArr va' vb
 
--- | Normalise a type into an isomorphic one.
+-- | Normalise a value into an isomorphic one.
 normalise :: TopEnv -> MetaSubst -> Level -> Value -> Value
 normalise topEnv subst lvl t =
   normalise2 topEnv subst lvl $
     normalise1 topEnv subst t
 
--- | Normalise a type into an isomorphic one.
+-- | Normalise a raw term into an isomorphic one.
 normaliseRaw :: Raw -> Term
 normaliseRaw t =
   quote 0 $ normalise mempty mempty 0 $ evaluateRaw mempty mempty t
-
---------------------------------------------------------------------------------
--- Unification procedure modulo βη-equivalence and type isomorphisms related to Π and Σ:
---   - (x : (y : A) * B[y]) * C[x]     ~ (x : A) * (y : B[x]) * C[(x, y)]
---   - (x : (y : A) * B[y]) -> C[x]    ~ (x : A) -> (y : B[x]) -> C[(x, y)]
---   - (x : A) * B                     ~ (x : B) * A
---   - (x : A) * Unit                  ~ A
---   - (x : Unit) * A[x]               ~ A[tt]
---   - (x : Unit) -> A[x]              ~ A[tt]
--- Constraints are solved from left to right (static unification).
-
--- | Constraints: ∀ x0, ..., x{n - 1}. t1 ≟ t2
-data Constraint = Constraint
-  { level :: Level, -- n
-    convMode :: ConvMode,
-    moduloIso :: Bool, -- modulo type isomorphisms?
-    lhs, rhs :: Value -- t1, t2
-  }
-
-forceConstraint :: TopEnv -> MetaSubst -> Constraint -> Constraint
-forceConstraint topEnv subst constraint =
-  if constraint.moduloIso
-    then
-      constraint
-        { lhs = normalise topEnv subst constraint.level constraint.lhs,
-          rhs = normalise topEnv subst constraint.level constraint.rhs
-        }
-    else
-      constraint
-        { lhs = force topEnv subst constraint.lhs,
-          rhs = force topEnv subst constraint.rhs
-        }
-
--- | Monad for unification.
--- @HeapT@ is like list transformer with priority.
--- @IO@ is for generating fresh metavariables.
-type UnifyM = HeapT Dist IO
-
-data ConvMode
-  = Rigid
-  | Flex
-  | Full
-  deriving stock (Eq, Show)
 
 --------------------------------------------------------------------------------
 -- Projections
@@ -184,6 +140,7 @@ data ImitationKind
   | IEq
   | IRefl
 
+-- | Create a meta abstraction of a given arity that imitates a particular rigid value.
 imitation :: ImitationKind -> Int -> UnifyM MetaAbs
 imitation kind arity =
   MetaAbs arity <$> imitation' kind params params'
@@ -255,6 +212,7 @@ imitation' kind params params' = lift case kind of
 jpProjection' :: Int -> UnifyM Term
 jpProjection' arity = Var <$> choose [0 .. Index arity - 1]
 
+-- | Generate Huet-style projections for a given value.
 huetProjection :: Value -> Int -> UnifyM MetaAbs
 huetProjection t arity =
   MetaAbs arity <$> huetProjection' t arity params params'
@@ -319,6 +277,7 @@ huetProjection' t arity params params' = go $ spine t
       )
         <|> jpProjection' arity
 
+-- | Generate a pair of meta abstractions for identification binding.
 identification :: Int -> Int -> UnifyM (MetaAbs, MetaAbs)
 identification arity arity' = lift do
   i <- freshMeta
@@ -330,6 +289,7 @@ identification arity arity' = lift do
       mabs' = MetaAbs arity' $ MetaApp i $ map (`MetaApp` params') ms ++ params'
   pure (mabs, mabs')
 
+-- | Generate meta abstractions that just drop some arguments.
 elimination :: Int -> UnifyM MetaAbs
 elimination arity = do
   e <- lift freshMeta
@@ -340,6 +300,7 @@ elimination arity = do
 
 --------------------------------------------------------------------------------
 -- Solving constraints in solved form
+-- Adopted from elaboration-zoo
 
 data PartialRenaming = PRen
   { dom :: Level,
@@ -420,219 +381,9 @@ rename topEnv metaSubst m = go
         pure $ EqElim `App` a' `App` x' `App` p' `App` r' `App` y' `App` t
 
 --------------------------------------------------------------------------------
+-- Swapping domains of pi types and components of sigma types
 
--- | Solve a constraint in solved form.
-solve :: TopEnv -> MetaSubst -> Constraint -> UnifyM MetaSubst
-solve topEnv subst (Constraint lvl _ _ lhs rhs) = do
-  case (lhs, rhs) of
-    (VFlex m ar ts SNil, t') -> solve' m ar ts t'
-    (t, VFlex m ar ts' SNil) -> solve' m ar ts' t
-    _ -> empty
-  where
-    solve' m ar ts t = do
-      pren <- invert topEnv subst lvl ts
-      body <- rename topEnv subst m pren t
-      let mabs = MetaAbs ar body
-          subst' = HM.insert m mabs subst
-      pure subst'
-
--- | Decompose a constraint into a set of smaller constraints.
-decompose :: Constraint -> [Constraint] -> UnifyM [Constraint]
-decompose (Constraint lvl cm iso lhs rhs) todos = case (lhs, rhs) of
-  (VStuck {}, _) -> empty
-  (_, VStuck {}) -> empty
-  (VRigid x sp, VRigid x' sp')
-    | x == x' -> decomposeSpine cm lvl sp sp' todos
-    | otherwise -> empty
-  (VRigid x (SApp sp t), VFlex m' ar' ts' (SApp sp' t')) -> do
-    let todo' = Constraint lvl cm False (VRigid x sp) (VFlex m' ar' ts' sp')
-        todo'' = Constraint lvl cm False t t'
-    pure (todo' : todo'' : todos)
-  (VRigid x (SFst sp), VFlex m' ar' ts' (SFst sp')) -> do
-    let todo' = Constraint lvl cm False (VRigid x sp) (VFlex m' ar' ts' sp')
-    pure (todo' : todos)
-  (VRigid x (SSnd sp), VFlex m' ar' ts' (SSnd sp')) -> do
-    let todo' = Constraint lvl cm False (VRigid x sp) (VFlex m' ar' ts' sp')
-    pure (todo' : todos)
-  (VFlex m ar ts (SApp sp t), VRigid x' (SApp sp' t')) -> do
-    let todo' = Constraint lvl cm False (VFlex m ar ts sp) (VRigid x' sp')
-        todo'' = Constraint lvl cm False t t'
-    pure (todo' : todo'' : todos)
-  (VFlex m ar ts (SFst sp), VRigid x' (SFst sp')) -> do
-    let todo' = Constraint lvl cm False (VFlex m ar ts sp) (VRigid x' sp')
-    pure (todo' : todos)
-  (VFlex m ar ts (SSnd sp), VRigid x' (SSnd sp')) -> do
-    let todo' = Constraint lvl cm False (VFlex m ar ts sp) (VRigid x' sp')
-    pure (todo' : todos)
-  (VFlex m ar ts (SApp sp t), VFlex m' ar' ts' (SApp sp' t')) -> do
-    let todo' = Constraint lvl cm False (VFlex m ar ts sp) (VFlex m' ar' ts' sp')
-        todo'' = Constraint lvl cm False t t'
-    pure (todo' : todo'' : todos)
-  (VFlex m ar ts (SFst sp), VFlex m' ar' ts' (SFst sp')) -> do
-    let todo' = Constraint lvl cm False (VFlex m ar ts sp) (VFlex m' ar' ts' sp')
-    pure (todo' : todos)
-  (VFlex m ar ts (SSnd sp), VFlex m' ar' ts' (SSnd sp')) -> do
-    let todo' = Constraint lvl cm False (VFlex m ar ts sp) (VFlex m' ar' ts' sp')
-    pure (todo' : todos)
-  (VFlex m _ ts SNil, VFlex m' _ ts' SNil)
-    | m == m' -> decomposeMetaArgs cm lvl (reverse ts) (reverse ts') todos
-  (VType, VType) -> pure todos
-  (VPi _ a b, VPi _ a' b') -> do
-    let todo' = Constraint lvl cm False a a'
-        todo'' = Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl)
-    pure (todo' : todo'' : todos)
-  (VPi _ a b, VArr a' b') -> do
-    let todo' = Constraint lvl cm False a a'
-        todo'' = Constraint (lvl + 1) cm iso (b $ VVar lvl) b'
-    pure (todo' : todo'' : todos)
-  (VArr a b, VPi _ a' b') -> do
-    let todo' = Constraint lvl cm False a a'
-        todo'' = Constraint (lvl + 1) cm iso b (b' $ VVar lvl)
-    pure (todo' : todo'' : todos)
-  (VArr a b, VArr a' b') -> do
-    let todo' = Constraint lvl cm iso a a'
-        todo'' = Constraint lvl cm iso b b'
-    pure (todo' : todo'' : todos)
-  (VAbs _ f, VAbs _ f') -> do
-    let todo' = Constraint (lvl + 1) cm False (f $ VVar lvl) (f' $ VVar lvl)
-    pure (todo' : todos)
-  -- η-expansion
-  (VAbs _ f, t') -> do
-    let todo' = Constraint (lvl + 1) cm False (f $ VVar lvl) (vapp t' $ VVar lvl)
-    pure (todo' : todos)
-  (t, VAbs _ f) -> do
-    let todo' = Constraint (lvl + 1) cm False (vapp t $ VVar lvl) (f $ VVar lvl)
-    pure (todo' : todos)
-  (VSigma _ a b, VSigma _ a' b') -> do
-    let todo' = Constraint lvl cm False a a'
-        todo'' = Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl)
-    pure (todo' : todo'' : todos)
-  (VSigma _ a b, VProd a' b') -> do
-    let todo' = Constraint lvl cm False a a'
-        todo'' = Constraint (lvl + 1) cm iso (b $ VVar lvl) b'
-    pure (todo' : todo'' : todos)
-  (VProd a b, VSigma _ a' b') -> do
-    let todo' = Constraint lvl cm False a a'
-        todo'' = Constraint (lvl + 1) cm iso b (b' $ VVar lvl)
-    pure (todo' : todo'' : todos)
-  (VProd a b, VProd a' b') -> do
-    let todo' = Constraint lvl cm iso a a'
-        todo'' = Constraint lvl cm iso b b'
-    pure (todo' : todo'' : todos)
-  (VPair t u, VPair t' u') -> do
-    let todo' = Constraint lvl cm False t t'
-        todo'' = Constraint lvl cm False u u'
-    pure (todo' : todo'' : todos)
-  -- η-expansion
-  (VPair t u, t') -> do
-    let todo' = Constraint lvl cm False t (vfst t')
-        todo'' = Constraint lvl cm False u (vsnd t')
-    pure (todo' : todo'' : todos)
-  (t, VPair t' u') -> do
-    let todo' = Constraint lvl cm False (vfst t) t'
-        todo'' = Constraint lvl cm False (vsnd t) u'
-    pure (todo' : todo'' : todos)
-  (VUnit, VUnit) -> pure todos
-  (VTT, VTT) -> pure todos
-  (VNat, VNat) -> pure todos
-  (VZero, VZero) -> pure todos
-  (VSuc t, VSuc t') -> do
-    let todo' = Constraint lvl cm False t t'
-    pure (todo' : todos)
-  (VEq a t u, VEq a' t' u') -> do
-    let todo' = Constraint lvl cm False a a'
-        todo'' = Constraint lvl cm False t t'
-        todo''' = Constraint lvl cm False u u'
-    pure (todo' : todo'' : todo''' : todos)
-  (VRefl a t, VRefl a' t') -> do
-    let todo' = Constraint lvl cm False a a'
-        todo'' = Constraint lvl cm False t t'
-    pure (todo' : todo'' : todos)
-  _ -> empty
-
--- | Decompose a pair of spines into constraints.
-decomposeSpine ::
-  ConvMode ->
-  Level ->
-  Spine ->
-  Spine ->
-  [Constraint] ->
-  UnifyM [Constraint]
-decomposeSpine cm lvl lhs rhs todos = case (lhs, rhs) of
-  (SNil, SNil) -> pure todos
-  (SApp sp v, SApp sp' v') -> do
-    let todo' = Constraint lvl cm False v v'
-    decomposeSpine cm lvl sp sp' (todo' : todos)
-  (SFst sp, SFst sp') -> decomposeSpine cm lvl sp sp' todos
-  (SSnd sp, SSnd sp') -> decomposeSpine cm lvl sp sp' todos
-  (SNatElim p s z sp, SNatElim p' s' z' sp') -> do
-    let todo1 = Constraint lvl cm False p p'
-        todo2 = Constraint lvl cm False s s'
-        todo3 = Constraint lvl cm False z z'
-    decomposeSpine cm lvl sp sp' (todo1 : todo2 : todo3 : todos)
-  (SEqElim a x p r y sp, SEqElim a' x' p' r' y' sp') -> do
-    let todo1 = Constraint lvl cm False a a'
-        todo2 = Constraint lvl cm False x x'
-        todo3 = Constraint lvl cm False p p'
-        todo4 = Constraint lvl cm False r r'
-        todo5 = Constraint lvl cm False y y'
-    decomposeSpine cm lvl sp sp' (todo1 : todo2 : todo3 : todo4 : todo5 : todos)
-  _ -> empty
-
--- | Decompose a pair of argument lists applied to metavariables into constraints.
-decomposeMetaArgs ::
-  ConvMode ->
-  Level ->
-  [Value] ->
-  [Value] ->
-  [Constraint] ->
-  UnifyM [Constraint]
-decomposeMetaArgs cm lvl lhs rhs todos = case (lhs, rhs) of
-  ([], []) -> pure todos
-  (v : vs, v' : vs') ->
-    decomposeMetaArgs cm lvl vs vs' (Constraint lvl cm False v v' : todos)
-  _ -> empty
-
-decomposeIso :: TopEnv -> MetaSubst -> Constraint -> [Constraint] -> UnifyM [Constraint]
-decomposeIso topEnv subst (Constraint lvl cm iso lhs rhs) todos = do
-  guard iso
-  case (lhs, rhs) of
-    -- Hoist one of the domains respecting dependencies
-    (isPi -> True, VPi _ a' b') -> do
-      (a, cod) <- possibleDomainHoists topEnv subst lvl lhs
-      let todo1 = Constraint lvl cm False a a'
-          todo2 = case cod of
-            Left b -> Constraint (lvl + 1) cm iso b (b' $ VVar lvl)
-            Right (_, b) -> Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl)
-      pure (todo1 : todo2 : todos)
-    (isPi -> True, VArr a' b') -> do
-      (a, cod) <- possibleDomainHoists topEnv subst lvl lhs
-      let (todo1, todo2) = case cod of
-            Left b -> (Constraint lvl cm iso a a', Constraint lvl cm iso b b')
-            Right (_, b) -> (Constraint lvl cm False a a', Constraint (lvl + 1) cm iso (b $ VVar lvl) b')
-      pure (todo1 : todo2 : todos)
-    -- Hoist one of the components respecting dependencies
-    (isSigma -> True, VSigma _ a' b') -> do
-      (a, cod) <- possibleComponentHoists topEnv subst lvl lhs
-      let todo1 = Constraint lvl cm False a a'
-          todo2 = case cod of
-            Left b -> Constraint (lvl + 1) cm iso b (b' $ VVar lvl)
-            Right (_, b) -> Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl)
-      pure (todo1 : todo2 : todos)
-    (isSigma -> True, VProd a' b') -> do
-      (a, cod) <- possibleComponentHoists topEnv subst lvl lhs
-      let (todo1, todo2) = case cod of
-            Left b -> (Constraint lvl cm iso a a', Constraint lvl cm iso b b')
-            Right (_, b) -> (Constraint lvl cm False a a', Constraint (lvl + 1) cm iso (b $ VVar lvl) b')
-      pure (todo1 : todo2 : todos)
-    -- swap the sides of the equality
-    (VEq a t u, VEq a' t' u') -> do
-      let todo' = Constraint lvl cm False a a'
-          todo'' = Constraint lvl cm False t u'
-          todo''' = Constraint lvl cm False u t'
-      pure (todo' : todo'' : todo''' : todos)
-    _ -> empty
-
+-- | Compute the free variable set of a value.
 freeVarSet :: TopEnv -> MetaSubst -> Level -> Value -> HS.HashSet Level
 freeVarSet topEnv subst = go
   where
@@ -673,22 +424,29 @@ isPi = \case
   VArr {} -> True
   _ -> False
 
-possibleDomainHoists :: (MonadPlus m) => TopEnv -> MetaSubst -> Level -> Value -> m (Value, Either Value (Name, Value -> Value))
+-- | From a pi type, generate the same type but with single domain is hoisted to the top respecting dependencies.
+-- Example 1:
+--   * Input:   (A B : Type) -> A -> B -> A
+--   * Output: [(B A : Type) -> A -> B -> A]
+-- Example 2:
+--   * Input:    (A -> B -> B) -> B -> List A -> B  (where A and B are free)
+--   * Output: [ B -> (A -> B -> B) -> List A -> B,
+--               List A -> (A -> B -> B) -> B -> B ]
+possibleDomainHoists :: TopEnv -> MetaSubst -> Level -> Value -> UnifyM (Value, Either Value (Name, Value -> Value))
 possibleDomainHoists topEnv subst lvl t = do
   guard $ isPi t
   choose $ tail $ go HS.empty 0 lvl t
   where
-    go :: HS.HashSet Level -> Int -> Level -> Value -> [(Value, Either Value (Name, Value -> Value))]
     go lvls i lvl' u = case force topEnv subst u of
       VPi x a b
         | hoistable a ->
-            (a, Right (x, \ ~v -> deletePi topEnv subst i v t))
+            (a, Right (x, \ ~v -> deletePi i v t))
               : go (HS.insert lvl' lvls) (i + 1) (lvl' + 1) (b $ VVar lvl')
         | otherwise ->
             go (HS.insert lvl' lvls) (i + 1) (lvl' + 1) (b $ VVar lvl')
       VArr a b
         | hoistable a ->
-            (a, Left $ deleteArr topEnv subst i t)
+            (a, Left $ deleteArr i t)
               : go lvls (i + 1) lvl' b
         | otherwise ->
             go lvls (i + 1) lvl' b
@@ -696,21 +454,19 @@ possibleDomainHoists topEnv subst lvl t = do
       where
         hoistable a = HS.null (HS.intersection (freeVarSet topEnv subst lvl a) lvls)
 
-deleteArr :: TopEnv -> MetaSubst -> Int -> Value -> Value
-deleteArr topEnv subst i t = case (i, force topEnv subst t) of
-  (0, VArr _ b) -> b
-  (0, _) -> error "deleteArr: not an arrow"
-  (_, VPi x a b) -> VPi x a (deleteArr topEnv subst (i - 1) . b)
-  (_, VArr a b) -> VArr a (deleteArr topEnv subst (i - 1) b)
-  _ -> error "deleteArr: not an arrow"
+    deleteArr i u = case (i, force topEnv subst u) of
+      (0 :: Int, VArr _ b) -> b
+      (0, _) -> error "deleteArr: not an arrow"
+      (_, VPi x a b) -> VPi x a (deleteArr (i - 1) . b)
+      (_, VArr a b) -> VArr a (deleteArr (i - 1) b)
+      _ -> error "deleteArr: not an arrow"
 
-deletePi :: TopEnv -> MetaSubst -> Int -> Value -> Value -> Value
-deletePi topEnv subst i t u = case (i, force topEnv subst u) of
-  (0, VPi _ _ b) -> b t
-  (0, _) -> error "deletePi: not a pi"
-  (_, VPi x a b) -> VPi x a (deletePi topEnv subst (i - 1) t . b)
-  (_, VArr a b) -> VArr a (deletePi topEnv subst (i - 1) t b)
-  _ -> error "deletePi: not a pi"
+    deletePi i u v = case (i, force topEnv subst v) of
+      (0 :: Int, VPi _ _ b) -> b u
+      (0, _) -> error "deletePi: not a pi"
+      (_, VPi x a b) -> VPi x a (deletePi (i - 1) u . b)
+      (_, VArr a b) -> VArr a (deletePi (i - 1) u b)
+      _ -> error "deletePi: not a pi"
 
 isSigma :: Value -> Bool
 isSigma = \case
@@ -718,56 +474,310 @@ isSigma = \case
   VProd {} -> True
   _ -> False
 
-possibleComponentHoists' :: (MonadPlus m) => TopEnv -> MetaSubst -> Level -> Value -> m Value
-possibleComponentHoists' topEnv subst lvl t = do
-  (a, cod) <- possibleComponentHoists topEnv subst lvl t
-  case cod of
-    Left b -> pure $ VProd a b
-    Right (x, b) -> pure $ VSigma x a b
-
-possibleComponentHoists :: (MonadPlus m) => TopEnv -> MetaSubst -> Level -> Value -> m (Value, Either Value (Name, Value -> Value))
+-- | Like @possibleDomainHoists@, generate sigma types with single component is hoisted to the top respecting dependencies.
+possibleComponentHoists :: TopEnv -> MetaSubst -> Level -> Value -> UnifyM (Value, Either Value (Name, Value -> Value))
 possibleComponentHoists topEnv subst lvl t = do
   guard $ isSigma t
   choose $ tail $ go HS.empty 0 lvl t
   where
-    go :: HS.HashSet Level -> Int -> Level -> Value -> [(Value, Either Value (Name, Value -> Value))]
     go lvls i lvl' u = case force topEnv subst u of
       VSigma x a b
         | hoistable a ->
-            (a, Right (x, \ ~v -> deleteSigma topEnv subst i v t))
+            (a, Right (x, \ ~v -> deleteSigma i v t))
               : go (HS.insert lvl' lvls) (i + 1) (lvl' + 1) (b $ VVar lvl')
         | otherwise ->
             go (HS.insert lvl' lvls) (i + 1) (lvl' + 1) (b $ VVar lvl')
       VProd a b
         | hoistable a ->
-            (a, Left $ deleteProd topEnv subst i t)
+            (a, Left $ deleteProd i t)
               : go lvls (i + 1) lvl' b
         | otherwise ->
             go lvls (i + 1) lvl' b
       a
-        | hoistable a -> [(a, Left $ deleteProd topEnv subst i t)]
+        | hoistable a -> [(a, Left $ deleteProd i t)]
         | otherwise -> []
       where
         hoistable a = HS.null (HS.intersection (freeVarSet topEnv subst lvl a) lvls)
 
-deleteProd :: TopEnv -> MetaSubst -> Int -> Value -> Value
-deleteProd topEnv subst i t = case (i, force topEnv subst t) of
-  (0, VProd _ b) -> b
-  (0, _) -> error "deleteProd: not a prod"
-  (1, VProd a b) -> case force topEnv subst b of
-    b'@VProd {} -> VProd a (deleteProd topEnv subst (i - 1) b')
-    _ -> a
-  (_, VSigma x a b) -> VSigma x a (deleteProd topEnv subst (i - 1) . b)
-  (_, VProd a b) -> VProd a (deleteProd topEnv subst (i - 1) b)
-  _ -> error $ "deleteProd: not a prod: " <> show i
+    deleteProd i u = case (i, force topEnv subst u) of
+      (0 :: Int, VProd _ b) -> b
+      (0, _) -> error "deleteProd: not a prod"
+      (1, VProd a b) -> case force topEnv subst b of
+        b'@VProd {} -> VProd a (deleteProd (i - 1) b')
+        _ -> a
+      (_, VSigma x a b) -> VSigma x a (deleteProd (i - 1) . b)
+      (_, VProd a b) -> VProd a (deleteProd (i - 1) b)
+      _ -> error $ "deleteProd: not a prod: " <> show i
 
-deleteSigma :: TopEnv -> MetaSubst -> Int -> Value -> Value -> Value
-deleteSigma topEnv subst i t u = case (i, force topEnv subst u) of
-  (0, VSigma _ _ b) -> b t
-  (0, _) -> error "deleteSigma: not a sigma"
-  (_, VSigma x a b) -> VSigma x a (deleteSigma topEnv subst (i - 1) t . b)
-  (_, VProd a b) -> VProd a (deleteSigma topEnv subst (i - 1) t b)
-  _ -> error "deleteSigma: not a sigma"
+    deleteSigma i u v = case (i, force topEnv subst v) of
+      (0 :: Int, VSigma _ _ b) -> b u
+      (0, _) -> error "deleteSigma: not a sigma"
+      (_, VSigma x a b) -> VSigma x a (deleteSigma (i - 1) u . b)
+      (_, VProd a b) -> VProd a (deleteSigma (i - 1) u b)
+      _ -> error "deleteSigma: not a sigma"
+
+--------------------------------------------------------------------------------
+-- Unification procedure modulo βη-equivalence and type isomorphisms related to Π and Σ:
+--   - (x : (y : A) * B[y]) * C[x]  ~ (x : A) * (y : B[x]) * C[(x, y)]
+--   - (x : (y : A) * B[y]) -> C[x] ~ (x : A) -> (y : B[x]) -> C[(x, y)]
+--   - (x : A) * B                  ~ (x : B) * A
+--   - (x : A) (y : B) -> C[x, y]   ~ (y : B) (x : A) -> C[x, y]
+--   - (x : A) * Unit               ~ A
+--   - (x : Unit) * A[x]            ~ A[tt]
+--   - (x : Unit) -> A[x]           ~ A[tt]
+-- Constraints are solved from left to right (static unification).
+
+-- | Constraints: ∀ x0, ..., x{n - 1}. t1 ≟ t2
+data Constraint = Constraint
+  { level :: Level, -- n
+    convMode :: ConvMode,
+    moduloIso :: Bool, -- modulo type isomorphisms?
+    lhs, rhs :: Value -- t1, t2
+  }
+
+forceConstraint :: TopEnv -> MetaSubst -> Constraint -> Constraint
+forceConstraint topEnv subst constraint =
+  if constraint.moduloIso
+    then
+      constraint
+        { lhs = normalise topEnv subst constraint.level constraint.lhs,
+          rhs = normalise topEnv subst constraint.level constraint.rhs
+        }
+    else
+      constraint
+        { lhs = force topEnv subst constraint.lhs,
+          rhs = force topEnv subst constraint.rhs
+        }
+
+-- | Monad for unification.
+-- @HeapT@ is like list transformer with priority.
+-- @IO@ is for generating fresh metavariables.
+type UnifyM = HeapT Dist IO
+
+-- | Used for controlling definition unfolding.
+data ConvMode
+  = Rigid
+  | Flex
+  | Full
+  deriving stock (Eq, Show)
+
+-- | For consistently unfolding definitions.
+-- Multiple modules possibly export definitions with the same name.
+-- In order to avoid unfolding definitions from different modules during unification, we need to keep track of which module has chosen a definition for a given name.
+type ChosenDefs = HM.HashMap Name ModuleName
+
+-- | Solve a constraint in solved form.
+solve :: TopEnv -> MetaSubst -> Constraint -> UnifyM MetaSubst
+solve topEnv subst (Constraint lvl _ _ lhs rhs) = do
+  case (lhs, rhs) of
+    (VFlex m ar ts SNil, t') -> solve' m ar ts t'
+    (t, VFlex m ar ts' SNil) -> solve' m ar ts' t
+    _ -> empty
+  where
+    solve' m ar ts t = do
+      pren <- invert topEnv subst lvl ts
+      body <- rename topEnv subst m pren t
+      let mabs = MetaAbs ar body
+          subst' = HM.insert m mabs subst
+      pure subst'
+
+-- | Decompose a constraint into a set of smaller constraints.
+decompose :: Constraint -> [Constraint] -> UnifyM [Constraint]
+decompose (Constraint lvl cm iso lhs rhs) todos = case (lhs, rhs) of
+  (VStuck {}, _) -> empty
+  (_, VStuck {}) -> empty
+  (VRigid x sp, VRigid x' sp')
+    | x == x' -> decomposeSpine cm lvl sp sp' todos
+    | otherwise -> empty
+  (VRigid x (SApp sp t), VFlex m' ar' ts' (SApp sp' t')) -> do
+    let todo1 = Constraint lvl cm False (VRigid x sp) (VFlex m' ar' ts' sp')
+        todo2 = Constraint lvl cm False t t'
+    pure (todo1 : todo2 : todos)
+  (VRigid x (SFst sp), VFlex m' ar' ts' (SFst sp')) -> do
+    let todo1 = Constraint lvl cm False (VRigid x sp) (VFlex m' ar' ts' sp')
+    pure (todo1 : todos)
+  (VRigid x (SSnd sp), VFlex m' ar' ts' (SSnd sp')) -> do
+    let todo1 = Constraint lvl cm False (VRigid x sp) (VFlex m' ar' ts' sp')
+    pure (todo1 : todos)
+  (VFlex m ar ts (SApp sp t), VRigid x' (SApp sp' t')) -> do
+    let todo1 = Constraint lvl cm False (VFlex m ar ts sp) (VRigid x' sp')
+        todo2 = Constraint lvl cm False t t'
+    pure (todo1 : todo2 : todos)
+  (VFlex m ar ts (SFst sp), VRigid x' (SFst sp')) -> do
+    let todo1 = Constraint lvl cm False (VFlex m ar ts sp) (VRigid x' sp')
+    pure (todo1 : todos)
+  (VFlex m ar ts (SSnd sp), VRigid x' (SSnd sp')) -> do
+    let todo1 = Constraint lvl cm False (VFlex m ar ts sp) (VRigid x' sp')
+    pure (todo1 : todos)
+  (VFlex m ar ts (SApp sp t), VFlex m' ar' ts' (SApp sp' t')) -> do
+    let todo1 = Constraint lvl cm False (VFlex m ar ts sp) (VFlex m' ar' ts' sp')
+        todo2 = Constraint lvl cm False t t'
+    pure (todo1 : todo2 : todos)
+  (VFlex m ar ts (SFst sp), VFlex m' ar' ts' (SFst sp')) -> do
+    let todo1 = Constraint lvl cm False (VFlex m ar ts sp) (VFlex m' ar' ts' sp')
+    pure (todo1 : todos)
+  (VFlex m ar ts (SSnd sp), VFlex m' ar' ts' (SSnd sp')) -> do
+    let todo1 = Constraint lvl cm False (VFlex m ar ts sp) (VFlex m' ar' ts' sp')
+    pure (todo1 : todos)
+  (VFlex m _ ts SNil, VFlex m' _ ts' SNil)
+    | m == m' -> decomposeMetaArgs cm lvl (reverse ts) (reverse ts') todos
+  (VType, VType) -> pure todos
+  (VPi _ a b, VPi _ a' b') -> do
+    let todo1 = Constraint lvl cm False a a'
+        todo2 = Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl)
+    pure (todo1 : todo2 : todos)
+  (VPi _ a b, VArr a' b') -> do
+    let todo1 = Constraint lvl cm False a a'
+        todo2 = Constraint (lvl + 1) cm iso (b $ VVar lvl) b'
+    pure (todo1 : todo2 : todos)
+  (VArr a b, VPi _ a' b') -> do
+    let todo1 = Constraint lvl cm False a a'
+        todo2 = Constraint (lvl + 1) cm iso b (b' $ VVar lvl)
+    pure (todo1 : todo2 : todos)
+  (VArr a b, VArr a' b') -> do
+    let todo1 = Constraint lvl cm iso a a'
+        todo2 = Constraint lvl cm iso b b'
+    pure (todo1 : todo2 : todos)
+  (VAbs _ f, VAbs _ f') -> do
+    let todo1 = Constraint (lvl + 1) cm False (f $ VVar lvl) (f' $ VVar lvl)
+    pure (todo1 : todos)
+  -- η-expansion
+  (VAbs _ f, t') -> do
+    let todo1 = Constraint (lvl + 1) cm False (f $ VVar lvl) (vapp t' $ VVar lvl)
+    pure (todo1 : todos)
+  (t, VAbs _ f) -> do
+    let todo1 = Constraint (lvl + 1) cm False (vapp t $ VVar lvl) (f $ VVar lvl)
+    pure (todo1 : todos)
+  (VSigma _ a b, VSigma _ a' b') -> do
+    let todo1 = Constraint lvl cm False a a'
+        todo2 = Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl)
+    pure (todo1 : todo2 : todos)
+  (VSigma _ a b, VProd a' b') -> do
+    let todo1 = Constraint lvl cm False a a'
+        todo2 = Constraint (lvl + 1) cm iso (b $ VVar lvl) b'
+    pure (todo1 : todo2 : todos)
+  (VProd a b, VSigma _ a' b') -> do
+    let todo1 = Constraint lvl cm False a a'
+        todo2 = Constraint (lvl + 1) cm iso b (b' $ VVar lvl)
+    pure (todo1 : todo2 : todos)
+  (VProd a b, VProd a' b') -> do
+    let todo1 = Constraint lvl cm iso a a'
+        todo2 = Constraint lvl cm iso b b'
+    pure (todo1 : todo2 : todos)
+  (VPair t u, VPair t' u') -> do
+    let todo1 = Constraint lvl cm False t t'
+        todo2 = Constraint lvl cm False u u'
+    pure (todo1 : todo2 : todos)
+  -- η-expansion
+  (VPair t u, t') -> do
+    let todo1 = Constraint lvl cm False t (vfst t')
+        todo2 = Constraint lvl cm False u (vsnd t')
+    pure (todo1 : todo2 : todos)
+  (t, VPair t' u') -> do
+    let todo1 = Constraint lvl cm False (vfst t) t'
+        todo2 = Constraint lvl cm False (vsnd t) u'
+    pure (todo1 : todo2 : todos)
+  (VUnit, VUnit) -> pure todos
+  (VTT, VTT) -> pure todos
+  (VNat, VNat) -> pure todos
+  (VZero, VZero) -> pure todos
+  (VSuc t, VSuc t') -> do
+    let todo1 = Constraint lvl cm False t t'
+    pure (todo1 : todos)
+  (VEq a t u, VEq a' t' u') -> do
+    let todo1 = Constraint lvl cm False a a'
+        todo2 = Constraint lvl cm False t t'
+        todo3 = Constraint lvl cm False u u'
+    pure (todo1 : todo2 : todo3 : todos)
+  (VRefl a t, VRefl a' t') -> do
+    let todo1 = Constraint lvl cm False a a'
+        todo2 = Constraint lvl cm False t t'
+    pure (todo1 : todo2 : todos)
+  _ -> empty
+
+-- | Decompose a pair of spines into constraints.
+decomposeSpine ::
+  ConvMode ->
+  Level ->
+  Spine ->
+  Spine ->
+  [Constraint] ->
+  UnifyM [Constraint]
+decomposeSpine cm lvl lhs rhs todos = case (lhs, rhs) of
+  (SNil, SNil) -> pure todos
+  (SApp sp v, SApp sp' v') -> do
+    let todo1 = Constraint lvl cm False v v'
+    decomposeSpine cm lvl sp sp' (todo1 : todos)
+  (SFst sp, SFst sp') -> decomposeSpine cm lvl sp sp' todos
+  (SSnd sp, SSnd sp') -> decomposeSpine cm lvl sp sp' todos
+  (SNatElim p s z sp, SNatElim p' s' z' sp') -> do
+    let todo1 = Constraint lvl cm False p p'
+        todo2 = Constraint lvl cm False s s'
+        todo3 = Constraint lvl cm False z z'
+    decomposeSpine cm lvl sp sp' (todo1 : todo2 : todo3 : todos)
+  (SEqElim a x p r y sp, SEqElim a' x' p' r' y' sp') -> do
+    let todo1 = Constraint lvl cm False a a'
+        todo2 = Constraint lvl cm False x x'
+        todo3 = Constraint lvl cm False p p'
+        todo4 = Constraint lvl cm False r r'
+        todo5 = Constraint lvl cm False y y'
+    decomposeSpine cm lvl sp sp' (todo1 : todo2 : todo3 : todo4 : todo5 : todos)
+  _ -> empty
+
+-- | Decompose a pair of argument lists applied to metavariables into constraints.
+decomposeMetaArgs ::
+  ConvMode ->
+  Level ->
+  [Value] ->
+  [Value] ->
+  [Constraint] ->
+  UnifyM [Constraint]
+decomposeMetaArgs cm lvl lhs rhs todos = case (lhs, rhs) of
+  ([], []) -> pure todos
+  (v : vs, v' : vs') ->
+    decomposeMetaArgs cm lvl vs vs' (Constraint lvl cm False v v' : todos)
+  _ -> empty
+
+-- | Like @decompose@, but function domains, sigma components, or equality sides are permuted.
+decomposeIso :: TopEnv -> MetaSubst -> Constraint -> [Constraint] -> UnifyM [Constraint]
+decomposeIso topEnv subst (Constraint lvl cm iso lhs rhs) todos = do
+  guard iso
+  case (lhs, rhs) of
+    -- Hoist one of the domains respecting dependencies
+    (isPi -> True, VPi _ a' b') -> do
+      (a, cod) <- possibleDomainHoists topEnv subst lvl lhs
+      let todo1 = Constraint lvl cm False a a'
+          todo2 = case cod of
+            Left b -> Constraint (lvl + 1) cm iso b (b' $ VVar lvl)
+            Right (_, b) -> Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl)
+      pure (todo1 : todo2 : todos)
+    (isPi -> True, VArr a' b') -> do
+      (a, cod) <- possibleDomainHoists topEnv subst lvl lhs
+      let (todo1, todo2) = case cod of
+            Left b -> (Constraint lvl cm iso a a', Constraint lvl cm iso b b')
+            Right (_, b) -> (Constraint lvl cm False a a', Constraint (lvl + 1) cm iso (b $ VVar lvl) b')
+      pure (todo1 : todo2 : todos)
+    -- Hoist one of the components respecting dependencies
+    (isSigma -> True, VSigma _ a' b') -> do
+      (a, cod) <- possibleComponentHoists topEnv subst lvl lhs
+      let todo1 = Constraint lvl cm False a a'
+          todo2 = case cod of
+            Left b -> Constraint (lvl + 1) cm iso b (b' $ VVar lvl)
+            Right (_, b) -> Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl)
+      pure (todo1 : todo2 : todos)
+    (isSigma -> True, VProd a' b') -> do
+      (a, cod) <- possibleComponentHoists topEnv subst lvl lhs
+      let (todo1, todo2) = case cod of
+            Left b -> (Constraint lvl cm iso a a', Constraint lvl cm iso b b')
+            Right (_, b) -> (Constraint lvl cm False a a', Constraint (lvl + 1) cm iso (b $ VVar lvl) b')
+      pure (todo1 : todo2 : todos)
+    -- swap the sides of the equality
+    (VEq a t u, VEq a' t' u') -> do
+      let todo1 = Constraint lvl cm False a a'
+          todo2 = Constraint lvl cm False t u'
+          todo3 = Constraint lvl cm False u t'
+      pure (todo1 : todo2 : todo3 : todos)
+    _ -> empty
 
 -- | Guess a metavariable from how they are eliminated.
 guessMeta :: Constraint -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
@@ -847,8 +857,6 @@ flexFlex todo@(Constraint _ _ _ lhs rhs) subst todos = do
           pure (subst', todo : todos)
     _ -> empty
 
-type ChosenDefs = HM.HashMap Name ModuleName
-
 -- | Lazily unfold definitions.
 unfold :: Constraint -> [Constraint] -> ChosenDefs -> UnifyM ([Constraint], ChosenDefs)
 unfold (Constraint lvl cm iso lhs rhs) todos chosenDefs = do
@@ -861,15 +869,15 @@ unfold (Constraint lvl cm iso lhs rhs) todos chosenDefs = do
               -- assume modName = modName'
               ((modName, t), (_modName', t')) <- choose (zip ts ts')
               let chosenDefs' = HM.insert n modName chosenDefs
-                  todo' = Constraint lvl Full iso t t'
-              pure (todo' : todos, chosenDefs')
+                  todo1 = Constraint lvl Full iso t t'
+              pure (todo1 : todos, chosenDefs')
       | otherwise -> do
           tell 2
           (modName, t) <- choose ts
           (modName', t') <- choose ts'
           let chosenDefs' = HM.insert n modName $ HM.insert n' modName' chosenDefs
-              todo' = Constraint lvl Rigid iso t t'
-          pure (todo' : todos, chosenDefs')
+              todo1 = Constraint lvl Rigid iso t t'
+          pure (todo1 : todos, chosenDefs')
     (Flex, VTop n sp _, VTop n' sp' _)
       | n == n' -> (,chosenDefs) <$> decomposeSpine Flex lvl sp sp' todos
       | otherwise -> empty
@@ -879,29 +887,29 @@ unfold (Constraint lvl cm iso lhs rhs) todos chosenDefs = do
           -- assume modName = modName'
           ((modName, t), (_modName', t')) <- choose (zip ts ts')
           let chosenDefs' = HM.insert n modName chosenDefs
-              todo' = Constraint lvl Full iso t t'
-          pure (todo' : todos, chosenDefs')
+              todo1 = Constraint lvl Full iso t t'
+          pure (todo1 : todos, chosenDefs')
       | otherwise -> do
           tell 2
           (modName, t) <- choose ts
           (modName', t') <- choose ts'
           let chosenDefs' = HM.insert n modName $ HM.insert n' modName' chosenDefs
-              todo' = Constraint lvl Rigid iso t t'
-          pure (todo' : todos, chosenDefs')
+              todo1 = Constraint lvl Rigid iso t t'
+          pure (todo1 : todos, chosenDefs')
     (Flex, VTop {}, _) -> empty
     (_, VTop n _ ts, t') -> do
       tell 1
       (modName, t) <- choose ts
-      let todo' = Constraint lvl cm iso t t'
+      let todo1 = Constraint lvl cm iso t t'
           chosenDefs' = HM.insert n modName chosenDefs
-      pure (todo' : todos, chosenDefs')
+      pure (todo1 : todos, chosenDefs')
     (Flex, _, VTop {}) -> empty
     (_, t, VTop n _ ts) -> do
       tell 1
       (modName, t') <- choose ts
-      let todo' = Constraint lvl cm iso t t'
+      let todo1 = Constraint lvl cm iso t t'
           chosenDefs' = HM.insert n modName chosenDefs
-      pure (todo' : todos, chosenDefs')
+      pure (todo1 : todos, chosenDefs')
     _ -> empty
 
 printConstraint :: Constraint -> IO ()
@@ -918,12 +926,6 @@ printConstraint (Constraint lvl _ iso lhs rhs) = do
       ]
 
 -- | Unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
--- TODO: modulo permutations of Σ components
--- NOTE: Permutating Σ components would unblock reduction!
---       Take this into account?
---   e.g.)   (x : (y : (z : Type) * z) -> y.1)) * Type
---         ~ (x : Type) * (y : (z : Type) * z) -> y.1)
---         ~ (x : Type) * ((z : Type) * (y : z) -> z)
 unify :: TopEnv -> ChosenDefs -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
 unify topEnv chosenDefs subst = \case
   [] -> pure (subst, [])
