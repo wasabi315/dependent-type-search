@@ -44,6 +44,9 @@ symbol s = lexeme (C.string s)
 char :: Char -> Parser Char
 char c = lexeme (C.char c)
 
+decimal :: Parser Int
+decimal = lexeme L.decimal
+
 parens :: Parser a -> Parser a
 parens p = char '(' *> p <* char ')'
 
@@ -78,9 +81,11 @@ keyword x =
 
 pIdent :: Parser T.Text
 pIdent = try do
-  xs <- takeWhile1P Nothing (\c -> isAlphaNum c || c == '\'' || c == '-')
-  guard (not (keyword xs))
-  xs <$ ws
+  x <- C.letterChar
+  xs <- takeWhileP Nothing (\c -> isAlphaNum c || c == '\'' || c == '-')
+  let xs' = T.cons x xs
+  guard (not (keyword xs'))
+  xs' <$ ws
 
 pModuleName :: Parser ModuleName
 pModuleName = ModuleName <$> pIdent
@@ -91,7 +96,7 @@ pName = Name <$> pIdent
 pQName :: Parser QName
 pQName = do
   x <- pIdent
-  y <- optional (char '.' *> pIdent)
+  y <- optional (try (char '.' *> pIdent))
   pure $ case y of
     Nothing -> Unqual (Name x)
     Just z -> Qual (ModuleName x) (Name z)
@@ -128,6 +133,7 @@ pAtom =
         <|> (REq <$ pKeyword "Eq")
         <|> (RRefl <$ pKeyword "refl")
         <|> (REqElim <$ pKeyword "eqElim")
+        <|> (rnatLit <$> decimal)
     )
     <|> parens pRaw
 
