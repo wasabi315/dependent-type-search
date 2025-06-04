@@ -669,11 +669,11 @@ decompose (Constraint lvl cm iso lhs rhs) todos = case (lhs, rhs) of
         todo2 = Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl)
     pure (todo1 : todo2 : todos)
   (VPi _ a b, VArr a' b') -> do
-    let todo1 = Constraint lvl cm BetaEta a a'
+    let todo1 = Constraint lvl cm iso a a'
         todo2 = Constraint (lvl + 1) cm iso (b $ VVar lvl) b'
     pure (todo1 : todo2 : todos)
   (VArr a b, VPi _ a' b') -> do
-    let todo1 = Constraint lvl cm BetaEta a a'
+    let todo1 = Constraint lvl cm iso a a'
         todo2 = Constraint (lvl + 1) cm iso b (b' $ VVar lvl)
     pure (todo1 : todo2 : todos)
   (VArr a b, VArr a' b') -> do
@@ -695,11 +695,11 @@ decompose (Constraint lvl cm iso lhs rhs) todos = case (lhs, rhs) of
         todo2 = Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl)
     pure (todo1 : todo2 : todos)
   (VSigma _ a b, VProd a' b') -> do
-    let todo1 = Constraint lvl cm BetaEta a a'
+    let todo1 = Constraint lvl cm iso a a'
         todo2 = Constraint (lvl + 1) cm iso (b $ VVar lvl) b'
     pure (todo1 : todo2 : todos)
   (VProd a b, VSigma _ a' b') -> do
-    let todo1 = Constraint lvl cm BetaEta a a'
+    let todo1 = Constraint lvl cm iso a a'
         todo2 = Constraint (lvl + 1) cm iso b (b' $ VVar lvl)
     pure (todo1 : todo2 : todos)
   (VProd a b, VProd a' b') -> do
@@ -788,30 +788,30 @@ decomposeIso topEnv subst (Constraint lvl cm iso lhs rhs) todos = do
     -- Hoist one of the domains respecting dependencies
     (isPi -> True, VPi _ a' b') -> do
       (a, cod) <- possibleDomainHoists topEnv subst lvl lhs
-      let todo1 = Constraint lvl cm BetaEta a a'
-          todo2 = case cod of
-            Left b -> Constraint (lvl + 1) cm iso b (b' $ VVar lvl)
-            Right (_, b) -> Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl)
+      let (todo1, todo2) = case cod of
+            Left b -> (Constraint lvl cm iso a a', Constraint (lvl + 1) cm iso b (b' $ VVar lvl))
+            Right (_, b) -> (Constraint lvl cm BetaEta a a', Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl))
       pure (todo1 : todo2 : todos)
     (isPi -> True, VArr a' b') -> do
       (a, cod) <- possibleDomainHoists topEnv subst lvl lhs
-      let (todo1, todo2) = case cod of
-            Left b -> (Constraint lvl cm iso a a', Constraint lvl cm iso b b')
-            Right (_, b) -> (Constraint lvl cm BetaEta a a', Constraint (lvl + 1) cm iso (b $ VVar lvl) b')
+      let todo1 = Constraint lvl cm iso a a'
+          todo2 = case cod of
+            Left b -> Constraint lvl cm iso b b'
+            Right (_, b) -> Constraint (lvl + 1) cm iso (b $ VVar lvl) b'
       pure (todo1 : todo2 : todos)
     -- Hoist one of the components respecting dependencies
     (isSigma -> True, VSigma _ a' b') -> do
       (a, cod) <- possibleComponentHoists topEnv subst lvl lhs
-      let todo1 = Constraint lvl cm BetaEta a a'
-          todo2 = case cod of
-            Left b -> Constraint (lvl + 1) cm iso b (b' $ VVar lvl)
-            Right (_, b) -> Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl)
+      let (todo1, todo2) = case cod of
+            Left b -> (Constraint lvl cm iso a a', Constraint (lvl + 1) cm iso b (b' $ VVar lvl))
+            Right (_, b) -> (Constraint lvl cm BetaEta a a', Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl))
       pure (todo1 : todo2 : todos)
     (isSigma -> True, VProd a' b') -> do
       (a, cod) <- possibleComponentHoists topEnv subst lvl lhs
-      let (todo1, todo2) = case cod of
-            Left b -> (Constraint lvl cm iso a a', Constraint lvl cm iso b b')
-            Right (_, b) -> (Constraint lvl cm BetaEta a a', Constraint (lvl + 1) cm iso (b $ VVar lvl) b')
+      let todo1 = Constraint lvl cm iso a a'
+          todo2 = case cod of
+            Left b -> Constraint lvl cm iso b b'
+            Right (_, b) -> Constraint (lvl + 1) cm iso (b $ VVar lvl) b'
       pure (todo1 : todo2 : todos)
     -- swap the sides of the equality
     (VEq a t u, VEq a' t' u') -> do

@@ -1,3 +1,5 @@
+-- Adopted from elaboration-zoo
+
 module TypeSearch.Parser
   ( parseModule,
     parseRaw,
