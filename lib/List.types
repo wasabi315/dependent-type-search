@@ -1,0 +1,9 @@
+module List where
+
+let List : Type → Type = λ A → (X : Type) → X → (A → X → X) → X
+
+let nil : (A : Type) → List A = λ A X n c → n
+
+let cons : (A : Type) → A → List A → List A = λ A x xs X n c → c x (xs X n c)
+
+let foldr : (A B : Type) → (A → B → B) → B → List A → B = λ A B f z xs → xs B z f

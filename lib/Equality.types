@@ -1,0 +1,36 @@
+module Equality where
+
+let sym : (A : Type) (x y : A) → Eq A x y → Eq A y x =
+  λ A x → eqElim A x (λ y _ → Eq A y x) (refl A x)
+
+let trans : (A : Type) (x y z : A) → Eq A x y → Eq A y z → Eq A x z =
+  λ A x y z p q → eqElim A y (λ w _ → Eq A x w) p z q
+
+let cong : (A B : Type) (f : A → B) (x y : A) → Eq A x y → Eq B (f x) (f y) =
+  λ A B f x → eqElim A x (λ y _ → Eq B (f x) (f y)) (refl B (f x))
+
+let cong2 : (A B C : Type) (f : A → B → C) (x y : A) → Eq A x y → (u v : B) → Eq B u v → Eq C (f x u) (f y v) =
+  λ A B C f x →
+    eqElim A x (λ y _ → (u v : B) → Eq B u v → Eq C (f x u) (f y v))
+      (λ u → eqElim B u (λ v _ → Eq C (f x u) (f x v)) (refl C (f x u)))
+
+let cong-app : (A B : Type) (f g : A → B) → Eq (A → B) f g → (x : A) → Eq B (f x) (g x) =
+ λ A B f → eqElim (A → B) f (λ h _ → (x : A) → Eq B (f x) (h x)) (λ x → refl B (f x))
+
+let subst : (A : Type) (B : A → Type) (x y : A) → Eq A x y → B x → B y =
+  λ A B x y eq Bx → eqElim A x (λ z _ → B z) Bx y eq
+
+let transport : (A B : Type) → Eq Type A B → A → B =
+  λ A B eq x → subst Type (id Type) A B eq x
+
+let LeftIdentity : (A : Type) (op : A → A → A) (e : A) → Type =
+  λ A op e → (x : A) → Eq A (op e x) x
+
+let RightIdentity : (A : Type) (op : A → A → A) (e : A) → Type =
+  λ A op e → (x : A) → Eq A (op x e) x
+
+let Commutativity : (A : Type) (op : A → A → A) → Type =
+  λ A op → (x y : A) → Eq A (op x y) (op y x)
+
+let Associativity : (A : Type) (op : A → A → A) → Type =
+  λ A op → (x y z : A) → Eq A (op x (op y z)) (op (op x y) z)
