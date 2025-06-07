@@ -75,6 +75,7 @@ keyword x =
     || x == "Nat"
     || x == "zero"
     || x == "suc"
+    || x == "natElim"
     || x == "Eq"
     || x == "refl"
     || x == "eqElim"
@@ -123,13 +124,14 @@ pAtom =
   withPos
     ( (RVar <$> pQName)
         <|> (RGenVar <$> pGenVar)
-        <|> (RMetaApp . Src <$> pMeta <*> brackets (pAbsPi `sepBy` char ','))
+        <|> (RMetaApp . Src <$> pMeta <*> option [] (brackets (pAbsPi `sepBy` char ',')))
         <|> (RType <$ pKeyword "Type")
         <|> (RUnit <$ pKeyword "Unit")
         <|> (RTT <$ pKeyword "tt")
         <|> (RNat <$ pKeyword "Nat")
         <|> (RZero <$ pKeyword "zero")
         <|> (RSuc <$ pKeyword "suc")
+        <|> (RNatElim <$ pKeyword "natElim")
         <|> (REq <$ pKeyword "Eq")
         <|> (RRefl <$ pKeyword "refl")
         <|> (REqElim <$ pKeyword "eqElim")
