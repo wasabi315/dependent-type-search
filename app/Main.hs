@@ -1,4 +1,4 @@
-module Main (main) where
+module Main (main, prepare) where
 
 import Control.Exception
 import Control.Monad
@@ -35,7 +35,7 @@ data Generalise = Generalise | NoGeneralise
 data Options = Options
   { generalise :: Generalise,
     modulo :: Modulo,
-    timeout :: Int
+    timeoutMs :: Int
   }
 
 data Command
@@ -54,7 +54,7 @@ parseCommand = maybe (pure Continue) \input -> case words input of
   ":set" : rest -> SetOption <$> parseOption rest
   (':' : cmd) : _ -> Left $ "Unknown command: " <> cmd
   _ -> case parseRaw "interactive" (T.pack input) of
-    Left _ -> Left "Parse error"
+    Left e -> Left $ displayException e
     Right ty -> pure $ Search ty
 
 parseOption :: [String] -> Either String (Options -> Options)
@@ -76,7 +76,7 @@ parseOption = \case
     Nothing -> Left $ "Invalid timeout: " <> ms
     Just ms' -> do
       f <- parseOption rest
-      pure \o -> f o {timeout = fromIntegral ms'}
+      pure \o -> f o {timeoutMs = fromIntegral ms'}
   tok : _ -> Left $ "Unknown option: " <> tok
 
 defaultOptions :: Options
@@ -84,7 +84,7 @@ defaultOptions =
   Options
     { generalise = NoGeneralise,
       modulo = BetaEtaIso,
-      timeout = 1
+      timeoutMs = 5
     }
 
 helpText :: String
@@ -100,11 +100,9 @@ helpText =
       "  <type>         : search for a type signature",
       "",
       "Options:",
-      "  generalise     : enable search up to generalisation",
-      "  no-generalise  : disable search up to generalisation",
-      "  modulo-iso     : enable search modulo βη and type isomorphisms",
-      "  no-modulo-iso  : search modulo βη",
-      "  timeout <ms>   : set the timeout in milliseconds"
+      "  (no-)generalise  : enable/disable search up to generalisation             (default=enabled)",
+      "  (no-)modulo-iso  : enable/disable search modulo βη and type isomorphisms  (default=enabled)",
+      "  timeout <ms>     : set the timeout in milliseconds                        (default=5)"
     ]
 
 mainLoop :: TopEnv -> [(QName, Raw)] -> InputT IO ()
@@ -130,12 +128,12 @@ search :: TopEnv -> [(QName, Raw)] -> Raw -> Options -> InputT IO ()
 search topEnv sigs ty opts = do
   let ~vty = evaluateRaw topEnv mempty ty
   for_ sigs \(x, sig) -> do
-    msubst <- liftIO $ timeout (opts.timeout * 1000) do
+    msubst <- liftIO $ timeout (opts.timeoutMs * 1000) do
       let vsig = evaluateRaw topEnv mempty sig
       unifyValue opts.modulo topEnv vsig vty
     case msubst of
       Just (Just subst) -> do
-        let subst' = flip HM.filterWithKey subst \k _ -> case k of Src _ -> True; Gen _ -> False
+        let subst' = flip HM.filterWithKey subst \k _ -> case k of Src _ _ -> True; Gen _ -> False
         outputStrLn $ shows x $ showString " : " $ prettyRaw 0 sig ""
         when (HM.size subst' > 0) do
           outputStrLn $ "  by instantiating " ++ prettyMetaSubst subst' "\n"
@@ -209,26 +207,3 @@ prepare mods = go (HM.empty, []) (HM.keys modMap)
       let topEnv' = HM.insertWith (<>) x (HM.singleton m (evaluateRaw topEnv HM.empty t)) topEnv
           sigs' = (Qual m x, a) : sigs
        in (topEnv', sigs')
-
-instantiate :: (MonadPlus m) => TopEnv -> Value -> m Value
-instantiate topEnv = \case
-  VPi (Name x) _ b -> do
-    let m = Src (Name $ x <> "?") -- append ? back to the name so it will be fresh
-    pure $ instantiate' $ b (VMetaApp m [])
-  VArr a b -> pure $ VArr a (instantiate' b)
-  VTop _ _ vs -> do
-    (_, v) <- choose vs
-    instantiate topEnv v
-  t -> pure t
-
-instantiate' :: Value -> Value
-instantiate' = \case
-  VPi (Name x) _ b ->
-    -- throwing away the domain type currently
-    let m = Src (Name $ x <> "?") -- append ? back to the name so it will be fresh
-     in instantiate' $ b (VMetaApp m [])
-  VArr a b -> VArr a (instantiate' b)
-  t -> t
-
-instantiateRaw :: (MonadPlus m) => TopEnv -> Raw -> m Value
-instantiateRaw topEnv = instantiate topEnv . evaluateRaw topEnv mempty

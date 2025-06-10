@@ -23,14 +23,14 @@ let subst : (A : Type) (B : A → Type) (x y : A) → Eq A x y → B x → B y =
 let transport : (A B : Type) → Eq Type A B → A → B =
   λ A B eq x → subst Type (id Type) A B eq x
 
-let LeftIdentity : (A : Type) (op : A → A → A) (e : A) → Type =
+let LeftIdentity : (A : Type) → (A → A → A) → A → Type =
   λ A op e → (x : A) → Eq A (op e x) x
 
-let RightIdentity : (A : Type) (op : A → A → A) (e : A) → Type =
+let RightIdentity : (A : Type) → (A → A → A) → A → Type =
   λ A op e → (x : A) → Eq A (op x e) x
 
-let Commutativity : (A : Type) (op : A → A → A) → Type =
+let Commutativity : (A : Type) → (A → A → A) → Type =
   λ A op → (x y : A) → Eq A (op x y) (op y x)
 
-let Associativity : (A : Type) (op : A → A → A) → Type =
+let Associativity : (A : Type) → (A → A → A) → Type =
   λ A op → (x y z : A) → Eq A (op x (op y z)) (op (op x y) z)

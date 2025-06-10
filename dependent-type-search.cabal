@@ -86,8 +86,8 @@ library
     , containers
     , hashable
     , haskeline
+    , logict
     , megaparsec
-    , monus-weighted-search
     , mtl
     , text
     , unordered-containers
@@ -150,8 +150,8 @@ executable dependent-type-search-exe
     , dependent-type-search
     , hashable
     , haskeline
+    , logict
     , megaparsec
-    , monus-weighted-search
     , mtl
     , text
     , unordered-containers
@@ -215,8 +215,8 @@ test-suite dependent-type-search-test
     , dependent-type-search
     , hashable
     , haskeline
+    , logict
     , megaparsec
-    , monus-weighted-search
     , mtl
     , text
     , unordered-containers

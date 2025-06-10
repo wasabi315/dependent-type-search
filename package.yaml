@@ -24,8 +24,8 @@ dependencies:
   - containers
   - hashable
   - haskeline
+  - logict
   - megaparsec
-  - monus-weighted-search
   - mtl
   - text
   - unordered-containers

@@ -15,14 +15,11 @@ where
 
 import Control.Applicative
 import Control.Monad
-import Control.Monad.Heap
+import Control.Monad.Logic
 import Control.Monad.Trans
-import Control.Monad.Writer
 import Data.HashMap.Lazy qualified as HM
 import Data.HashSet qualified as HS
-import Data.List (subsequences)
 import Data.Maybe
-import Data.Monus.Dist
 import Data.Text qualified as T
 import TypeSearch.Common
 import TypeSearch.Evaluation
@@ -249,7 +246,7 @@ huetProjection' t arity params params' = go $ spine t
       VRefl {} -> pure IRefl
       VStuck {} -> empty
 
-    go sp =
+    go sp = do
       ( case sp of
           SNil -> kind >>= \k -> imitation' k params params'
           SApp sp' _ -> do
@@ -280,29 +277,8 @@ huetProjection' t arity params params' = go $ spine t
                 y = MetaApp m5 params
             eq <- go sp'
             pure $ EqElim `App` a `App` x `App` p `App` r `App` y `App` eq
-      )
+        )
         <|> jpProjection' arity
-
--- | Generate a pair of meta abstractions for identification binding.
-identification :: Int -> Int -> UnifyM (MetaAbs, MetaAbs)
-identification arity arity' = lift do
-  i <- freshMeta
-  ms <- replicateM arity freshMeta
-  ms' <- replicateM arity' freshMeta
-  let params = map Var $ down (Index arity - 1) 0
-      params' = map Var $ down (Index arity' - 1) 0
-      mabs = MetaAbs arity $ MetaApp i $ params ++ map (`MetaApp` params) ms'
-      mabs' = MetaAbs arity' $ MetaApp i $ map (`MetaApp` params') ms ++ params'
-  pure (mabs, mabs')
-
--- | Generate meta abstractions that just drop some arguments.
-elimination :: Int -> UnifyM MetaAbs
-elimination arity = do
-  e <- lift freshMeta
-  let params = map Var $ down (Index arity - 1) 0
-  subParams <- choose $ subsequences params
-  let mabs = MetaAbs arity $ MetaApp e subParams
-  pure mabs
 
 --------------------------------------------------------------------------------
 -- Solving constraints in solved form
@@ -519,7 +495,7 @@ possibleComponentHoists topEnv subst lvl t = do
         _ -> a
       (_, VSigma x a b) -> VSigma x a (deleteProd (i - 1) . b)
       (_, VProd a b) -> VProd a (deleteProd (i - 1) b)
-      _ -> error $ "deleteProd: not a prod: " <> show i
+      _ -> error "deleteProd: not a prod"
 
     deleteSigma i u v = case (i, force topEnv subst v) of
       (0 :: Int, VSigma _ _ b) -> b u
@@ -569,7 +545,7 @@ data Modulo
 -- | Monad for unification.
 -- @HeapT@ is like list transformer with priority.
 -- @IO@ is for generating fresh metavariables.
-type UnifyM = HeapT Dist IO
+type UnifyM = LogicT IO
 
 -- | Used for controlling definition unfolding.
 data ConvMode
@@ -824,7 +800,6 @@ decomposeIso topEnv subst (Constraint lvl cm iso lhs rhs) todos = do
 -- | Guess a metavariable from how they are eliminated.
 guessMeta :: Constraint -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
 guessMeta todo@(Constraint _ _ _ lhs rhs) subst todos = do
-  tell 1
   (m, mabs) <- guessMeta' lhs <|> guessMeta' rhs
   let subst' = HM.insert m mabs subst
   pure (subst', todo : todos)
@@ -842,7 +817,6 @@ guessMeta todo@(Constraint _ _ _ lhs rhs) subst todos = do
 guessMetaIso :: TopEnv -> Constraint -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
 guessMetaIso topEnv todo@(Constraint lvl _ iso lhs rhs) subst todos = do
   guard (iso == BetaEtaIso)
-  tell 1
   (m, mabs) <- guessMetaIso' lhs <|> guessMetaIso' rhs
   let subst' = HM.insert m mabs subst
   pure (subst', todo : todos)
@@ -881,7 +855,6 @@ guessMetaIso topEnv todo@(Constraint lvl _ iso lhs rhs) subst todos = do
 -- | Go through candidate solutions for flex-rigid constraints
 flexRigid :: Constraint -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
 flexRigid todo@(Constraint _ _ _ lhs rhs) subst todos = do
-  tell 1
   case (lhs, rhs) of
     (VFlex {}, VFlex {}) -> empty
     (VFlex m ar _ SNil, t') -> do
@@ -894,24 +867,6 @@ flexRigid todo@(Constraint _ _ _ lhs rhs) subst todos = do
       pure (subst', todo : todos)
     _ -> empty
 
--- | Go through candidate solutions for flex-flex constraints
--- Iteration binding is not supported yet.
-flexFlex :: Constraint -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
-flexFlex todo@(Constraint _ _ _ lhs rhs) subst todos = do
-  tell 2
-  case (lhs, rhs) of
-    (VFlex m ar _ SNil, VFlex m' ar' _ SNil)
-      | m == m' -> do
-          guard (ar == ar')
-          mabs <- elimination ar
-          let subst' = HM.insert m mabs subst
-          pure (subst', todo : todos)
-      | otherwise -> do
-          (mabs, mabs') <- identification ar ar'
-          let subst' = HM.insert m mabs $ HM.insert m' mabs' subst
-          pure (subst', todo : todos)
-    _ -> empty
-
 -- | Lazily unfold definitions.
 unfold :: Constraint -> [Constraint] -> ChosenDefs -> UnifyM ([Constraint], ChosenDefs)
 unfold (Constraint lvl cm iso lhs rhs) todos chosenDefs = do
@@ -920,14 +875,12 @@ unfold (Constraint lvl cm iso lhs rhs) todos chosenDefs = do
       | n == n' ->
           (,chosenDefs) <$> decomposeSpine Flex lvl sp sp' todos
             <|> do
-              tell 1
               -- assume modName = modName'
               ((modName, t), (_modName', t')) <- choose (zip ts ts')
               let chosenDefs' = HM.insert n modName chosenDefs
                   todo1 = Constraint lvl Full iso t t'
               pure (todo1 : todos, chosenDefs')
       | otherwise -> do
-          tell 2
           (modName, t) <- choose ts
           (modName', t') <- choose ts'
           let chosenDefs' = HM.insert n modName $ HM.insert n' modName' chosenDefs
@@ -938,14 +891,12 @@ unfold (Constraint lvl cm iso lhs rhs) todos chosenDefs = do
       | otherwise -> empty
     (Full, VTop n _ ts, VTop n' _ ts')
       | n == n' -> do
-          tell 1
           -- assume modName = modName'
           ((modName, t), (_modName', t')) <- choose (zip ts ts')
           let chosenDefs' = HM.insert n modName chosenDefs
               todo1 = Constraint lvl Full iso t t'
           pure (todo1 : todos, chosenDefs')
       | otherwise -> do
-          tell 2
           (modName, t) <- choose ts
           (modName', t') <- choose ts'
           let chosenDefs' = HM.insert n modName $ HM.insert n' modName' chosenDefs
@@ -953,26 +904,49 @@ unfold (Constraint lvl cm iso lhs rhs) todos chosenDefs = do
           pure (todo1 : todos, chosenDefs')
     (Flex, VTop {}, _) -> empty
     (_, VTop n _ ts, t') -> do
-      tell 1
       (modName, t) <- choose ts
       let todo1 = Constraint lvl cm iso t t'
           chosenDefs' = HM.insert n modName chosenDefs
       pure (todo1 : todos, chosenDefs')
     (Flex, _, VTop {}) -> empty
     (_, t, VTop n _ ts) -> do
-      tell 1
       (modName, t') <- choose ts
       let todo1 = Constraint lvl cm iso t t'
           chosenDefs' = HM.insert n modName chosenDefs
       pure (todo1 : todos, chosenDefs')
     _ -> empty
 
+instantiate :: Constraint -> [Constraint] -> UnifyM [Constraint]
+instantiate (Constraint lvl cm iso lhs rhs) todos = case lhs of
+  VPi x _ b -> do
+    m <- lift $ freshMetaSrc x
+    let args = map VVar $ down (lvl - 1) 0
+        todo1 = Constraint lvl cm iso (b (VMetaApp m args)) rhs
+    pure (todo1 : todos)
+  _ -> empty
+
+chooseConstraint :: TopEnv -> MetaSubst -> [Constraint] -> Either [Constraint] (Constraint, [Constraint])
+chooseConstraint topEnv subst = go [] []
+  where
+    go fr ff = \case
+      [] -> case fr of
+        [] -> Left ff
+        todo : todos -> Right (todo, todos)
+      (forceConstraint topEnv subst -> todo) : todos -> case todo of
+        Constraint _ _ _ (VFlex m _ _ SNil) (VFlex m' _ _ SNil)
+          | m == m' -> Right (todo, todos)
+          | otherwise -> go fr (todo : ff) todos
+        Constraint _ _ _ (VFlex _ _ _ SNil) _ -> go (todo : fr) ff todos
+        Constraint _ _ _ _ (VFlex _ _ _ SNil) -> go (todo : fr) ff todos
+        _ -> Right (todo, todos)
+
 -- | Unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
 unify :: TopEnv -> ChosenDefs -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
-unify topEnv chosenDefs subst = \case
-  [] -> pure (subst, [])
-  (forceConstraint topEnv subst -> todo) : todos -> do
+unify topEnv chosenDefs subst todos = case chooseConstraint topEnv subst todos of
+  Left ff -> pure (subst, ff)
+  Right (todo, todos) -> do
     -- lift do
+    --   threadDelay 500000
     --   putStrLn "--------------------------------------------------"
     --   putStrLn $ prettyMetaSubst subst ""
     --   putStrLn $ prettyConstraint todo ""
@@ -993,12 +967,10 @@ unify topEnv chosenDefs subst = \case
             (subst', todos') <- flexRigid todo subst todos
             pure (subst', todos', chosenDefs),
           do
-            (subst', todos') <- flexFlex todo subst todos
-            pure (subst', todos', chosenDefs),
-          do
             (todos', chosenDefs') <- unfold todo todos chosenDefs
             pure (subst, todos', chosenDefs'),
-          (subst,,chosenDefs) <$> decomposeIso topEnv subst todo todos
+          (subst,,chosenDefs) <$> decomposeIso topEnv subst todo todos,
+          (subst,,chosenDefs) <$> instantiate todo todos
         ]
     unify topEnv chosenDefs' subst' todos'
 
@@ -1046,9 +1018,11 @@ unifyValue' modulo topEnv v v' = do
 
 -- | Unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
 unifyValue :: Modulo -> TopEnv -> Value -> Value -> IO (Maybe MetaSubst)
-unifyValue modulo topEnv v v' =
-  fmap (zonkMetaSubst topEnv . fst . snd)
-    <$> bestT (unifyValue' modulo topEnv v v')
+unifyValue modulo topEnv v v' = do
+  xs <- observeManyT 1 (unifyValue' modulo topEnv v v')
+  case xs of
+    [] -> pure Nothing
+    (subst, _) : _ -> pure (Just (zonkMetaSubst topEnv subst))
 
 -- | Unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
 unifyTerm :: Modulo -> TopEnv -> Term -> Term -> IO (Maybe MetaSubst)
