@@ -1,10 +1,11 @@
-module Main (main, prepare) where
+module Main (main, prepareTopEnv) where
 
 import Control.Exception
 import Control.Monad
 import Control.Monad.Except
 import Data.Foldable
 import Data.HashMap.Lazy qualified as HM
+import Data.HashSet qualified as HS
 import Data.Text qualified as T
 import Data.Text.IO qualified as T
 import Data.Traversable
@@ -125,19 +126,23 @@ mainLoop topEnv sigs = go defaultOptions
           go opts
 
 search :: TopEnv -> [(QName, Raw)] -> Raw -> Options -> InputT IO ()
-search topEnv sigs ty opts = do
-  let ~vty = evaluateRaw topEnv mempty ty
-  for_ sigs \(x, sig) -> do
-    msubst <- liftIO $ timeout (opts.timeoutMs * 1000) do
-      let vsig = evaluateRaw topEnv mempty sig
-      unifyValue opts.modulo topEnv vsig vty
-    case msubst of
-      Just (Just subst) -> do
-        let subst' = flip HM.filterWithKey subst \k _ -> case k of Src _ _ -> True; Gen _ -> False
-        outputStrLn $ shows x $ showString " : " $ prettyRaw 0 sig ""
-        when (HM.size subst' > 0) do
-          outputStrLn $ "  by instantiating " ++ prettyMetaSubst subst' "\n"
-      _ -> pure ()
+search topEnv sigs ty opts
+  | freeVars <- freeVarSet ty `HS.difference` HM.keysSet topEnv,
+    not $ HS.null freeVars = do
+      outputStrLn $ "Undefined variables: " ++ show (HS.toList freeVars)
+      pure ()
+  | otherwise = do
+      for_ sigs \(x, sig) -> do
+        msubst <- liftIO $ timeout (opts.timeoutMs * 1000) do
+          unifyRaw opts.modulo topEnv sig ty
+        case msubst of
+          Just (Just subst) -> do
+            let subst' = flip HM.filterWithKey subst \k _ -> case k of Src _ _ -> True; Gen _ -> False
+            outputStrLn $ shows x $ showString " : " $ prettyRaw 0 sig ""
+            when (HM.size subst' > 0) do
+              outputStrLn $ "  by instantiating " ++ prettyMetaSubst subst' ""
+            outputStrLn ""
+          _ -> pure ()
 
 main :: IO ()
 main = do
@@ -151,40 +156,26 @@ main = do
     outputStrLn helpText
     mainLoop topEnv sigs
 
--- runInputT defaultSettings do
---   fix \loop -> do
---     minput <- getInputLine "> "
---     case minput of
---       Nothing -> loop
---       Just ":q" -> pure ()
---       Just input -> do
---         case parseRaw "" (T.pack input) of
---           Left _ -> do
---             outputStrLn "Parse error"
---             loop
---           Right ty -> do
---             let vty = evaluateRaw topEnv mempty ty
---             for_ sigs \(x, sig) -> do
---               let vsigs = instantiateRaw @[] topEnv sig
---               for_ vsigs \vsig -> do
---                 msubst <- liftIO $ timeout 100000 $ unifyValue BetaEtaIso topEnv vsig vty
---                 case msubst of
---                   Just (Just subst) -> do
---                     let subst' =
---                           subst
---                             & HM.filterWithKey (\k _ -> case k of Src _ -> True; Gen _ -> False)
---                             & HM.mapKeys
---                               ( \case
---                                   Gen _ -> error "impossible"
---                                   Src (Name n)
---                                     | T.last n == '?' -> Src (Name $ T.init n)
---                                     | otherwise -> Src (Name n)
---                               )
---                     outputStrLn $ show x ++ " : " ++ prettyRaw 0 sig ""
---                     when (HM.size subst' > 0) do
---                       outputStrLn $ "  by instantiating " ++ prettyMetaSubst subst' ""
---                   _ -> pure ()
---             loop
+prepareTopEnv :: [FilePath] -> IO TopEnv
+prepareTopEnv libPaths = do
+  let go topEnv = \case
+        [] -> topEnv
+        m : ms
+          | any (\m' -> m'.name `elem` m.imports) ms -> go topEnv (ms ++ [m])
+          | otherwise -> go (goModule topEnv m) ms
+
+      goModule topEnv (Module m _ decls) = foldl' (goDecl m) topEnv decls
+
+      goDecl m topEnv (DLet _ x _ t) =
+        HM.insertWith (<>) x (HM.singleton m (evaluateRaw topEnv HM.empty t)) topEnv
+
+  mods <- for libPaths \path -> do
+    src <- T.readFile path
+    case parseModule path src of
+      Left e -> throwIO e
+      Right m -> pure m
+
+  pure $ go HM.empty mods
 
 -- FIXME: loop indefinitely if there are circular dependencies
 prepare :: [Module] -> (TopEnv, [(QName, Raw)])

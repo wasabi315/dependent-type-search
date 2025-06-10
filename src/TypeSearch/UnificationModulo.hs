@@ -14,6 +14,7 @@ module TypeSearch.UnificationModulo
 where
 
 import Control.Applicative
+import Control.Concurrent
 import Control.Monad
 import Control.Monad.Logic
 import Control.Monad.Trans
@@ -367,8 +368,8 @@ rename topEnv metaSubst m = go
 -- Swapping domains of pi types and components of sigma types
 
 -- | Compute the free variable set of a value.
-freeVarSet :: TopEnv -> MetaSubst -> Level -> Value -> HS.HashSet Level
-freeVarSet topEnv subst = go
+freeVarSet' :: TopEnv -> MetaSubst -> Level -> Value -> HS.HashSet Level
+freeVarSet' topEnv subst = go
   where
     go lvl t = case force topEnv subst t of
       VRigid l sp -> HS.insert l (goSpine lvl sp)
@@ -438,7 +439,7 @@ possibleDomainHoists topEnv subst lvl t = do
       where
         hoistable a =
           HS.null lvls
-            || HS.null (HS.intersection (freeVarSet topEnv subst lvl a) lvls)
+            || HS.null (HS.intersection (freeVarSet' topEnv subst lvl a) lvls)
 
     deleteArr i u = case (i, force topEnv subst u) of
       (0 :: Int, VArr _ b) -> b
@@ -485,7 +486,7 @@ possibleComponentHoists topEnv subst lvl t = do
       where
         hoistable a =
           HS.null lvls
-            || HS.null (HS.intersection (freeVarSet topEnv subst lvl a) lvls)
+            || HS.null (HS.intersection (freeVarSet' topEnv subst lvl a) lvls)
 
     deleteProd i u = case (i, force topEnv subst u) of
       (0 :: Int, VProd _ b) -> b
@@ -916,29 +917,20 @@ unfold (Constraint lvl cm iso lhs rhs) todos chosenDefs = do
       pure (todo1 : todos, chosenDefs')
     _ -> empty
 
-instantiate :: Constraint -> [Constraint] -> UnifyM [Constraint]
-instantiate (Constraint lvl cm iso lhs rhs) todos = case lhs of
-  VPi x _ b -> do
-    m <- lift $ freshMetaSrc x
-    let args = map VVar $ down (lvl - 1) 0
-        todo1 = Constraint lvl cm iso (b (VMetaApp m args)) rhs
-    pure (todo1 : todos)
-  _ -> empty
-
 chooseConstraint :: TopEnv -> MetaSubst -> [Constraint] -> Either [Constraint] (Constraint, [Constraint])
 chooseConstraint topEnv subst = go [] []
   where
     go fr ff = \case
       [] -> case fr of
         [] -> Left ff
-        todo : todos -> Right (todo, todos)
+        todo : todos -> Right (todo, todos ++ ff)
       (forceConstraint topEnv subst -> todo) : todos -> case todo of
         Constraint _ _ _ (VFlex m _ _ SNil) (VFlex m' _ _ SNil)
-          | m == m' -> Right (todo, todos)
+          | m == m' -> Right (todo, todos ++ fr ++ ff)
           | otherwise -> go fr (todo : ff) todos
         Constraint _ _ _ (VFlex _ _ _ SNil) _ -> go (todo : fr) ff todos
         Constraint _ _ _ _ (VFlex _ _ _ SNil) -> go (todo : fr) ff todos
-        _ -> Right (todo, todos)
+        _ -> Right (todo, todos ++ fr ++ ff)
 
 -- | Unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
 unify :: TopEnv -> ChosenDefs -> MetaSubst -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
@@ -951,28 +943,26 @@ unify topEnv chosenDefs subst todos = case chooseConstraint topEnv subst todos o
     --   putStrLn $ prettyMetaSubst subst ""
     --   putStrLn $ prettyConstraint todo ""
     --   mapM_ (\todo' -> putStrLn $ prettyConstraint todo' "") todos
-    (subst', todos', chosenDefs') <-
-      asum
-        [ do
-            subst' <- solve topEnv subst todo
-            pure (subst', todos, chosenDefs),
-          (subst,,chosenDefs) <$> decompose todo todos,
-          do
-            (subst', todos') <- guessMeta todo subst todos
-            pure (subst', todos', chosenDefs),
-          do
-            (subst', todos') <- guessMetaIso topEnv todo subst todos
-            pure (subst', todos', chosenDefs),
-          do
-            (subst', todos') <- flexRigid todo subst todos
-            pure (subst', todos', chosenDefs),
-          do
-            (todos', chosenDefs') <- unfold todo todos chosenDefs
-            pure (subst, todos', chosenDefs'),
-          (subst,,chosenDefs) <$> decomposeIso topEnv subst todo todos,
-          (subst,,chosenDefs) <$> instantiate todo todos
-        ]
-    unify topEnv chosenDefs' subst' todos'
+    asum
+      [ do
+          subst' <- solve topEnv subst todo
+          pure (subst', todos, chosenDefs),
+        (subst,,chosenDefs) <$> decompose todo todos,
+        do
+          (subst', todos') <- guessMeta todo subst todos
+          pure (subst', todos', chosenDefs),
+        do
+          (subst', todos') <- guessMetaIso topEnv todo subst todos
+          pure (subst', todos', chosenDefs),
+        (subst,,chosenDefs) <$> decomposeIso topEnv subst todo todos,
+        do
+          (subst', todos') <- flexRigid todo subst todos
+          pure (subst', todos', chosenDefs),
+        do
+          (todos', chosenDefs') <- unfold todo todos chosenDefs
+          pure (subst, todos', chosenDefs')
+      ]
+      >>= \(subst', todos', chosenDefs') -> unify topEnv chosenDefs' subst' todos'
 
 prettyConstraint :: Constraint -> ShowS
 prettyConstraint (Constraint lvl _ iso lhs rhs) =

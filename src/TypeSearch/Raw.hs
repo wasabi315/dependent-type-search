@@ -7,9 +7,11 @@ module TypeSearch.Raw
     Raw (..),
     rnatLit,
     unRPos,
+    freeVarSet,
   )
 where
 
+import Data.HashSet qualified as HS
 import TypeSearch.Common
 
 --------------------------------------------------------------------------------
@@ -60,3 +62,30 @@ unRPos :: Raw -> Raw
 unRPos = \case
   RPos t _ -> unRPos t
   t -> t
+
+freeVarSet :: Raw -> HS.HashSet Name
+freeVarSet = \case
+  RVar (Qual _ n) -> HS.singleton n
+  RVar (Unqual n) -> HS.singleton n
+  RGenVar _ -> HS.empty
+  RMetaApp _ ts -> foldMap freeVarSet ts
+  RType -> HS.empty
+  RPi x t1 t2 -> freeVarSet t1 <> HS.delete x (freeVarSet t2)
+  RArr t1 t2 -> freeVarSet t1 <> freeVarSet t2
+  RAbs x t -> HS.delete x (freeVarSet t)
+  RApp t1 t2 -> freeVarSet t1 <> freeVarSet t2
+  RSigma x t1 t2 -> freeVarSet t1 <> HS.delete x (freeVarSet t2)
+  RProd t1 t2 -> freeVarSet t1 <> freeVarSet t2
+  RPair t1 t2 -> freeVarSet t1 <> freeVarSet t2
+  RFst t -> freeVarSet t
+  RSnd t -> freeVarSet t
+  RUnit -> HS.empty
+  RTT -> HS.empty
+  RNat -> HS.empty
+  RZero -> HS.empty
+  RSuc -> HS.empty
+  RNatElim -> HS.empty
+  REq -> HS.empty
+  RRefl -> HS.empty
+  REqElim -> HS.empty
+  RPos t _ -> freeVarSet t
