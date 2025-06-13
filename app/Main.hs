@@ -129,10 +129,6 @@ search :: TopEnv -> [(QName, Raw)] -> Raw -> Options -> InputT IO ()
 search topEnv sigs ty opts = do
   let unify = if opts.generalise == Generalise then unifyRawInst else unifyRaw
   for_ sigs \(x, sig) -> do
-    liftIO $ withFile "unify.log" AppendMode \h -> do
-      hPutStrLn h "**************************************************"
-      hPutStrLn h $ "Matching " ++ show x ++ " : " ++ prettyRaw 0 sig ""
-      hPutStrLn h "**************************************************"
     msubst <-
       liftIO $
         timeout (opts.timeoutMs * 1000) do
