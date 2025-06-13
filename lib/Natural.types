@@ -40,7 +40,7 @@ let add-assoc : Equality.Associativity Nat add =
     (λ m n → refl Nat (add m n))
 
 let mul : Nat → Nat → Nat =
-  λ m n → natElim (λ _ → Nat) 0 (λ _ → add n) m
+  λ m n → natElim (λ _ → Nat) (λ _ → add n) 0 m
 
 let mul-zero-l : (n : Nat) → Eq Nat (mul 0 n) 0 =
   λ n → refl Nat 0

@@ -531,7 +531,6 @@ data Constraint = Constraint
   { level :: Level, -- n
     convMode :: ConvMode,
     modulo :: Modulo,
-    inst :: Bool, -- whether lhs can be instantiated
     lhs, rhs :: Value -- t1, t2
   }
 
@@ -590,7 +589,7 @@ incrNumGuessMetaIso ctx = ctx {numGuessMetaIso = ctx.numGuessMetaIso + 1}
 
 -- | Decompose a constraint into a set of smaller constraints.
 decompose :: SharedCtx -> Constraint -> [Constraint] -> UnifyM [Constraint]
-decompose ctx (Constraint lvl cm iso _ lhs rhs) todos = do
+decompose ctx (Constraint lvl cm iso lhs rhs) todos = do
   case (lhs, rhs) of
     (VStuck {}, _) -> empty
     (_, VStuck {}) -> empty
@@ -598,161 +597,161 @@ decompose ctx (Constraint lvl cm iso _ lhs rhs) todos = do
       | x == x' -> decomposeSpine cm lvl sp sp' todos
       | otherwise -> empty
     (VRigid x (SApp sp t), VFlex m' ar' ts' (SApp sp' t')) -> do
-      let todo1 = Constraint lvl cm DefEq False (VRigid x sp) (VFlex m' ar' ts' sp')
-          todo2 = Constraint lvl cm DefEq False t t'
+      let todo1 = Constraint lvl cm DefEq (VRigid x sp) (VFlex m' ar' ts' sp')
+          todo2 = Constraint lvl cm DefEq t t'
       pure (todo1 : todo2 : todos)
     (VRigid x (SFst sp), VFlex m' ar' ts' (SFst sp')) -> do
-      let todo1 = Constraint lvl cm DefEq False (VRigid x sp) (VFlex m' ar' ts' sp')
+      let todo1 = Constraint lvl cm DefEq (VRigid x sp) (VFlex m' ar' ts' sp')
       pure (todo1 : todos)
     (VRigid x (SSnd sp), VFlex m' ar' ts' (SSnd sp')) -> do
-      let todo1 = Constraint lvl cm DefEq False (VRigid x sp) (VFlex m' ar' ts' sp')
+      let todo1 = Constraint lvl cm DefEq (VRigid x sp) (VFlex m' ar' ts' sp')
       pure (todo1 : todos)
     -- FIXME: avoid recomputation
     (VRigid x (SApp sp t), VTop n (SApp sp' t') _) -> do
       let def = evaluateRaw ctx.topEnv mempty (RVar (Unqual n))
-          todo1 = Constraint lvl cm DefEq False (VRigid x sp) (vappSpine def sp')
-          todo2 = Constraint lvl cm DefEq False t t'
+          todo1 = Constraint lvl cm DefEq (VRigid x sp) (vappSpine def sp')
+          todo2 = Constraint lvl cm DefEq t t'
       pure (todo1 : todo2 : todos)
     (VRigid x (SFst sp), VTop n (SFst sp') _) -> do
       let def = evaluateRaw ctx.topEnv mempty (RVar (Unqual n))
-          todo1 = Constraint lvl cm DefEq False (VRigid x sp) (vappSpine def sp')
+          todo1 = Constraint lvl cm DefEq (VRigid x sp) (vappSpine def sp')
       pure (todo1 : todos)
     (VRigid x (SSnd sp), VTop n (SSnd sp') _) -> do
       let def = evaluateRaw ctx.topEnv mempty (RVar (Unqual n))
-          todo1 = Constraint lvl cm DefEq False (VRigid x sp) (vappSpine def sp')
+          todo1 = Constraint lvl cm DefEq (VRigid x sp) (vappSpine def sp')
       pure (todo1 : todos)
     (VFlex m ar ts (SApp sp t), VRigid x' (SApp sp' t')) -> do
-      let todo1 = Constraint lvl cm DefEq False (VFlex m ar ts sp) (VRigid x' sp')
-          todo2 = Constraint lvl cm DefEq False t t'
+      let todo1 = Constraint lvl cm DefEq (VFlex m ar ts sp) (VRigid x' sp')
+          todo2 = Constraint lvl cm DefEq t t'
       pure (todo1 : todo2 : todos)
     (VFlex m ar ts (SFst sp), VRigid x' (SFst sp')) -> do
-      let todo1 = Constraint lvl cm DefEq False (VFlex m ar ts sp) (VRigid x' sp')
+      let todo1 = Constraint lvl cm DefEq (VFlex m ar ts sp) (VRigid x' sp')
       pure (todo1 : todos)
     (VFlex m ar ts (SSnd sp), VRigid x' (SSnd sp')) -> do
-      let todo1 = Constraint lvl cm DefEq False (VFlex m ar ts sp) (VRigid x' sp')
+      let todo1 = Constraint lvl cm DefEq (VFlex m ar ts sp) (VRigid x' sp')
       pure (todo1 : todos)
     (VFlex m ar ts (SApp sp t), VFlex m' ar' ts' (SApp sp' t')) -> do
-      let todo1 = Constraint lvl cm DefEq False (VFlex m ar ts sp) (VFlex m' ar' ts' sp')
-          todo2 = Constraint lvl cm DefEq False t t'
+      let todo1 = Constraint lvl cm DefEq (VFlex m ar ts sp) (VFlex m' ar' ts' sp')
+          todo2 = Constraint lvl cm DefEq t t'
       pure (todo1 : todo2 : todos)
     (VFlex m ar ts (SFst sp), VFlex m' ar' ts' (SFst sp')) -> do
-      let todo1 = Constraint lvl cm DefEq False (VFlex m ar ts sp) (VFlex m' ar' ts' sp')
+      let todo1 = Constraint lvl cm DefEq (VFlex m ar ts sp) (VFlex m' ar' ts' sp')
       pure (todo1 : todos)
     (VFlex m ar ts (SSnd sp), VFlex m' ar' ts' (SSnd sp')) -> do
-      let todo1 = Constraint lvl cm DefEq False (VFlex m ar ts sp) (VFlex m' ar' ts' sp')
+      let todo1 = Constraint lvl cm DefEq (VFlex m ar ts sp) (VFlex m' ar' ts' sp')
       pure (todo1 : todos)
     (VFlex m _ ts SNil, VFlex m' _ ts' SNil)
       | m == m' -> decomposeMetaArgs cm lvl (reverse ts) (reverse ts') todos
     (VFlex m ar ts (SApp sp t), VTop n (SApp sp' t') _) -> do
       let def = evaluateRaw ctx.topEnv mempty (RVar (Unqual n))
-          todo1 = Constraint lvl cm DefEq False (VFlex m ar ts sp) (vappSpine def sp')
-          todo2 = Constraint lvl cm DefEq False t t'
+          todo1 = Constraint lvl cm DefEq (VFlex m ar ts sp) (vappSpine def sp')
+          todo2 = Constraint lvl cm DefEq t t'
       pure (todo1 : todo2 : todos)
     (VFlex m ar ts (SFst sp), VTop n (SFst sp') _) -> do
       let def = evaluateRaw ctx.topEnv mempty (RVar (Unqual n))
-          todo1 = Constraint lvl cm DefEq False (VFlex m ar ts sp) (vappSpine def sp')
+          todo1 = Constraint lvl cm DefEq (VFlex m ar ts sp) (vappSpine def sp')
       pure (todo1 : todos)
     (VFlex m ar ts (SSnd sp), VTop n (SSnd sp') _) -> do
       let def = evaluateRaw ctx.topEnv mempty (RVar (Unqual n))
-          todo1 = Constraint lvl cm DefEq False (VFlex m ar ts sp) (vappSpine def sp')
+          todo1 = Constraint lvl cm DefEq (VFlex m ar ts sp) (vappSpine def sp')
       pure (todo1 : todos)
     (VTop n (SApp sp t) _, VRigid x' (SApp sp' t')) -> do
       let def = evaluateRaw ctx.topEnv mempty (RVar (Unqual n))
-          todo1 = Constraint lvl cm DefEq False (vappSpine def sp) (VRigid x' sp')
-          todo2 = Constraint lvl cm DefEq False t t'
+          todo1 = Constraint lvl cm DefEq (vappSpine def sp) (VRigid x' sp')
+          todo2 = Constraint lvl cm DefEq t t'
       pure (todo1 : todo2 : todos)
     (VTop n (SFst sp) _, VRigid x' (SFst sp')) -> do
       let def = evaluateRaw ctx.topEnv mempty (RVar (Unqual n))
-          todo1 = Constraint lvl cm DefEq False (vappSpine def sp) (VRigid x' sp')
+          todo1 = Constraint lvl cm DefEq (vappSpine def sp) (VRigid x' sp')
       pure (todo1 : todos)
     (VTop n (SSnd sp) _, VRigid x' (SSnd sp')) -> do
       let def = evaluateRaw ctx.topEnv mempty (RVar (Unqual n))
-          todo1 = Constraint lvl cm DefEq False (vappSpine def sp) (VRigid x' sp')
+          todo1 = Constraint lvl cm DefEq (vappSpine def sp) (VRigid x' sp')
       pure (todo1 : todos)
     (VTop n (SApp sp t) _, VFlex m' ar' ts' (SApp sp' t')) -> do
       let def = evaluateRaw ctx.topEnv mempty (RVar (Unqual n))
-          todo1 = Constraint lvl cm DefEq False (vappSpine def sp) (VFlex m' ar' ts' sp')
-          todo2 = Constraint lvl cm DefEq False t t'
+          todo1 = Constraint lvl cm DefEq (vappSpine def sp) (VFlex m' ar' ts' sp')
+          todo2 = Constraint lvl cm DefEq t t'
       pure (todo1 : todo2 : todos)
     (VTop n (SFst sp) _, VFlex m' ar' ts' (SFst sp')) -> do
       let def = evaluateRaw ctx.topEnv mempty (RVar (Unqual n))
-          todo1 = Constraint lvl cm DefEq False (vappSpine def sp) (VFlex m' ar' ts' sp')
+          todo1 = Constraint lvl cm DefEq (vappSpine def sp) (VFlex m' ar' ts' sp')
       pure (todo1 : todos)
     (VTop n (SSnd sp) _, VFlex m' ar' ts' (SSnd sp')) -> do
       let def = evaluateRaw ctx.topEnv mempty (RVar (Unqual n))
-          todo1 = Constraint lvl cm DefEq False (vappSpine def sp) (VFlex m' ar' ts' sp')
+          todo1 = Constraint lvl cm DefEq (vappSpine def sp) (VFlex m' ar' ts' sp')
       pure (todo1 : todos)
     (VType, VType) -> pure todos
     (VPi _ a b, VPi _ a' b') -> do
-      let todo1 = Constraint lvl cm DefEq False a a'
-          todo2 = Constraint (lvl + 1) cm iso True (b $ VVar lvl) (b' $ VVar lvl)
+      let todo1 = Constraint lvl cm DefEq a a'
+          todo2 = Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl)
       pure (todo1 : todo2 : todos)
     (VPi _ a b, VArr a' b') -> do
-      let todo1 = Constraint lvl cm iso False a a'
-          todo2 = Constraint (lvl + 1) cm iso True (b $ VVar lvl) b'
+      let todo1 = Constraint lvl cm iso a a'
+          todo2 = Constraint (lvl + 1) cm iso (b $ VVar lvl) b'
       pure (todo1 : todo2 : todos)
     (VArr a b, VPi _ a' b') -> do
-      let todo1 = Constraint lvl cm iso False a a'
-          todo2 = Constraint (lvl + 1) cm iso True b (b' $ VVar lvl)
+      let todo1 = Constraint lvl cm iso a a'
+          todo2 = Constraint (lvl + 1) cm iso b (b' $ VVar lvl)
       pure (todo1 : todo2 : todos)
     (VArr a b, VArr a' b') -> do
-      let todo1 = Constraint lvl cm iso False a a'
-          todo2 = Constraint lvl cm iso True b b'
+      let todo1 = Constraint lvl cm iso a a'
+          todo2 = Constraint lvl cm iso b b'
       pure (todo1 : todo2 : todos)
     (VAbs _ f, VAbs _ f') -> do
-      let todo1 = Constraint (lvl + 1) cm DefEq False (f $ VVar lvl) (f' $ VVar lvl)
+      let todo1 = Constraint (lvl + 1) cm DefEq (f $ VVar lvl) (f' $ VVar lvl)
       pure (todo1 : todos)
     -- η-expansion
     (VAbs _ f, t') -> do
-      let todo1 = Constraint (lvl + 1) cm DefEq False (f $ VVar lvl) (vapp t' $ VVar lvl)
+      let todo1 = Constraint (lvl + 1) cm DefEq (f $ VVar lvl) (vapp t' $ VVar lvl)
       pure (todo1 : todos)
     (t, VAbs _ f) -> do
-      let todo1 = Constraint (lvl + 1) cm DefEq False (vapp t $ VVar lvl) (f $ VVar lvl)
+      let todo1 = Constraint (lvl + 1) cm DefEq (vapp t $ VVar lvl) (f $ VVar lvl)
       pure (todo1 : todos)
     (VSigma _ a b, VSigma _ a' b') -> do
-      let todo1 = Constraint lvl cm DefEq False a a'
-          todo2 = Constraint (lvl + 1) cm iso False (b $ VVar lvl) (b' $ VVar lvl)
+      let todo1 = Constraint lvl cm DefEq a a'
+          todo2 = Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl)
       pure (todo1 : todo2 : todos)
     (VSigma _ a b, VProd a' b') -> do
-      let todo1 = Constraint lvl cm iso False a a'
-          todo2 = Constraint (lvl + 1) cm iso False (b $ VVar lvl) b'
+      let todo1 = Constraint lvl cm iso a a'
+          todo2 = Constraint (lvl + 1) cm iso (b $ VVar lvl) b'
       pure (todo1 : todo2 : todos)
     (VProd a b, VSigma _ a' b') -> do
-      let todo1 = Constraint lvl cm iso False a a'
-          todo2 = Constraint (lvl + 1) cm iso False b (b' $ VVar lvl)
+      let todo1 = Constraint lvl cm iso a a'
+          todo2 = Constraint (lvl + 1) cm iso b (b' $ VVar lvl)
       pure (todo1 : todo2 : todos)
     (VProd a b, VProd a' b') -> do
-      let todo1 = Constraint lvl cm iso False a a'
-          todo2 = Constraint lvl cm iso True b b'
+      let todo1 = Constraint lvl cm iso a a'
+          todo2 = Constraint lvl cm iso b b'
       pure (todo1 : todo2 : todos)
     (VPair t u, VPair t' u') -> do
-      let todo1 = Constraint lvl cm DefEq False t t'
-          todo2 = Constraint lvl cm DefEq False u u'
+      let todo1 = Constraint lvl cm DefEq t t'
+          todo2 = Constraint lvl cm DefEq u u'
       pure (todo1 : todo2 : todos)
     -- η-expansion
     (VPair t u, t') -> do
-      let todo1 = Constraint lvl cm DefEq False t (vfst t')
-          todo2 = Constraint lvl cm DefEq False u (vsnd t')
+      let todo1 = Constraint lvl cm DefEq t (vfst t')
+          todo2 = Constraint lvl cm DefEq u (vsnd t')
       pure (todo1 : todo2 : todos)
     (t, VPair t' u') -> do
-      let todo1 = Constraint lvl cm DefEq False (vfst t) t'
-          todo2 = Constraint lvl cm DefEq False (vsnd t) u'
+      let todo1 = Constraint lvl cm DefEq (vfst t) t'
+          todo2 = Constraint lvl cm DefEq (vsnd t) u'
       pure (todo1 : todo2 : todos)
     (VUnit, VUnit) -> pure todos
     (VTT, VTT) -> pure todos
     (VNat, VNat) -> pure todos
     (VZero, VZero) -> pure todos
     (VSuc t, VSuc t') -> do
-      let todo1 = Constraint lvl cm DefEq False t t'
+      let todo1 = Constraint lvl cm DefEq t t'
       pure (todo1 : todos)
     (VEq a t u, VEq a' t' u') -> do
-      let todo1 = Constraint lvl cm DefEq False a a'
-          todo2 = Constraint lvl cm DefEq False t t'
-          todo3 = Constraint lvl cm DefEq False u u'
+      let todo1 = Constraint lvl cm DefEq a a'
+          todo2 = Constraint lvl cm DefEq t t'
+          todo3 = Constraint lvl cm DefEq u u'
       pure (todo1 : todo2 : todo3 : todos)
     (VRefl a t, VRefl a' t') -> do
-      let todo1 = Constraint lvl cm DefEq False a a'
-          todo2 = Constraint lvl cm DefEq False t t'
+      let todo1 = Constraint lvl cm DefEq a a'
+          todo2 = Constraint lvl cm DefEq t t'
       pure (todo1 : todo2 : todos)
     _ -> empty
 
@@ -767,21 +766,21 @@ decomposeSpine ::
 decomposeSpine cm lvl lhs rhs todos = case (lhs, rhs) of
   (SNil, SNil) -> pure todos
   (SApp sp v, SApp sp' v') -> do
-    let todo1 = Constraint lvl cm DefEq False v v'
+    let todo1 = Constraint lvl cm DefEq v v'
     decomposeSpine cm lvl sp sp' (todo1 : todos)
   (SFst sp, SFst sp') -> decomposeSpine cm lvl sp sp' todos
   (SSnd sp, SSnd sp') -> decomposeSpine cm lvl sp sp' todos
   (SNatElim p s z sp, SNatElim p' s' z' sp') -> do
-    let todo1 = Constraint lvl cm DefEq False p p'
-        todo2 = Constraint lvl cm DefEq False s s'
-        todo3 = Constraint lvl cm DefEq False z z'
+    let todo1 = Constraint lvl cm DefEq p p'
+        todo2 = Constraint lvl cm DefEq s s'
+        todo3 = Constraint lvl cm DefEq z z'
     decomposeSpine cm lvl sp sp' (todo1 : todo2 : todo3 : todos)
   (SEqElim a x p r y sp, SEqElim a' x' p' r' y' sp') -> do
-    let todo1 = Constraint lvl cm DefEq False a a'
-        todo2 = Constraint lvl cm DefEq False x x'
-        todo3 = Constraint lvl cm DefEq False p p'
-        todo4 = Constraint lvl cm DefEq False r r'
-        todo5 = Constraint lvl cm DefEq False y y'
+    let todo1 = Constraint lvl cm DefEq a a'
+        todo2 = Constraint lvl cm DefEq x x'
+        todo3 = Constraint lvl cm DefEq p p'
+        todo4 = Constraint lvl cm DefEq r r'
+        todo5 = Constraint lvl cm DefEq y y'
     decomposeSpine cm lvl sp sp' (todo1 : todo2 : todo3 : todo4 : todo5 : todos)
   _ -> empty
 
@@ -796,33 +795,33 @@ decomposeMetaArgs ::
 decomposeMetaArgs cm lvl lhs rhs todos = case (lhs, rhs) of
   ([], []) -> pure todos
   (v : vs, v' : vs') ->
-    decomposeMetaArgs cm lvl vs vs' (Constraint lvl cm DefEq False v v' : todos)
+    decomposeMetaArgs cm lvl vs vs' (Constraint lvl cm DefEq v v' : todos)
   _ -> empty
 
 -- | Like @decompose@, but function domains, sigma components, or equality sides are permuted.
 decomposeIso :: SharedCtx -> Constraint -> [Constraint] -> UnifyM [Constraint]
-decomposeIso ctx (Constraint lvl cm iso inst lhs rhs) todos = do
+decomposeIso ctx (Constraint lvl cm iso lhs rhs) todos = do
   guard (iso == Iso)
   case (lhs, rhs) of
     -- Hoist one of the domains respecting dependencies
     (isPi -> True, isPi -> True) -> do
       lhs' <- choose $ tail $ possibleDomainHoists ctx.topEnv ctx.metaSubst lvl lhs
-      let todo1 = Constraint lvl cm iso inst lhs' rhs
+      let todo1 = Constraint lvl cm iso lhs' rhs
       decompose ctx todo1 todos
     -- Hoist one of the components respecting dependencies
     (isSigma -> True, isSigma -> True) -> do
       lhs' <- choose $ tail $ possibleComponentHoists ctx.topEnv ctx.metaSubst lvl lhs
-      let todo1 = Constraint lvl cm iso inst lhs' rhs
+      let todo1 = Constraint lvl cm iso lhs' rhs
       decompose ctx todo1 todos
     -- swap the sides of the equality
     (VEq a t u, VEq {}) -> do
-      let todo1 = Constraint lvl cm iso inst (VEq a u t) rhs
+      let todo1 = Constraint lvl cm iso (VEq a u t) rhs
       decompose ctx todo1 todos
     _ -> empty
 
 -- | Guess a metavariable from how they are eliminated.
 guessMeta :: SharedCtx -> Constraint -> [Constraint] -> UnifyM (SharedCtx, [Constraint])
-guessMeta ctx todo@(Constraint _ _ _ _ lhs rhs) todos = do
+guessMeta ctx todo@(Constraint _ _ _ lhs rhs) todos = do
   (m, mabs) <- guessMeta' lhs <|> guessMeta' rhs
   let ctx' = addMetaSubst m mabs ctx
   pure (ctx', todo : todos)
@@ -831,8 +830,6 @@ guessMeta ctx todo@(Constraint _ _ _ _ lhs rhs) todos = do
       VFlex m arity _ (SApp' {}) -> (m,) <$> imitation (IAbs "x") arity
       VFlex m arity _ (SFst' {}) -> (m,) <$> imitation IPair arity
       VFlex m arity _ (SSnd' {}) -> (m,) <$> imitation IPair arity
-      VFlex m arity _ (SNatElim' {}) -> (m,) <$> (imitation IZero arity <|> imitation ISuc arity)
-      VFlex m arity _ (SEqElim' {}) -> (m,) <$> imitation IRefl arity
       _ -> empty
 
 data TooManyGuessMetaIso = TooManyGuessMetaIso
@@ -843,7 +840,7 @@ instance Exception TooManyGuessMetaIso
 -- | Like @guessMeta@, but for type isomorphisms.
 -- Π and Σ types act as "eliminators" when considering type isomorphisms!
 guessMetaIso :: SharedCtx -> Constraint -> [Constraint] -> UnifyM (SharedCtx, [Constraint])
-guessMetaIso ctx todo@(Constraint lvl _ iso _ lhs rhs) todos = do
+guessMetaIso ctx todo@(Constraint lvl _ iso lhs rhs) todos = do
   guard $ iso == Iso
   when (ctx.numGuessMetaIso >= 3) do
     liftIO $ throwIO TooManyGuessMetaIso
@@ -882,30 +879,9 @@ guessMetaIso ctx todo@(Constraint lvl _ iso _ lhs rhs) todos = do
         (m,) <$> imitation IUnit ar
       _ -> empty
 
-instantiate :: SharedCtx -> Constraint -> [Constraint] -> UnifyM [Constraint]
-instantiate ctx (Constraint lvl cm iso inst lhs rhs) todos = do
-  guard inst
-  case force' ctx lhs of
-    lhs'@(isPi -> True) -> do
-      lhs'' <- choose $ possibleDomainHoists ctx.topEnv ctx.metaSubst lvl lhs'
-      case lhs'' of
-        VPi x _ b -> do
-          unifyLog \h -> hPutStrLn h $ "instantiate: " ++ show x
-          m <- liftIO $ freshMetaSrc x
-          let args = map VVar [0 .. lvl - 1]
-              lhs''' = b (VMetaApp m args)
-              todo1 = Constraint lvl cm iso inst lhs''' rhs
-          pure (todo1 : todos)
-        _ -> empty
-    VTop _ SNil ts -> do
-      (_, t) <- choose ts
-      let todo1 = Constraint lvl cm iso inst t rhs
-      instantiate ctx todo1 todos
-    _ -> empty
-
 -- | Go through candidate solutions for flex-rigid constraints
 flexRigid :: SharedCtx -> Constraint -> [Constraint] -> UnifyM (SharedCtx, [Constraint])
-flexRigid ctx todo@(Constraint _ _ _ _ lhs rhs) todos = do
+flexRigid ctx todo@(Constraint _ _ _ lhs rhs) todos = do
   case (lhs, rhs) of
     (VFlex {}, VFlex {}) -> empty
     (VFlex m ar _ SNil, t') -> do
@@ -920,7 +896,7 @@ flexRigid ctx todo@(Constraint _ _ _ _ lhs rhs) todos = do
 
 -- | Lazily unfold definitions.
 unfold :: SharedCtx -> Constraint -> [Constraint] -> UnifyM (SharedCtx, [Constraint])
-unfold ctx (Constraint lvl cm iso inst lhs rhs) todos = do
+unfold ctx (Constraint lvl cm iso lhs rhs) todos = do
   case (cm, lhs, rhs) of
     (Rigid, VTop n sp ts, VTop n' sp' ts')
       | n == n' ->
@@ -930,7 +906,7 @@ unfold ctx (Constraint lvl cm iso inst lhs rhs) todos = do
               -- assume modName = modName'
               ((modName, t), (_modName', t')) <- choose (zip ts ts')
               let ctx' = addChosenDef n modName ctx
-                  todo1 = Constraint lvl Full iso inst t t'
+                  todo1 = Constraint lvl Full iso t t'
               pure (ctx', todo1 : todos)
       | otherwise -> do
           unifyLog \h -> hPutStrLn h $ "unfold: " ++ show n ++ " (" ++ show (length ts) ++ " alternatives)"
@@ -938,7 +914,7 @@ unfold ctx (Constraint lvl cm iso inst lhs rhs) todos = do
           unifyLog \h -> hPutStrLn h $ "unfold: " ++ show n' ++ " (" ++ show (length ts') ++ " alternatives)"
           (modName', t') <- choose ts'
           let ctx' = addChosenDef n modName $ addChosenDef n' modName' ctx
-              todo1 = Constraint lvl Rigid iso inst t t'
+              todo1 = Constraint lvl Rigid iso t t'
           pure (ctx', todo1 : todos)
     (Flex, VTop n sp _, VTop n' sp' _)
       | n == n' -> (ctx,) <$> decomposeSpine Flex lvl sp sp' todos
@@ -949,7 +925,7 @@ unfold ctx (Constraint lvl cm iso inst lhs rhs) todos = do
           unifyLog \h -> hPutStrLn h $ "unfold: " ++ show n ++ " (" ++ show (length ts) ++ " alternatives)"
           ((modName, t), (_modName', t')) <- choose (zip ts ts')
           let ctx' = addChosenDef n modName ctx
-              todo1 = Constraint lvl Full iso inst t t'
+              todo1 = Constraint lvl Full iso t t'
           pure (ctx', todo1 : todos)
       | otherwise -> do
           unifyLog \h -> hPutStrLn h $ "unfold: " ++ show n ++ " (" ++ show (length ts) ++ " alternatives)"
@@ -957,20 +933,20 @@ unfold ctx (Constraint lvl cm iso inst lhs rhs) todos = do
           unifyLog \h -> hPutStrLn h $ "unfold: " ++ show n' ++ " (" ++ show (length ts') ++ " alternatives)"
           (modName', t') <- choose ts'
           let ctx' = addChosenDef n modName $ addChosenDef n' modName' ctx
-              todo1 = Constraint lvl Rigid iso inst t t'
+              todo1 = Constraint lvl Rigid iso t t'
           pure (ctx', todo1 : todos)
     (Flex, VTop {}, _) -> empty
     (_, VTop n _ ts, t') -> do
       unifyLog \h -> hPutStrLn h $ "unfold: " ++ show n ++ " (" ++ show (length ts) ++ " alternatives)"
       (modName, t) <- choose ts
-      let todo1 = Constraint lvl cm iso inst t t'
+      let todo1 = Constraint lvl cm iso t t'
           ctx' = addChosenDef n modName ctx
       pure (ctx', todo1 : todos)
     (Flex, _, VTop {}) -> empty
     (_, t, VTop n _ ts) -> do
       unifyLog \h -> hPutStrLn h $ "unfold: " ++ show n ++ " (" ++ show (length ts) ++ " alternatives)"
       (modName, t') <- choose ts
-      let todo1 = Constraint lvl cm iso inst t t'
+      let todo1 = Constraint lvl cm iso t t'
           ctx' = addChosenDef n modName ctx
       pure (ctx', todo1 : todos)
     _ -> empty
@@ -989,58 +965,57 @@ chooseConstraint ctx = go [] []
         todo : todos -> Next todo (todos ++ ff)
       (forceConstraint ctx -> todo) : todos ->
         case todo of
-          Constraint lvl _ _ _ (VFlex m ar ts SNil) t'
+          Constraint lvl _ _ (VFlex m ar ts SNil) t'
             | Just mabs <- solve ctx.topEnv ctx.metaSubst lvl m ar ts t' ->
                 Solved m mabs (todos ++ fr ++ ff)
-          Constraint lvl _ _ _ t (VFlex m' ar' ts' SNil)
+          Constraint lvl _ _ t (VFlex m' ar' ts' SNil)
             | Just mabs <- solve ctx.topEnv ctx.metaSubst lvl m' ar' ts' t ->
                 Solved m' mabs (todos ++ fr ++ ff)
-          Constraint _ _ _ _ (VFlex m _ _ SNil) (VFlex m' _ _ SNil)
+          Constraint _ _ _ (VFlex m _ _ SNil) (VFlex m' _ _ SNil)
             | m == m' -> Next todo (todos ++ fr ++ ff)
             | otherwise -> go fr (todo : ff) todos
-          Constraint _ _ _ _ (VFlex _ _ _ SNil) _ -> go (todo : fr) ff todos
-          Constraint _ _ _ _ _ (VFlex _ _ _ SNil) -> go (todo : fr) ff todos
+          Constraint _ _ _ (VFlex _ _ _ SNil) _ -> go (todo : fr) ff todos
+          Constraint _ _ _ _ (VFlex _ _ _ SNil) -> go (todo : fr) ff todos
           _ -> Next todo (todos ++ fr ++ ff)
 
 -- | Unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
 unify :: SharedCtx -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
-unify ctx todos = case chooseConstraint ctx todos of
-  Done ff -> pure (ctx.metaSubst, ff)
-  Solved m mabs todos -> unify (addMetaSubst m mabs ctx) todos
-  Next todo todos ->
-    do
-      unifyLog \h -> do
-        -- threadDelay 500000
-        hPutStrLn h "--------------------------------------------------"
-        hPutStrLn h $ prettyMetaSubst ctx.metaSubst ""
-        hPutStrLn h $ prettyConstraint todo ""
-        mapM_ (\todo' -> hPutStrLn h $ prettyConstraint todo' "") todos
-      ( do
-          (ctx', todos') <-
-            asum
-              [ (ctx,) <$> decompose ctx todo todos,
-                (ctx,) <$> decomposeIso ctx todo todos,
-                guessMeta ctx todo todos,
-                unfold ctx todo todos,
-                (ctx,) <$> instantiate ctx todo todos
-              ]
+unify ctx todos = do
+  unifyLog \h -> do
+    -- threadDelay 500000
+    hPutStrLn h "--------------------------------------------------"
+    hPutStrLn h $ prettyMetaSubst ctx.metaSubst ""
+    mapM_ (\todo' -> hPutStrLn h $ prettyConstraint todo' "") todos
+  case chooseConstraint ctx todos of
+    Done ff -> do
+      unifyLog \h -> hPutStrLn h $ "Done" ++ show (length ff)
+      pure (ctx.metaSubst, ff)
+    Solved m mabs todos -> unify (addMetaSubst m mabs ctx) todos
+    Next todo todos ->
+      do
+        ( do
+            (ctx', todos') <-
+              asum
+                [ (ctx,) <$> decompose ctx todo todos,
+                  (ctx,) <$> decomposeIso ctx todo todos,
+                  guessMeta ctx todo todos,
+                  unfold ctx todo todos
+                ]
+            unify ctx' todos'
+          )
+        <|> do
+          (ctx', todos') <- flexRigid ctx todo todos
           unify ctx' todos'
-        )
-      <|> do
-        (ctx', todos') <- flexRigid ctx todo todos
-        unify ctx' todos'
-      <|> catchEmpty @TooManyGuessMetaIso do
-        (ctx', todos') <- guessMetaIso ctx todo todos
-        unify ctx' todos'
+        <|> catchEmpty @TooManyGuessMetaIso do
+          (ctx', todos') <- guessMetaIso ctx todo todos
+          unify ctx' todos'
 
 catchEmpty :: forall e a. (Exception e) => UnifyM a -> UnifyM a
 catchEmpty m = ReaderT \h -> LogicT \cons nil ->
-  try @e (runLogicT (runReaderT m h) cons nil) >>= \case
-    Right a -> pure a
-    Left _ -> hPutStrLn h "catchEmpty" >> nil
+  try @e (runLogicT (runReaderT m h) cons nil) >>= either (const nil) pure
 
 prettyConstraint :: Constraint -> ShowS
-prettyConstraint (Constraint lvl _ iso _ lhs rhs) =
+prettyConstraint (Constraint lvl _ iso lhs rhs) =
   ( if lvl > 0
       then
         showString "∀ "
@@ -1079,7 +1054,7 @@ zonkMetaSubst topEnv subst = fmap (zonkMetaAbs topEnv subst) subst
 unifyValue' :: Modulo -> TopEnv -> Value -> Value -> UnifyM (MetaSubst, [Constraint])
 unifyValue' modulo topEnv v v' = do
   let initCtx = SharedCtx topEnv HM.empty HM.empty 0
-      initTodo = Constraint 0 Rigid modulo True v v'
+      initTodo = Constraint 0 Rigid modulo v v'
   unify initCtx [initTodo]
 
 -- | Unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
