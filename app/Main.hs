@@ -5,7 +5,6 @@ import Control.Monad
 import Control.Monad.Except
 import Data.Foldable
 import Data.HashMap.Lazy qualified as HM
-import Data.HashSet qualified as HS
 import Data.Text qualified as T
 import Data.Text.IO qualified as T
 import Data.Traversable
@@ -15,7 +14,7 @@ import System.Environment
 import System.Exit (exitFailure)
 import System.IO
 import System.Timeout
-import Text.Read
+import Text.Read (readMaybe)
 import TypeSearch.Common
 import TypeSearch.Evaluation
 import TypeSearch.Parser
@@ -32,6 +31,7 @@ orDie (ExceptT m) =
     Right a -> pure a
 
 data Generalise = Generalise | NoGeneralise
+  deriving stock (Eq)
 
 data Options = Options
   { generalise :: Generalise,
@@ -83,7 +83,7 @@ parseOption = \case
 defaultOptions :: Options
 defaultOptions =
   Options
-    { generalise = NoGeneralise,
+    { generalise = Generalise,
       modulo = Iso,
       timeoutMs = 5
     }
@@ -126,27 +126,25 @@ mainLoop topEnv sigs = go defaultOptions
           go opts
 
 search :: TopEnv -> [(QName, Raw)] -> Raw -> Options -> InputT IO ()
-search topEnv sigs ty opts
-  | freeVars <- freeVarSet ty `HS.difference` HM.keysSet topEnv,
-    not $ HS.null freeVars = do
-      outputStrLn $ "Undefined variables: " ++ show (HS.toList freeVars)
-      pure ()
-  | otherwise = do
-      for_ sigs \(x, sig) -> do
-        liftIO $ withFile "unify.log" AppendMode \h -> do
-          hPutStrLn h "**************************************************"
-          hPutStrLn h $ "Matching " ++ show x ++ " : " ++ prettyRaw 0 sig ""
-          hPutStrLn h "**************************************************"
-        msubst <- liftIO $ timeout (opts.timeoutMs * 1000) do
-          unifyRaw opts.modulo topEnv sig ty
-        case msubst of
-          Just (Just subst) -> do
-            let subst' = flip HM.filterWithKey subst \k _ -> case k of Src _ _ -> True; Gen _ -> False
-            outputStrLn $ shows x $ showString " : " $ prettyRaw 0 sig ""
-            when (HM.size subst' > 0) do
-              outputStrLn $ "  by instantiating " ++ prettyMetaSubst subst' ""
-            outputStrLn ""
-          _ -> pure ()
+search topEnv sigs ty opts = do
+  let unify = if opts.generalise == Generalise then unifyRawInst else unifyRaw
+  for_ sigs \(x, sig) -> do
+    liftIO $ withFile "unify.log" AppendMode \h -> do
+      hPutStrLn h "**************************************************"
+      hPutStrLn h $ "Matching " ++ show x ++ " : " ++ prettyRaw 0 sig ""
+      hPutStrLn h "**************************************************"
+    msubst <-
+      liftIO $
+        timeout (opts.timeoutMs * 1000) do
+          unify opts.modulo topEnv sig ty `catch` \(_ :: EvalError) -> pure Nothing
+    case msubst of
+      Just (Just subst) -> do
+        let subst' = flip HM.filterWithKey subst \k _ -> case k of Src _ _ -> True; Gen _ -> False
+        outputStrLn $ shows x $ showString " : " $ prettyRaw 0 sig ""
+        when (HM.size subst' > 0) do
+          outputStrLn $ "  by instantiating " ++ prettyMetaSubst subst' ""
+        outputStrLn ""
+      _ -> pure ()
 
 main :: IO ()
 main = do

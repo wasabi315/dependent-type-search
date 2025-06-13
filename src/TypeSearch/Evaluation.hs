@@ -39,9 +39,13 @@ module TypeSearch.Evaluation
     -- * Forcing
     force,
     deepForce,
+
+    -- * Errors
+    EvalError (..),
   )
 where
 
+import Control.Exception (Exception (..), throw)
 import Data.Foldable
 import Data.HashMap.Lazy qualified as HM
 import Data.Hashable
@@ -87,7 +91,6 @@ data Value
   | VSuc Value
   | VEq Value Value Value
   | VRefl Value Value
-  | VStuck Value Spine -- failed to eliminate
 
 pattern VVar :: Level -> Value
 pattern VVar l = VRigid l SNil
@@ -148,7 +151,6 @@ spine = \case
   VRigid _ sp -> sp
   VFlex _ _ _ sp -> sp
   VTop _ sp _ -> sp
-  VStuck _ sp -> sp
   VType -> SNil
   VPi {} -> SNil
   VArr {} -> SNil
@@ -164,25 +166,43 @@ spine = \case
   VEq {} -> SNil
   VRefl {} -> SNil
 
+data EvalError
+  = VarNotFound QName
+  | ArityMismatch
+  | NotFunction
+  | NotPair
+  | NotNat
+  | NotEq
+  deriving stock (Show)
+
+instance Exception EvalError where
+  displayException = \case
+    VarNotFound n -> "Variable not found: " ++ show n
+    ArityMismatch -> "Arity mismatch"
+    NotFunction -> "Not a function"
+    NotPair -> "Not a pair"
+    NotNat -> "Not a natural number"
+    NotEq -> "Not an equality"
+
 --------------------------------------------------------------------------------
 -- Evaluation
 
 lookupWithQName :: TopEnv -> RawEnv -> QName -> Value
 lookupWithQName topEnv env = \case
-  Unqual n -> case HM.lookup n env of
+  m@(Unqual n) -> case HM.lookup n env of
     Just v -> v
     Nothing -> case HM.lookup n topEnv of
       Just vs -> VTop n SNil (HM.toList vs)
-      Nothing -> error $ "Variable not found: " ++ show n
+      Nothing -> throw $ VarNotFound m
   m@(Qual q n) -> case HM.lookup n topEnv >>= HM.lookup q of
     Just v -> VTop n SNil [(q, v)]
-    Nothing -> error $ "Variable not found: " ++ show m
+    Nothing -> throw $ VarNotFound m
 
 lookupPossibleModules :: TopEnv -> [ModuleName] -> Name -> Value
 lookupPossibleModules topEnv ms n = case HM.lookup n topEnv of
   Nothing -> case ms of
-    [] -> error $ "Variable not found: " ++ show n
-    _ -> error $ "Variable not found: " ++ show n
+    [] -> throw $ VarNotFound (Unqual n)
+    (m : _) -> throw $ VarNotFound (Qual m n)
   Just vs -> VTop n SNil (map (\m -> (m, vs HM.! m)) ms)
 
 evaluateRaw :: TopEnv -> RawEnv -> Raw -> Value
@@ -243,8 +263,7 @@ vapp vt vu = case vt of
   VRigid l sp -> VRigid l (SApp sp vu)
   VFlex m ar vs sp -> VFlex m ar vs (SApp sp vu)
   VTop n sp vs -> VTop n (SApp sp vu) (fmap (`vapp` vu) <$> vs)
-  VStuck v sp -> VStuck v (SApp sp vu)
-  _ -> VStuck vt (SApp SNil vu)
+  _ -> throw NotFunction
 
 -- | Projections in "the value world".
 vfst, vsnd :: Value -> Value
@@ -253,15 +272,13 @@ vfst = \case
   VRigid l sp -> VRigid l (SFst sp)
   VFlex m ar vs sp -> VFlex m ar vs (SFst sp)
   VTop n sp vs -> VTop n (SFst sp) (fmap vfst <$> vs)
-  VStuck v sp -> VStuck v (SFst sp)
-  v -> VStuck v (SFst SNil)
+  _ -> throw NotPair
 vsnd = \case
   VPair _ v -> v
   VRigid l sp -> VRigid l (SSnd sp)
   VFlex m ar vs sp -> VFlex m ar vs (SSnd sp)
   VTop n sp vs -> VTop n (SSnd sp) (fmap vsnd <$> vs)
-  VStuck v sp -> VStuck v (SSnd sp)
-  v -> VStuck v (SSnd SNil)
+  _ -> throw NotPair
 
 vnatElim :: Value -> Value -> Value -> Value -> Value
 vnatElim p s z = \case
@@ -270,8 +287,7 @@ vnatElim p s z = \case
   VRigid l sp -> VRigid l (SNatElim p s z sp)
   VFlex m ar vs sp -> VFlex m ar vs (SNatElim p s z sp)
   VTop n sp vs -> VTop n (SNatElim p s z sp) (fmap (vnatElim p s z) <$> vs)
-  VStuck v sp -> VStuck v (SNatElim p s z sp)
-  v -> VStuck v (SNatElim p s z SNil)
+  _ -> throw NotNat
 
 veqElim :: Value -> Value -> Value -> Value -> Value -> Value -> Value
 veqElim a x p r y = \case
@@ -279,8 +295,7 @@ veqElim a x p r y = \case
   VRigid l sp -> VRigid l (SEqElim a x p r y sp)
   VFlex m ar vs sp -> VFlex m ar vs (SEqElim a x p r y sp)
   VTop n sp vs -> VTop n (SEqElim a x p r y sp) (fmap (veqElim a x p r y) <$> vs)
-  VStuck v sp -> VStuck v (SEqElim a x p r y sp)
-  v -> VStuck v (SEqElim a x p r y SNil)
+  _ -> throw NotEq
 
 -- | Apply an elimination to a value.
 vappElim :: Value -> Elim -> Value
@@ -297,7 +312,9 @@ vappSpine v sp = foldl' vappElim v sp
 
 -- | Apply a meta-abstraction to arguments.
 vmetaApp :: TopEnv -> MetaAbs -> [Value] -> Value
-vmetaApp topEnv (MetaAbs _arity body) args = evaluate topEnv (reverse args) body
+vmetaApp topEnv (MetaAbs arity body) args
+  | length args /= arity = throw ArityMismatch
+  | otherwise = evaluate topEnv (reverse args) body
 
 --------------------------------------------------------------------------------
 -- Quotation
@@ -320,7 +337,6 @@ quote lvl = \case
   VPair vt vu -> Pair (quote lvl vt) (quote lvl vu)
   VUnit -> Unit
   VTT -> TT
-  VStuck v sp -> quoteSpine lvl (quote lvl v) sp
   VNat -> Nat
   VZero -> Zero
   VSuc n -> Suc `App` quote lvl n
@@ -372,7 +388,6 @@ deepForce topEnv subst = go
       VSuc n -> VSuc (go n)
       VEq a x y -> VEq (go a) (go x) (go y)
       VRefl a x -> VRefl (go a) (go x)
-      VStuck u sp -> VStuck (go u) (goSpine sp)
 
     goSpine = fmap goElim
 

@@ -5,13 +5,13 @@ module TypeSearch.UnificationModulo
     normalise,
     normaliseRaw,
 
-    -- * Unification
+    -- * Unification (+ instantiation)
     unifyValue,
     unifyTerm,
     unifyRaw,
-    unifiable,
-    freeVarSet',
-    possibleDomainHoists,
+    unifyValueInst,
+    unifyTermInst,
+    unifyRawInst,
   )
 where
 
@@ -23,7 +23,6 @@ import Control.Monad.Logic
 import Control.Monad.Reader
 import Data.HashMap.Lazy qualified as HM
 import Data.HashSet qualified as HS
-import Data.Maybe
 import Data.Text qualified as T
 import System.IO
 import TypeSearch.Common
@@ -245,7 +244,6 @@ huetProjection' t arity params params' = go $ spine t
       VSuc {} -> pure ISuc
       VEq {} -> pure IEq
       VRefl {} -> pure IRefl
-      VStuck {} -> empty
 
     go sp = do
       ( case sp of
@@ -340,7 +338,6 @@ rename topEnv metaSubst m = go
         a' <- go pren a
         x' <- go pren x
         pure $ Refl `App` a' `App` x'
-      VStuck {} -> empty
 
     goScope pren f = go (liftPRen pren) (f $ VVar pren.cod)
 
@@ -374,8 +371,8 @@ solve topEnv subst lvl m ar ts t = do
 -- Swapping domains of pi types and components of sigma types
 
 -- | Compute the free variable set of a value.
-freeVarSet' :: TopEnv -> MetaSubst -> Level -> Value -> HS.HashSet Level
-freeVarSet' topEnv subst = go
+freeVarSet :: TopEnv -> MetaSubst -> Level -> Value -> HS.HashSet Level
+freeVarSet topEnv subst = go
   where
     go lvl t = case force topEnv subst t of
       VRigid l sp -> HS.insert l (goSpine lvl sp)
@@ -395,7 +392,6 @@ freeVarSet' topEnv subst = go
       VSuc u -> go lvl u
       VEq a u v -> go lvl a <> go lvl u <> go lvl v
       VRefl a u -> go lvl a <> go lvl u
-      VStuck {} -> HS.empty
 
     goScope lvl f = HS.delete lvl $ go (lvl + 1) (f $ VVar lvl)
 
@@ -444,7 +440,7 @@ possibleDomainHoists topEnv subst lvl t = do
       where
         hoistable a =
           HS.null lvls
-            || HS.null (HS.intersection (freeVarSet' topEnv subst lvl' a) lvls)
+            || HS.null (HS.intersection (freeVarSet topEnv subst lvl' a) lvls)
 
     deleteArr i u = case (i, force topEnv subst u) of
       (0 :: Int, VArr _ b) -> b
@@ -491,7 +487,7 @@ possibleComponentHoists topEnv subst lvl t = do
       where
         hoistable a =
           HS.null lvls
-            || HS.null (HS.intersection (freeVarSet' topEnv subst lvl' a) lvls)
+            || HS.null (HS.intersection (freeVarSet topEnv subst lvl' a) lvls)
 
     deleteProd i u = case (i, force topEnv subst u) of
       (0 :: Int, VProd _ b) -> b
@@ -561,6 +557,7 @@ data SharedCtx = SharedCtx
 -- In order to avoid unfolding definitions from different modules during unification, we need to keep track of which module has chosen a definition for a given name.
 type ChosenDefs = HM.HashMap Name ModuleName
 
+-- | Force a constraint. If the constraint is to be solved up to type isomorphisms, terms are normalised.
 forceConstraint :: SharedCtx -> Constraint -> Constraint
 forceConstraint ctx constraint =
   if constraint.modulo == Iso
@@ -591,8 +588,6 @@ incrNumGuessMetaIso ctx = ctx {numGuessMetaIso = ctx.numGuessMetaIso + 1}
 decompose :: SharedCtx -> Constraint -> [Constraint] -> UnifyM [Constraint]
 decompose ctx (Constraint lvl cm iso lhs rhs) todos = do
   case (lhs, rhs) of
-    (VStuck {}, _) -> empty
-    (_, VStuck {}) -> empty
     (VRigid x sp, VRigid x' sp')
       | x == x' -> decomposeSpine cm lvl sp sp' todos
       | otherwise -> empty
@@ -1049,6 +1044,53 @@ zonkMetaSubst :: TopEnv -> MetaSubst -> MetaSubst
 zonkMetaSubst topEnv subst = fmap (zonkMetaAbs topEnv subst) subst
 
 --------------------------------------------------------------------------------
+-- Instantiation
+
+-- | Instantiate the second argument inside the top-level pis of the first argument.
+-- Example:
+--    instantiateInPisOf ((A : Type) -> A -> A -> A) ((A B : Type) -> A -> B -> A)
+--  = (A : Type) -> ?M1[A] -> ?M2[A] -> ?M1[A]
+--        where M1 and M2 are fresh metavariables generated for A and B respectively.
+instantiateInPisOf :: Value -> Value -> UnifyM Value
+instantiateInPisOf t u = do
+  let lvl = numTopPis t
+  u' <- instantiateTopPis lvl u
+  pure $ go u' t
+  where
+    go v = \case
+      VPi x a b -> VPi x a (go v . b)
+      VArr _ b -> go v b
+      _ -> v
+
+-- | Count the number of top-level pis.
+numTopPis :: Value -> Level
+numTopPis = go 0
+  where
+    go lvl = \case
+      VPi _ _ b -> go (lvl + 1) (b (VVar lvl))
+      VArr _ b -> go lvl b
+      _ -> lvl
+
+-- | Instantiate top-level pis. Unfold definitions.
+instantiateTopPis :: Level -> Value -> UnifyM Value
+instantiateTopPis lvl = go
+  where
+    go = \case
+      VTop _ _ ts -> do
+        (_, t) <- choose ts
+        go t
+      t -> go' t
+
+    go' = \case
+      t@(VPi x _ b) -> do
+        m <- liftIO $ freshMetaSrc x
+        pure t <|> go (b $ VMetaApp m args)
+      VArr a b -> VArr a <$> go' b
+      t -> pure t
+
+    args = map VVar [0 .. lvl - 1]
+
+--------------------------------------------------------------------------------
 -- Entry points
 
 unifyValue' :: Modulo -> TopEnv -> Value -> Value -> UnifyM (MetaSubst, [Constraint])
@@ -1076,5 +1118,25 @@ unifyRaw :: Modulo -> TopEnv -> Raw -> Raw -> IO (Maybe MetaSubst)
 unifyRaw modulo topEnv t t' =
   unifyValue modulo topEnv (evaluateRaw topEnv HM.empty t) (evaluateRaw topEnv HM.empty t')
 
-unifiable :: Modulo -> TopEnv -> Raw -> Raw -> IO Bool
-unifiable modulo topEnv t t' = isJust <$> unifyRaw modulo topEnv t t'
+unifyValueInst' :: Modulo -> TopEnv -> Value -> Value -> UnifyM (MetaSubst, [Constraint])
+unifyValueInst' modulo topEnv v v' = do
+  w <- instantiateInPisOf v' v
+  unifyValue' modulo topEnv w v'
+
+-- | Unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
+-- The left hand side is instantiated.
+unifyValueInst :: Modulo -> TopEnv -> Value -> Value -> IO (Maybe MetaSubst)
+unifyValueInst modulo topEnv v v' = do
+  xs <- withFile "unify.log" AppendMode \h -> do
+    observeManyT 1 $ runReaderT (unifyValueInst' modulo topEnv v v') h
+  case xs of
+    [] -> pure Nothing
+    (subst, _) : _ -> pure (Just (zonkMetaSubst topEnv subst))
+
+unifyTermInst :: Modulo -> TopEnv -> Term -> Term -> IO (Maybe MetaSubst)
+unifyTermInst modulo topEnv t t' =
+  unifyValueInst modulo topEnv (evaluate topEnv [] t) (evaluate topEnv [] t')
+
+unifyRawInst :: Modulo -> TopEnv -> Raw -> Raw -> IO (Maybe MetaSubst)
+unifyRawInst modulo topEnv t t' =
+  unifyValueInst modulo topEnv (evaluateRaw topEnv HM.empty t) (evaluateRaw topEnv HM.empty t')
