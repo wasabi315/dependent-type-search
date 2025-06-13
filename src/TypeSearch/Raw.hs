@@ -29,7 +29,6 @@ data Decl = DLet SourcePos Name Raw Raw
 -- | Raw terms
 data Raw
   = RVar QName
-  | RGenVar Name
   | RMetaApp Meta [Raw]
   | RType
   | RPi Name Raw Raw
@@ -67,7 +66,6 @@ freeVarSet :: Raw -> HS.HashSet Name
 freeVarSet = \case
   RVar (Qual _ n) -> HS.singleton n
   RVar (Unqual n) -> HS.singleton n
-  RGenVar _ -> HS.empty
   RMetaApp _ ts -> foldMap freeVarSet ts
   RType -> HS.empty
   RPi x t1 t2 -> freeVarSet t1 <> HS.delete x (freeVarSet t2)

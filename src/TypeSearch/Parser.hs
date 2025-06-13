@@ -102,12 +102,6 @@ pQName = do
     Nothing -> Unqual (Name x)
     Just z -> Qual (ModuleName x) (Name z)
 
-pGenVar :: Parser Name
-pGenVar = do
-  _ <- char '$'
-  v <- pIdent
-  pure $ Name (T.cons '$' v)
-
 pMeta :: Parser Name
 pMeta = do
   _ <- char '?'
@@ -123,7 +117,6 @@ pAtom :: Parser Raw
 pAtom =
   withPos
     ( (RVar <$> pQName)
-        <|> (RGenVar <$> pGenVar)
         <|> (RMetaApp . flip Src Nothing <$> pMeta <*> option [] (brackets (pAbsPi `sepBy` char ',')))
         <|> (RType <$ pKeyword "Type")
         <|> (RUnit <$ pKeyword "Unit")
