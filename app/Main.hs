@@ -69,10 +69,10 @@ parseOption = \case
     pure \o -> f o {generalise = NoGeneralise}
   "modulo-iso" : rest -> do
     f <- parseOption rest
-    pure \o -> f o {modulo = BetaEtaIso}
+    pure \o -> f o {modulo = Iso}
   "no-modulo-iso" : rest -> do
     f <- parseOption rest
-    pure \o -> f o {modulo = BetaEta}
+    pure \o -> f o {modulo = DefEq}
   "timeout" : ms : rest -> case readMaybe @Natural ms of
     Nothing -> Left $ "Invalid timeout: " <> ms
     Just ms' -> do
@@ -84,7 +84,7 @@ defaultOptions :: Options
 defaultOptions =
   Options
     { generalise = NoGeneralise,
-      modulo = BetaEtaIso,
+      modulo = Iso,
       timeoutMs = 5
     }
 
@@ -133,6 +133,10 @@ search topEnv sigs ty opts
       pure ()
   | otherwise = do
       for_ sigs \(x, sig) -> do
+        liftIO $ withFile "unify.log" AppendMode \h -> do
+          hPutStrLn h "**************************************************"
+          hPutStrLn h $ "Matching " ++ show x ++ " : " ++ prettyRaw 0 sig ""
+          hPutStrLn h "**************************************************"
         msubst <- liftIO $ timeout (opts.timeoutMs * 1000) do
           unifyRaw opts.modulo topEnv sig ty
         case msubst of
