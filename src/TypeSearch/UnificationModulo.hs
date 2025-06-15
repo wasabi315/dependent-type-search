@@ -1073,7 +1073,7 @@ instantiateTopPis lvl = go
     go' = \case
       t@(VPi x _ b) -> do
         m <- liftIO $ freshMetaSrc x
-        pure t <|> go (b $ VMetaApp m args)
+        go (b $ VMetaApp m args) <|> pure t
       VArr a b -> VArr a <$> go' b
       t -> pure t
 
