@@ -19,10 +19,10 @@ A \times \mathrm{Unit} &\cong A &&& (\Sigma\text{-unit-right}) \\
 
 This repository contains a prototypical implementation of a type-based library search tool using the semi-algorithm.
 
-To search within a module, [`Natural`](/lib/Natural.types) and [`List`](/lib/List.types) for example, run:
+To search within modules in the [`lib`](/lib) directory, run:
 
 ```shell
-stack run -- lib/Natural.types lib/List.types
+stack run -- lib/
 ```
 
 You search with a query type, then the tool will show you components of the library that match the query type.

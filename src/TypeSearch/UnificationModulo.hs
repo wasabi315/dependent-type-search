@@ -1091,7 +1091,7 @@ unifyValue' modulo topEnv v v' = do
 -- | Unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
 unifyValue :: Modulo -> TopEnv -> Value -> Value -> IO (Maybe MetaSubst)
 unifyValue modulo topEnv v v' = do
-  xs <- withFile "unify.log" AppendMode \h -> do
+  xs <- withFile "/dev/null" AppendMode \h -> do
     observeManyT 1 $ runReaderT (unifyValue' modulo topEnv v v') h
   case xs of
     [] -> pure Nothing
@@ -1116,7 +1116,7 @@ unifyValueInst' modulo topEnv v v' = do
 -- The left hand side is instantiated.
 unifyValueInst :: Modulo -> TopEnv -> Value -> Value -> IO (Maybe MetaSubst)
 unifyValueInst modulo topEnv v v' = do
-  xs <- withFile "unify.log" AppendMode \h -> do
+  xs <- withFile "/dev/null" AppendMode \h -> do
     observeManyT 1 $ runReaderT (unifyValueInst' modulo topEnv v v') h
   case xs of
     [] -> pure Nothing

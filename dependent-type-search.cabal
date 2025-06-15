@@ -84,6 +84,8 @@ library
   build-depends:
       base >=4.7 && <5
     , containers
+    , directory
+    , filepath
     , hashable
     , haskeline
     , logict
@@ -148,6 +150,8 @@ executable dependent-type-search-exe
       base >=4.7 && <5
     , containers
     , dependent-type-search
+    , directory
+    , filepath
     , hashable
     , haskeline
     , logict
@@ -213,6 +217,8 @@ test-suite dependent-type-search-test
       base >=4.7 && <5
     , containers
     , dependent-type-search
+    , directory
+    , filepath
     , hashable
     , haskeline
     , logict

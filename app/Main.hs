@@ -1,4 +1,4 @@
-module Main (main, prepareTopEnv) where
+module Main (main, readParsePrepare) where
 
 import Control.Exception
 import Control.Monad
@@ -10,8 +10,10 @@ import Data.Text.IO qualified as T
 import Data.Traversable
 import Numeric.Natural
 import System.Console.Haskeline
+import System.Directory
 import System.Environment
 import System.Exit (exitFailure)
+import System.FilePath
 import System.IO
 import System.Timeout
 import Text.Read (readMaybe)
@@ -21,14 +23,6 @@ import TypeSearch.Parser
 import TypeSearch.Pretty
 import TypeSearch.Raw
 import TypeSearch.UnificationModulo
-
-orDie :: (Exception e) => ExceptT e IO a -> IO a
-orDie (ExceptT m) =
-  m >>= \case
-    Left e -> do
-      hPutStrLn stderr $ displayException e
-      exitFailure
-    Right a -> pure a
 
 data Generalise = Generalise | NoGeneralise
   deriving stock (Eq)
@@ -98,7 +92,7 @@ helpText =
       "  :help, :h      : show this help text",
       "  :quit, :q      : quit the program",
       "  :set <option>  : set an option",
-      "  <type>         : search for a type signature",
+      "  <type>         : search for definitions whose type matches <type>",
       "",
       "Options:",
       "  (no-)generalise  : enable/disable search up to generalisation             (default=enabled)",
@@ -144,36 +138,14 @@ search topEnv sigs ty opts = do
 
 main :: IO ()
 main = do
-  libPaths <- getArgs
-  mods <- orDie $ for libPaths \path -> do
-    src <- liftIO $ T.readFile path
-    ExceptT $ pure $ parseModule path src
-  let (topEnv, sigs) = prepare mods
-
-  runInputT defaultSettings do
-    outputStrLn helpText
-    mainLoop topEnv sigs
-
-prepareTopEnv :: [FilePath] -> IO TopEnv
-prepareTopEnv libPaths = do
-  let go topEnv = \case
-        [] -> topEnv
-        m : ms
-          | any (\m' -> m'.name `elem` m.imports) ms -> go topEnv (ms ++ [m])
-          | otherwise -> go (goModule topEnv m) ms
-
-      goModule topEnv (Module m _ decls) = foldl' (goDecl m) topEnv decls
-
-      goDecl m topEnv (DLet _ x _ t) =
-        HM.insertWith (<>) x (HM.singleton m (evaluateRaw topEnv HM.empty t)) topEnv
-
-  mods <- for libPaths \path -> do
-    src <- T.readFile path
-    case parseModule path src of
-      Left e -> throwIO e
-      Right m -> pure m
-
-  pure $ go HM.empty mods
+  args <- getArgs
+  case args of
+    [] -> hPutStrLn stderr "Missing argument" >> exitFailure
+    path : _ -> do
+      (topEnv, sigs) <- readParsePrepare path
+      runInputT defaultSettings do
+        outputStrLn helpText
+        mainLoop topEnv sigs
 
 -- FIXME: loop indefinitely if there are circular dependencies
 prepare :: [Module] -> (TopEnv, [(QName, Raw)])
@@ -196,3 +168,16 @@ prepare mods = go (HM.empty, []) (HM.keys modMap)
       let topEnv' = HM.insertWith (<>) x (HM.singleton m (evaluateRaw topEnv HM.empty t)) topEnv
           sigs' = (Qual m x, a) : sigs
        in (topEnv', sigs')
+
+readParsePrepare :: FilePath -> IO (TopEnv, [(QName, Raw)])
+readParsePrepare libPath = do
+  fnames <- listDirectory libPath
+  let fnames' = filter (typesExt `isExtensionOf`) fnames
+  mods <- for fnames' \fname -> do
+    src <- T.readFile (libPath </> fname)
+    either (\e -> hPutStrLn stderr (displayException e) >> exitFailure) pure $
+      parseModule fname src
+  pure $ prepare mods
+
+typesExt :: String
+typesExt = ".types"
