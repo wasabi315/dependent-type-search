@@ -22,9 +22,11 @@ import Control.Monad.Logic
 import Control.Monad.Reader
 import Data.HashMap.Lazy qualified as HM
 import Data.HashSet qualified as HS
+import Data.Text qualified as T
 import System.IO
 import TypeSearch.Common
 import TypeSearch.Evaluation
+import TypeSearch.Pretty
 import TypeSearch.Raw
 import TypeSearch.Term
 
@@ -241,6 +243,7 @@ huetProjection' t arity params params' = go $ spine t
       VSuc {} -> pure ISuc
       VEq {} -> pure IEq
       VRefl {} -> pure IRefl
+      VStuck {} -> empty
 
     go sp = do
       ( case sp of
@@ -335,6 +338,7 @@ rename topEnv metaSubst m = go
         a' <- go pren a
         x' <- go pren x
         pure $ Refl `App` a' `App` x'
+      VStuck {} -> Nothing
 
     goScope pren f = go (liftPRen pren) (f $ VVar pren.cod)
 
@@ -389,6 +393,7 @@ freeVarSet topEnv subst = go
       VSuc u -> go lvl u
       VEq a u v -> go lvl a <> go lvl u <> go lvl v
       VRefl a u -> go lvl a <> go lvl u
+      VStuck {} -> HS.empty
 
     goScope lvl f = HS.delete lvl $ go (lvl + 1) (f $ VVar lvl)
 
@@ -514,10 +519,10 @@ possibleComponentHoists topEnv subst lvl t = do
 --   - (x : Unit) -> A[x]           ~ A[tt]
 -- Constraints are solved from left to right (static unification).
 
--- unifyLog :: (Handle -> IO ()) -> UnifyM ()
--- unifyLog f = when True do
---   h <- ask
---   liftIO $ f h
+unifyLog :: (Handle -> IO ()) -> UnifyM ()
+unifyLog f = when True do
+  h <- ask
+  liftIO $ f h
 
 -- | Constraints: ∀ x0, ..., x{n - 1}. t1 ≟ t2
 data Constraint = Constraint
@@ -841,34 +846,64 @@ guessMetaIso ctx todo@(Constraint lvl _ iso lhs rhs) todos = do
   pure (ctx', todo : todos)
   where
     guessMetaIso' = \case
-      -- Σ x : M[t0, ..., tn]. B[x]
-      VSigma _ (force' ctx -> VFlex m ar _ _) _ ->
-        -- M[x0, ..., xn] ↦ Unit or
-        -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
-        (m,) <$> (imitation IUnit ar <|> imitation (ISigma "x") ar)
-      -- M[t0, ..., tn] * B
-      VProd (force' ctx -> VFlex m ar _ _) _ ->
-        -- M[x0, ..., xn] ↦ Unit or
-        -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
-        (m,) <$> (imitation IUnit ar <|> imitation (ISigma "x") ar)
-      -- (x : M[t0, ..., tn]) → B[x]
-      VPi _ (force' ctx -> VFlex m ar _ _) _ ->
-        -- M[x0, ..., xn] ↦ Unit or
-        -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
-        (m,) <$> (imitation IUnit ar <|> imitation (ISigma "x") ar)
-      -- M[t0, ..., tn] → B
-      VArr (force' ctx -> VFlex m ar _ _) _ ->
-        -- M[x0, ..., xn] ↦ Unit or
-        -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
-        (m,) <$> (imitation IUnit ar <|> imitation (ISigma "x") ar)
-      -- Σ x : A. M[t0, ..., tn]
-      VSigma _ _ b
-        | VFlex m ar _ _ <- force' ctx (b $ VVar lvl) ->
-            -- M[x0, ..., xn] ↦ Unit
-            (m,) <$> imitation IUnit ar
-      -- A * M[t0, ..., tn]
-      VProd _ (force' ctx -> VFlex m ar _ _) ->
-        (m,) <$> imitation IUnit ar
+      VSigma _ a b ->
+        asum
+          [ -- Σ x : M[t0, ..., tn]. B[x]
+            case force' ctx a of
+              -- M[x0, ..., xn] ↦ Unit or
+              -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
+              VFlex m ar _ _ -> (m,) <$> (imitation IUnit ar <|> imitation (ISigma "x") ar)
+              _ -> empty,
+            -- Σ x : A. M[t0, ..., tn]
+            case force' ctx (b $ VVar lvl) of
+              -- M[x0, ..., xn] ↦ Unit or
+              -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
+              VFlex m ar _ _ -> (m,) <$> (imitation IUnit ar <|> imitation (ISigma "x") ar)
+              _ -> empty
+          ]
+      VProd a b ->
+        asum
+          [ -- M[t0, ..., tn] * B
+            case force' ctx a of
+              -- M[x0, ..., xn] ↦ Unit or
+              -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
+              VFlex m ar _ _ -> (m,) <$> (imitation IUnit ar <|> imitation (ISigma "x") ar)
+              _ -> empty,
+            -- A * M[t0, ..., tn]
+            case force' ctx b of
+              -- M[x0, ..., xn] ↦ Unit or
+              -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
+              VFlex m ar _ _ -> (m,) <$> (imitation IUnit ar <|> imitation (ISigma "x") ar)
+              _ -> empty
+          ]
+      VPi _ a b ->
+        asum
+          [ -- (x : M[t0, ..., tn]) → B[x]
+            case force' ctx a of
+              -- M[x0, ..., xn] ↦ Unit or
+              -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
+              VFlex m ar _ _ -> (m,) <$> (imitation IUnit ar <|> imitation (ISigma "x") ar)
+              _ -> empty,
+            -- (x : A) -> M[t0, ..., tn]
+            case force' ctx (b $ VVar lvl) of
+              -- M[x0, ..., xn] ↦ (y : M1[x0, ..., xn]). M2[x0, ..., xn, y]
+              VFlex m ar _ _ -> (m,) <$> imitation (IPi "x") ar
+              _ -> empty
+          ]
+      VArr a b ->
+        asum
+          [ -- M[t0, ..., tn] → B
+            case force' ctx a of
+              -- M[x0, ..., xn] ↦ Unit or
+              -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
+              VFlex m ar _ _ -> (m,) <$> (imitation IUnit ar <|> imitation (ISigma "x") ar)
+              _ -> empty,
+            -- A → M[t0, ..., tn]
+            case force' ctx b of
+              -- M[x0, ..., xn] ↦ (y : M1[x0, ..., xn]). M2[x0, ..., xn, y]
+              VFlex m ar _ _ -> (m,) <$> imitation (IPi "x") ar
+              _ -> empty
+          ]
       _ -> empty
 
 -- | Go through candidate solutions for flex-rigid constraints
@@ -947,6 +982,7 @@ data ChooseResult
   = Done [Constraint]
   | Solved Meta MetaAbs [Constraint]
   | Next Constraint [Constraint]
+  | Stuck
 
 chooseConstraint :: SharedCtx -> [Constraint] -> ChooseResult
 chooseConstraint ctx = go [] []
@@ -957,6 +993,8 @@ chooseConstraint ctx = go [] []
         todo : todos -> Next todo (todos ++ ff)
       (forceConstraint ctx -> todo) : todos ->
         case todo of
+          Constraint _ _ _ (VStuck {}) _ -> Stuck
+          Constraint _ _ _ _ (VStuck {}) -> Stuck
           Constraint lvl _ _ (VFlex m ar ts SNil) t'
             | Just mabs <- solve ctx.topEnv ctx.metaSubst lvl m ar ts t' ->
                 Solved m mabs (todos ++ fr ++ ff)
@@ -973,12 +1011,13 @@ chooseConstraint ctx = go [] []
 -- | Unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
 unify :: SharedCtx -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
 unify ctx todos = do
-  -- unifyLog \h -> do
-  --   -- threadDelay 500000
-  --   hPutStrLn h "--------------------------------------------------"
-  --   hPutStrLn h $ prettyMetaSubst ctx.metaSubst ""
-  --   mapM_ (\todo' -> hPutStrLn h $ prettyConstraint todo' "") todos
+  unifyLog \h -> do
+    -- threadDelay 500000
+    hPutStrLn h "--------------------------------------------------"
+    hPutStrLn h $ prettyMetaSubst ctx.metaSubst ""
+    mapM_ (\todo' -> hPutStrLn h $ prettyConstraint todo' "") todos
   case chooseConstraint ctx todos of
+    Stuck -> empty
     Done ff -> pure (ctx.metaSubst, ff)
     Solved m mabs todos' -> unify (addMetaSubst m mabs ctx) todos'
     Next todo todos' ->
@@ -998,39 +1037,40 @@ catchEmpty :: forall e a. (Exception e) => UnifyM a -> UnifyM a
 catchEmpty m = ReaderT \h -> LogicT \cons nil ->
   try @e (runLogicT (runReaderT m h) cons nil) >>= either (const nil) pure
 
--- prettyConstraint :: Constraint -> ShowS
--- prettyConstraint (Constraint lvl _ iso lhs rhs) =
---   ( if lvl > 0
---       then
---         showString "∀ "
---           . punctuate (showString " ") (map shows $ reverse vars)
---           . showString ". "
---       else id
---   )
---     . prettyTerm vars 0 lhs'
---     . showString eq
---     . prettyTerm vars 0 rhs'
---   where
---     lhs' = quote lvl lhs
---     rhs' = quote lvl rhs
---     vars = map (\i -> Name $ "x" <> T.pack (show i)) $ down (lvl - 1) 0
---     eq = case iso of
---       DefEq -> " ≡ "
---       Iso -> " ≅ "
+prettyConstraint :: Constraint -> ShowS
+prettyConstraint (Constraint lvl _ iso lhs rhs) =
+  ( if lvl > 0
+      then
+        showString "∀ "
+          . punctuate (showString " ") (map shows $ reverse vars)
+          . showString ". "
+      else id
+  )
+    . prettyTerm vars 0 lhs'
+    . showString eq
+    . prettyTerm vars 0 rhs'
+  where
+    lhs' = quote lvl lhs
+    rhs' = quote lvl rhs
+    vars = map (\i -> Name $ "x" <> T.pack (show i)) $ down (lvl - 1) 0
+    eq = case iso of
+      DefEq -> " ≡ "
+      Iso -> " ≅ "
 
 --------------------------------------------------------------------------------
 -- Zonking (unfold all metavariables in terms)
 
-zonkMetaAbs :: TopEnv -> MetaSubst -> MetaAbs -> MetaAbs
-zonkMetaAbs topEnv subst mabs = mabs {body = body'}
+zonkMetaAbs :: Modulo -> TopEnv -> MetaSubst -> MetaAbs -> MetaAbs
+zonkMetaAbs modulo topEnv subst mabs = mabs {body = body'}
   where
     vbody =
-      deepForce topEnv subst $
-        vmetaApp topEnv mabs [VVar l | l <- [0 .. Level mabs.arity - 1]]
+      (if modulo == Iso then normalise topEnv subst 0 else id) $
+        deepForce topEnv subst $
+          vmetaApp topEnv mabs [VVar l | l <- [0 .. Level mabs.arity - 1]]
     body' = quote (Level mabs.arity) vbody
 
-zonkMetaSubst :: TopEnv -> MetaSubst -> MetaSubst
-zonkMetaSubst topEnv subst = fmap (zonkMetaAbs topEnv subst) subst
+zonkMetaSubst :: Modulo -> TopEnv -> MetaSubst -> MetaSubst
+zonkMetaSubst modulo topEnv subst = fmap (zonkMetaAbs modulo topEnv subst) subst
 
 --------------------------------------------------------------------------------
 -- Instantiation
@@ -1095,7 +1135,7 @@ unifyValue modulo topEnv v v' = do
     observeManyT 1 $ runReaderT (unifyValue' modulo topEnv v v') h
   case xs of
     [] -> pure Nothing
-    (subst, _) : _ -> pure (Just (zonkMetaSubst topEnv subst))
+    (subst, _) : _ -> pure (Just (zonkMetaSubst modulo topEnv subst))
 
 -- | Unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
 unifyTerm :: Modulo -> TopEnv -> Term -> Term -> IO (Maybe MetaSubst)
@@ -1120,7 +1160,7 @@ unifyValueInst modulo topEnv v v' = do
     observeManyT 1 $ runReaderT (unifyValueInst' modulo topEnv v v') h
   case xs of
     [] -> pure Nothing
-    (subst, _) : _ -> pure (Just (zonkMetaSubst topEnv subst))
+    (subst, _) : _ -> pure (Just (zonkMetaSubst modulo topEnv subst))
 
 unifyTermInst :: Modulo -> TopEnv -> Term -> Term -> IO (Maybe MetaSubst)
 unifyTermInst modulo topEnv t t' =

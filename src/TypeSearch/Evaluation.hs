@@ -91,6 +91,7 @@ data Value
   | VSuc Value
   | VEq Value Value Value
   | VRefl Value Value
+  | VStuck Value Spine
 
 pattern VVar :: Level -> Value
 pattern VVar l = VRigid l SNil
@@ -165,6 +166,7 @@ spine = \case
   VSuc {} -> SNil
   VEq {} -> SNil
   VRefl {} -> SNil
+  VStuck _ sp -> sp
 
 data EvalError
   = VarNotFound QName
@@ -263,7 +265,7 @@ vapp vt vu = case vt of
   VRigid l sp -> VRigid l (SApp sp vu)
   VFlex m ar vs sp -> VFlex m ar vs (SApp sp vu)
   VTop n sp vs -> VTop n (SApp sp vu) (fmap (`vapp` vu) <$> vs)
-  _ -> throw NotFunction
+  _ -> VStuck vt (SApp SNil vu)
 
 -- | Projections in "the value world".
 vfst, vsnd :: Value -> Value
@@ -272,13 +274,13 @@ vfst = \case
   VRigid l sp -> VRigid l (SFst sp)
   VFlex m ar vs sp -> VFlex m ar vs (SFst sp)
   VTop n sp vs -> VTop n (SFst sp) (fmap vfst <$> vs)
-  _ -> throw NotPair
+  v -> VStuck v (SFst SNil)
 vsnd = \case
   VPair _ v -> v
   VRigid l sp -> VRigid l (SSnd sp)
   VFlex m ar vs sp -> VFlex m ar vs (SSnd sp)
   VTop n sp vs -> VTop n (SSnd sp) (fmap vsnd <$> vs)
-  _ -> throw NotPair
+  v -> VStuck v (SSnd SNil)
 
 vnatElim :: Value -> Value -> Value -> Value -> Value
 vnatElim p s z = \case
@@ -287,7 +289,7 @@ vnatElim p s z = \case
   VRigid l sp -> VRigid l (SNatElim p s z sp)
   VFlex m ar vs sp -> VFlex m ar vs (SNatElim p s z sp)
   VTop n sp vs -> VTop n (SNatElim p s z sp) (fmap (vnatElim p s z) <$> vs)
-  _ -> throw NotNat
+  v -> VStuck v (SNatElim p s z SNil)
 
 veqElim :: Value -> Value -> Value -> Value -> Value -> Value -> Value
 veqElim a x p r y = \case
@@ -295,7 +297,7 @@ veqElim a x p r y = \case
   VRigid l sp -> VRigid l (SEqElim a x p r y sp)
   VFlex m ar vs sp -> VFlex m ar vs (SEqElim a x p r y sp)
   VTop n sp vs -> VTop n (SEqElim a x p r y sp) (fmap (veqElim a x p r y) <$> vs)
-  _ -> throw NotEq
+  v -> VStuck v (SEqElim a x p r y SNil)
 
 -- | Apply an elimination to a value.
 vappElim :: Value -> Elim -> Value
@@ -342,6 +344,7 @@ quote lvl = \case
   VSuc n -> Suc `App` quote lvl n
   VEq a x y -> Eq `App` quote lvl a `App` quote lvl x `App` quote lvl y
   VRefl a x -> Refl `App` quote lvl a `App` quote lvl x
+  VStuck v sp -> quoteSpine lvl (quote lvl v) sp
 
 quoteElim :: Level -> Term -> Elim -> Term
 quoteElim lvl t = \case
@@ -388,6 +391,7 @@ deepForce topEnv subst = go
       VSuc n -> VSuc (go n)
       VEq a x y -> VEq (go a) (go x) (go y)
       VRefl a x -> VRefl (go a) (go x)
+      VStuck u sp -> VStuck (go u) (goSpine sp)
 
     goSpine = fmap goElim
 
