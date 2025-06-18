@@ -1082,8 +1082,8 @@ zonkMetaSubst modulo topEnv subst = fmap (zonkMetaAbs modulo topEnv subst) subst
 --        where M1 and M2 are fresh metavariables generated for A and B respectively.
 instantiateInPisOf :: Value -> Value -> UnifyM Value
 instantiateInPisOf t u = do
-  let lvl = numTopPis t
-  u' <- instantiateTopPis lvl u
+  let names = topPiNames t
+  u' <- instantiateTopPis names u
   pure $ go u' t
   where
     go v = \case
@@ -1091,18 +1091,18 @@ instantiateInPisOf t u = do
       VArr _ b -> go v b
       _ -> v
 
--- | Count the number of top-level pis.
-numTopPis :: Value -> Level
-numTopPis = go 0
+-- | Collect the variable names bound by top-level pis.
+topPiNames :: Value -> [Name]
+topPiNames = go [] 0
   where
-    go lvl = \case
-      VPi _ _ b -> go (lvl + 1) (b (VVar lvl))
-      VArr _ b -> go lvl b
-      _ -> lvl
+    go acc lvl = \case
+      VPi x _ b -> go (x : acc) (lvl + 1) (b (VVar lvl))
+      VArr _ b -> go acc lvl b
+      _ -> acc
 
 -- | Instantiate top-level pis. Unfold definitions.
-instantiateTopPis :: Level -> Value -> UnifyM Value
-instantiateTopPis lvl = go
+instantiateTopPis :: [Name] -> Value -> UnifyM Value
+instantiateTopPis names = go
   where
     go = \case
       VTop _ _ ts -> do
@@ -1112,11 +1112,12 @@ instantiateTopPis lvl = go
 
     go' = \case
       t@(VPi x _ b) -> do
-        m <- liftIO $ freshMetaSrc x
+        let m = Inst x names
         go (b $ VMetaApp m args) <|> pure t
       VArr a b -> VArr a <$> go' b
       t -> pure t
 
+    lvl = Level $ length names
     args = map VVar [0 .. lvl - 1]
 
 --------------------------------------------------------------------------------

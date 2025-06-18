@@ -117,7 +117,7 @@ pAtom :: Parser Raw
 pAtom =
   withPos
     ( (RVar <$> pQName)
-        <|> (RMetaApp . flip Src Nothing <$> pMeta <*> option [] (brackets (pAbsPi `sepBy` char ',')))
+        <|> (RMetaApp . Src <$> pMeta <*> option [] (brackets (pAbsPi `sepBy` char ',')))
         <|> (RType <$ pKeyword "Type")
         <|> (RUnit <$ pKeyword "Unit")
         <|> (RTT <$ pKeyword "tt")

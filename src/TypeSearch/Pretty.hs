@@ -5,6 +5,7 @@ module TypeSearch.Pretty
     prettyRaw,
     prettyTerm,
     prettyMetaSubst,
+    prettyInst,
   )
 where
 
@@ -188,3 +189,15 @@ prettyMetaSubst = \subst ->
         . prettyTerm (reverse params) absP body
       where
         params = map (\i -> Name $ "x" <> T.pack (show i)) [0 .. arity - 1]
+
+prettyInst :: [Name] -> HM.HashMap Name Term -> ShowS
+prettyInst ns = \subst ->
+  HM.toList subst
+    & map (uncurry prettyBody)
+    & punctuate (showString ", ")
+    & enclose (showChar '{') (showChar '}')
+  where
+    prettyBody m t =
+      shows m
+        . showString " ↦ "
+        . prettyTerm ns absP t

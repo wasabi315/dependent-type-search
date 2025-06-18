@@ -171,20 +171,12 @@ spine = \case
 data EvalError
   = VarNotFound QName
   | ArityMismatch
-  | NotFunction
-  | NotPair
-  | NotNat
-  | NotEq
   deriving stock (Show)
 
 instance Exception EvalError where
   displayException = \case
     VarNotFound n -> "Variable not found: " ++ show n
     ArityMismatch -> "Arity mismatch"
-    NotFunction -> "Not a function"
-    NotPair -> "Not a pair"
-    NotNat -> "Not a natural number"
-    NotEq -> "Not an equality"
 
 --------------------------------------------------------------------------------
 -- Evaluation

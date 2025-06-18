@@ -11,7 +11,6 @@ module TypeSearch.Common
     Index (..),
     Meta (..),
     freshMeta,
-    freshMetaSrc,
     Name (..),
     ModuleName (..),
     QName (..),
@@ -64,22 +63,21 @@ newtype Index = Index Int
 
 -- | Metavariables
 data Meta
-  = Src Name (Maybe Unique)
-  | Gen Unique
+  = Src Name
+  | Inst Name [Name] -- generated during instantiation
+  | Gen Unique -- generated during unification
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (Hashable)
 
 instance Show Meta where
   showsPrec _ = \case
-    Src n _ -> shows n
-    Gen u -> showString "?M$" . shows (hashUnique u)
+    Src n -> shows n
+    Inst n _ -> showString "?I$" . shows n
+    Gen u -> showString "?G$" . shows (hashUnique u)
 
 -- | Generate a fresh metavariable.
 freshMeta :: IO Meta
 freshMeta = Gen <$> newUnique
-
-freshMetaSrc :: Name -> IO Meta
-freshMetaSrc n = Src n . Just <$> newUnique
 
 -- | Names
 newtype Name = Name T.Text
