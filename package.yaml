@@ -26,7 +26,6 @@ dependencies:
   - filepath
   - hashable
   - haskeline
-  - logict
   - megaparsec
   - mtl
   - text

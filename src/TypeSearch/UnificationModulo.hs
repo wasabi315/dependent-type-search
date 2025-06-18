@@ -15,18 +15,17 @@ module TypeSearch.UnificationModulo
   )
 where
 
+import Backtrack
 import Control.Applicative
 import Control.Monad
-import Control.Monad.Logic
 import Control.Monad.Reader
 import Data.HashMap.Lazy qualified as HM
 import Data.HashSet qualified as HS
-import Data.Sequence qualified as Seq
-import Data.Text qualified as T
-import System.IO
+-- import Data.Text qualified as T
+-- import System.IO
 import TypeSearch.Common
 import TypeSearch.Evaluation
-import TypeSearch.Pretty
+-- import TypeSearch.Pretty
 import TypeSearch.Raw
 import TypeSearch.Term
 
@@ -216,9 +215,9 @@ jpProjection' :: Int -> UnifyM Term
 jpProjection' arity = Var <$> choose [0 .. Index arity - 1]
 
 -- | Generate Huet-style projections for a given value.
-huetProjection :: Value -> Int -> Int -> UnifyM MetaAbs
-huetProjection t maxDepth arity =
-  MetaAbs arity <$> huetProjection' t maxDepth arity params params'
+huetProjection :: Value -> Int -> UnifyM MetaAbs
+huetProjection t arity =
+  MetaAbs arity <$> huetProjection' t arity params params'
   where
     params = map Var $ down (Index arity - 1) 0
     params' = map Var $ down (Index arity) 0
@@ -235,8 +234,8 @@ hasNoElimRule = \case
   Eq {} -> True
   _ -> False
 
-huetProjection' :: Value -> Int -> Int -> [Term] -> [Term] -> UnifyM Term
-huetProjection' t maxDepth arity params params' = hd >>= \h -> go (Seq.singleton (maxDepth, pure h))
+huetProjection' :: Value -> Int -> [Term] -> [Term] -> UnifyM Term
+huetProjection' t arity params params' = hd >>= lift . go
   where
     kind = case t of
       VRigid {} -> empty
@@ -260,23 +259,20 @@ huetProjection' t maxDepth arity params params' = hd >>= \h -> go (Seq.singleton
 
     hd = (kind >>= \k -> imitation' k params params') <|> jpProjection' arity
 
-    go Seq.Empty = empty
-    go ((d, u) Seq.:<| q) = do
-      u' <- u
-      pure u' <|> (guard (d > 0) >> go (step q (d - 1) u'))
-
-    step q d u
-      | hasNoElimRule u = q
-      | otherwise =
-          q
-            Seq.:|> ( d,
-                      do
-                        m <- liftIO freshMeta
-                        let v = MetaApp m params
-                        pure $ u `App` v
-                    )
-            Seq.:|> (d, pure (Fst u))
-            Seq.:|> (d, pure (Snd u))
+    go u =
+      pure u <|> postpone do
+        guard (not $ hasNoElimRule u)
+        elim <-
+          asum
+            [ do
+                m <- liftIO freshMeta
+                let v = MetaApp m params
+                pure (`App` v),
+              pure Fst,
+              pure Snd
+            ]
+        u' <- go u
+        pure $ elim u'
 
 --------------------------------------------------------------------------------
 -- Solving constraints in solved form
@@ -532,10 +528,10 @@ data Modulo = DefEq | Iso
 -- | Monad for unification.
 -- @HeapT@ is like list transformer with priority.
 -- @IO@ is for generating fresh metavariables.
-type UnifyM = ReaderT (String -> IO ()) (LogicT IO)
+type UnifyM = ReaderT (String -> IO ()) (Backtrack IO)
 
-unifyLog :: ((String -> IO ()) -> IO ()) -> UnifyM ()
-unifyLog f = ask >>= liftIO . (f $)
+-- unifyLog :: ((String -> IO ()) -> IO ()) -> UnifyM ()
+-- unifyLog f = ask >>= liftIO . (f $)
 
 -- | Used for controlling definition unfolding.
 data ConvMode
@@ -902,11 +898,11 @@ flexRigid ctx todo@(Constraint _ _ _ lhs rhs) todos = do
   case (lhs, rhs) of
     (VFlex {}, VFlex {}) -> empty
     (VFlex m ar _ SNil, t') -> do
-      mabs <- huetProjection t' 3 ar
+      mabs <- huetProjection t' ar
       let ctx' = addMetaSubst m mabs ctx
       pure (ctx', todo : todos)
     (t, VFlex m' ar' _ SNil) -> do
-      mabs <- huetProjection t 3 ar'
+      mabs <- huetProjection t ar'
       let ctx' = addMetaSubst m' mabs ctx
       pure (ctx', todo : todos)
     _ -> empty
@@ -1001,16 +997,16 @@ chooseConstraint ctx = go [] []
 -- | Unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
 unify :: SharedCtx -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
 unify ctx todos = do
-  unifyLog \f -> do
-    f "--------------------------------------------------"
-    f $ prettyMetaSubst ctx.metaSubst ""
-    mapM_ (\todo' -> f $ prettyConstraint todo' "") todos
+  -- unifyLog \f -> do
+  --   f "--------------------------------------------------"
+  --   f $ prettyMetaSubst ctx.metaSubst ""
+  --   mapM_ (\todo' -> f $ prettyConstraint todo' "") todos
   case chooseConstraint ctx todos of
     Stuck -> empty
     Done ff -> pure (ctx.metaSubst, ff)
     Solved m mabs todos' -> unify (addMetaSubst m mabs ctx) todos'
-    Next todo todos' ->
-      do
+    Next todo todos' -> do
+      (ctx', todos'') <-
         asum
           [ (ctx,) <$> decompose ctx todo todos',
             (ctx,) <$> decomposeIso ctx todo todos',
@@ -1019,27 +1015,27 @@ unify ctx todos = do
             guard (ctx.numGuessMetaIso < 3) >> guessMetaIso ctx todo todos',
             flexRigid ctx todo todos'
           ]
-        >>- uncurry unify
+      unify ctx' todos''
 
-prettyConstraint :: Constraint -> ShowS
-prettyConstraint (Constraint lvl _ iso lhs rhs) =
-  ( if lvl > 0
-      then
-        showString "∀ "
-          . punctuate (showString " ") (map shows $ reverse vars)
-          . showString ". "
-      else id
-  )
-    . prettyTerm vars 0 lhs'
-    . showString eq
-    . prettyTerm vars 0 rhs'
-  where
-    lhs' = quote lvl lhs
-    rhs' = quote lvl rhs
-    vars = map (\i -> Name $ "x" <> T.pack (show i)) $ down (lvl - 1) 0
-    eq = case iso of
-      DefEq -> " ≡ "
-      Iso -> " ≅ "
+-- prettyConstraint :: Constraint -> ShowS
+-- prettyConstraint (Constraint lvl _ iso lhs rhs) =
+--   ( if lvl > 0
+--       then
+--         showString "∀ "
+--           . punctuate (showString " ") (map shows $ reverse vars)
+--           . showString ". "
+--       else id
+--   )
+--     . prettyTerm vars 0 lhs'
+--     . showString eq
+--     . prettyTerm vars 0 rhs'
+--   where
+--     lhs' = quote lvl lhs
+--     rhs' = quote lvl rhs
+--     vars = map (\i -> Name $ "x" <> T.pack (show i)) $ down (lvl - 1) 0
+--     eq = case iso of
+--       DefEq -> " ≡ "
+--       Iso -> " ≅ "
 
 --------------------------------------------------------------------------------
 -- Zonking (unfold all metavariables in terms)
@@ -1118,10 +1114,10 @@ unifyValue :: Modulo -> TopEnv -> Value -> Value -> IO (Maybe MetaSubst)
 unifyValue modulo topEnv v v' = do
   -- xs <- withFile "unify.log" AppendMode \h -> do
   --   observeManyT 1 $ runReaderT (unifyValue' modulo topEnv v v') (hPutStrLn h)
-  xs <- observeManyT 1 $ runReaderT (unifyValue' modulo topEnv v v') (\_ -> pure ())
+  xs <- Backtrack.head $ runReaderT (unifyValue' modulo topEnv v v') (\_ -> pure ())
   case xs of
-    [] -> pure Nothing
-    (subst, _) : _ -> pure (Just (zonkMetaSubst modulo topEnv subst))
+    Nothing -> pure Nothing
+    Just (subst, _) -> pure (Just (zonkMetaSubst modulo topEnv subst))
 
 -- | Unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
 unifyTerm :: Modulo -> TopEnv -> Term -> Term -> IO (Maybe MetaSubst)
@@ -1142,12 +1138,12 @@ unifyValueInst' modulo topEnv v v' = do
 -- The left hand side is instantiated.
 unifyValueInst :: Modulo -> TopEnv -> Value -> Value -> IO (Maybe MetaSubst)
 unifyValueInst modulo topEnv v v' = do
-  xs <- withFile "unify.log" AppendMode \h -> do
-    observeManyT 1 $ runReaderT (unifyValueInst' modulo topEnv v v') (hPutStrLn h)
-  -- xs <- observeManyT 1 $ runReaderT (unifyValueInst' modulo topEnv v v') (\_ -> pure ())
+  -- xs <- withFile "unify.log" AppendMode \h -> do
+  --   Backtrack.head $ runReaderT (unifyValueInst' modulo topEnv v v') (hPutStrLn h)
+  xs <- Backtrack.head $ runReaderT (unifyValueInst' modulo topEnv v v') (\_ -> pure ())
   case xs of
-    [] -> pure Nothing
-    (subst, _) : _ -> pure (Just (zonkMetaSubst modulo topEnv subst))
+    Nothing -> pure Nothing
+    Just (subst, _) -> pure (Just (zonkMetaSubst modulo topEnv subst))
 
 unifyTermInst :: Modulo -> TopEnv -> Term -> Term -> IO (Maybe MetaSubst)
 unifyTermInst modulo topEnv t t' =

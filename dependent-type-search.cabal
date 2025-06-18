@@ -25,6 +25,7 @@ source-repository head
 
 library
   exposed-modules:
+      Backtrack
       TypeSearch
       TypeSearch.Common
       TypeSearch.Evaluation
@@ -88,7 +89,6 @@ library
     , filepath
     , hashable
     , haskeline
-    , logict
     , megaparsec
     , mtl
     , text
@@ -154,7 +154,6 @@ executable dependent-type-search-exe
     , filepath
     , hashable
     , haskeline
-    , logict
     , megaparsec
     , mtl
     , text
@@ -221,7 +220,6 @@ test-suite dependent-type-search-test
     , filepath
     , hashable
     , haskeline
-    , logict
     , megaparsec
     , mtl
     , text
