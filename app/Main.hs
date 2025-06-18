@@ -139,12 +139,14 @@ search :: TopEnv -> [(QName, Raw)] -> Raw -> Options -> InputT IO ()
 search topEnv sigs ty opts = do
   let unify = if opts.generalise == Generalise then unifyRawInst else unifyRaw
   for_ sigs \(x, sig) -> do
+    -- outputStrLn $ shows x ""
     msubst <-
       liftIO $
         timeout (opts.timeoutMs * 1000) do
           unify opts.modulo topEnv sig ty `catch` \(_ :: EvalError) -> pure Nothing
     case msubst of
       Just (Just subst) -> displayResult x sig subst >> outputStrLn ""
+      -- Nothing -> outputStrLn "timeout"
       _ -> pure ()
 
 main :: IO ()
