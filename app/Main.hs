@@ -121,20 +121,19 @@ mainLoop topEnv sigs = go defaultOptions
           search topEnv sigs ty opts
           go opts
 
-displayResult :: QName -> Raw -> [MetaSubst] -> InputT IO ()
-displayResult name sig substs = do
+displayResult :: QName -> Raw -> MetaSubst -> InputT IO ()
+displayResult name sig subst = do
   outputStrLn $ shows name $ showString " : " $ prettyRaw 0 sig ""
-  for_ substs \subst -> do
-    let inst = flip imapMaybe subst \k (MetaAbs _ body) -> case k of
-          Inst {} -> Just body
-          _ -> Nothing
-        subst' = flip ifilter subst \k _ -> case k of Src _ -> True; _ -> False
-    when (HM.size inst > 0) do
-      let ~(Inst _ ns : _) = HM.keys inst
-          inst' = HM.mapKeys (\ ~(Inst x _) -> x) inst
-      outputStrLn $ "  instantiation: " ++ prettyInst ns inst' ""
-    when (HM.size subst' > 0) do
-      outputStrLn $ "  substitution: " ++ prettyMetaSubst subst' ""
+  let inst = flip imapMaybe subst \k (MetaAbs _ body) -> case k of
+        Inst {} -> Just body
+        _ -> Nothing
+      subst' = flip ifilter subst \k _ -> case k of Src _ -> True; _ -> False
+  when (HM.size inst > 0) do
+    let ~(Inst _ ns : _) = HM.keys inst
+        inst' = HM.mapKeys (\ ~(Inst x _) -> x) inst
+    outputStrLn $ "  instantiation: " ++ prettyInst ns inst' ""
+  when (HM.size subst' > 0) do
+    outputStrLn $ "  substitution: " ++ prettyMetaSubst subst' ""
 
 search :: TopEnv -> [(QName, Raw)] -> Raw -> Options -> InputT IO ()
 search topEnv sigs ty opts = do
@@ -145,7 +144,7 @@ search topEnv sigs ty opts = do
         timeout (opts.timeoutMs * 1000) do
           unify opts.modulo topEnv sig ty `catch` \(_ :: EvalError) -> pure Nothing
     case msubst of
-      Just (Just subst) -> displayResult x sig [subst] >> outputStrLn ""
+      Just (Just subst) -> displayResult x sig subst >> outputStrLn ""
       _ -> pure ()
 
 main :: IO ()

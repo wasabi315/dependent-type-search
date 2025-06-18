@@ -23,7 +23,6 @@ import Control.Monad.Reader
 import Data.HashMap.Lazy qualified as HM
 import Data.HashSet qualified as HS
 import Data.Text qualified as T
-import System.IO
 import TypeSearch.Common
 import TypeSearch.Evaluation
 import TypeSearch.Pretty
@@ -519,10 +518,8 @@ possibleComponentHoists topEnv subst lvl t = do
 --   - (x : Unit) -> A[x]           ~ A[tt]
 -- Constraints are solved from left to right (static unification).
 
-unifyLog :: (Handle -> IO ()) -> UnifyM ()
-unifyLog f = when True do
-  h <- ask
-  liftIO $ f h
+-- unifyLog :: ((String -> IO ()) -> IO ()) -> UnifyM ()
+-- unifyLog f = ask >>= liftIO . (f $)
 
 -- | Constraints: ∀ x0, ..., x{n - 1}. t1 ≟ t2
 data Constraint = Constraint
@@ -538,7 +535,7 @@ data Modulo = DefEq | Iso
 -- | Monad for unification.
 -- @HeapT@ is like list transformer with priority.
 -- @IO@ is for generating fresh metavariables.
-type UnifyM = ReaderT Handle (LogicT IO)
+type UnifyM = ReaderT (String -> IO ()) (LogicT IO)
 
 -- | Used for controlling definition unfolding.
 data ConvMode
@@ -929,16 +926,16 @@ unfold ctx (Constraint lvl cm iso lhs rhs) todos = do
       | n == n' ->
           (ctx,) <$> decomposeSpine Flex lvl sp sp' todos
             <|> do
-              -- unifyLog \h -> hPutStrLn h $ "unfold: " ++ show n ++ " (" ++ show (length ts) ++ " alternatives)"
+              -- unifyLog \f -> f $ "unfold: " ++ show n ++ " (" ++ show (length ts) ++ " alternatives)"
               -- assume modName = modName'
               ((modName, t), (_modName', t')) <- choose (zip ts ts')
               let ctx' = addChosenDef n modName ctx
                   todo1 = Constraint lvl Full iso t t'
               pure (ctx', todo1 : todos)
       | otherwise -> do
-          -- unifyLog \h -> hPutStrLn h $ "unfold: " ++ show n ++ " (" ++ show (length ts) ++ " alternatives)"
+          -- unifyLog \f -> f $ "unfold: " ++ show n ++ " (" ++ show (length ts) ++ " alternatives)"
           (modName, t) <- choose ts
-          -- unifyLog \h -> hPutStrLn h $ "unfold: " ++ show n' ++ " (" ++ show (length ts') ++ " alternatives)"
+          -- unifyLog \f -> f $ "unfold: " ++ show n' ++ " (" ++ show (length ts') ++ " alternatives)"
           (modName', t') <- choose ts'
           let ctx' = addChosenDef n modName $ addChosenDef n' modName' ctx
               todo1 = Constraint lvl Rigid iso t t'
@@ -949,29 +946,29 @@ unfold ctx (Constraint lvl cm iso lhs rhs) todos = do
     (Full, VTop n _ ts, VTop n' _ ts')
       | n == n' -> do
           -- assume modName = modName'
-          -- unifyLog \h -> hPutStrLn h $ "unfold: " ++ show n ++ " (" ++ show (length ts) ++ " alternatives)"
+          -- unifyLog \f -> f $ "unfold: " ++ show n ++ " (" ++ show (length ts) ++ " alternatives)"
           ((modName, t), (_modName', t')) <- choose (zip ts ts')
           let ctx' = addChosenDef n modName ctx
               todo1 = Constraint lvl Full iso t t'
           pure (ctx', todo1 : todos)
       | otherwise -> do
-          -- unifyLog \h -> hPutStrLn h $ "unfold: " ++ show n ++ " (" ++ show (length ts) ++ " alternatives)"
+          -- unifyLog \f -> f $ "unfold: " ++ show n ++ " (" ++ show (length ts) ++ " alternatives)"
           (modName, t) <- choose ts
-          -- unifyLog \h -> hPutStrLn h $ "unfold: " ++ show n' ++ " (" ++ show (length ts') ++ " alternatives)"
+          -- unifyLog \f -> f $ "unfold: " ++ show n' ++ " (" ++ show (length ts') ++ " alternatives)"
           (modName', t') <- choose ts'
           let ctx' = addChosenDef n modName $ addChosenDef n' modName' ctx
               todo1 = Constraint lvl Rigid iso t t'
           pure (ctx', todo1 : todos)
     (Flex, VTop {}, _) -> empty
     (_, VTop n _ ts, t') -> do
-      -- unifyLog \h -> hPutStrLn h $ "unfold: " ++ show n ++ " (" ++ show (length ts) ++ " alternatives)"
+      -- unifyLog \f -> f $ "unfold: " ++ show n ++ " (" ++ show (length ts) ++ " alternatives)"
       (modName, t) <- choose ts
       let todo1 = Constraint lvl cm iso t t'
           ctx' = addChosenDef n modName ctx
       pure (ctx', todo1 : todos)
     (Flex, _, VTop {}) -> empty
     (_, t, VTop n _ ts) -> do
-      -- unifyLog \h -> hPutStrLn h $ "unfold: " ++ show n ++ " (" ++ show (length ts) ++ " alternatives)"
+      -- unifyLog \f -> f $ "unfold: " ++ show n ++ " (" ++ show (length ts) ++ " alternatives)"
       (modName, t') <- choose ts
       let todo1 = Constraint lvl cm iso t t'
           ctx' = addChosenDef n modName ctx
@@ -1011,11 +1008,11 @@ chooseConstraint ctx = go [] []
 -- | Unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
 unify :: SharedCtx -> [Constraint] -> UnifyM (MetaSubst, [Constraint])
 unify ctx todos = do
-  unifyLog \h -> do
-    -- threadDelay 500000
-    hPutStrLn h "--------------------------------------------------"
-    hPutStrLn h $ prettyMetaSubst ctx.metaSubst ""
-    mapM_ (\todo' -> hPutStrLn h $ prettyConstraint todo' "") todos
+  -- unifyLog \f -> do
+  --   -- threadDelay 500000
+  --   f "--------------------------------------------------"
+  --   f $ prettyMetaSubst ctx.metaSubst ""
+  --   mapM_ (\todo' -> f $ prettyConstraint todo' "") todos
   case chooseConstraint ctx todos of
     Stuck -> empty
     Done ff -> pure (ctx.metaSubst, ff)
@@ -1037,25 +1034,25 @@ catchEmpty :: forall e a. (Exception e) => UnifyM a -> UnifyM a
 catchEmpty m = ReaderT \h -> LogicT \cons nil ->
   try @e (runLogicT (runReaderT m h) cons nil) >>= either (const nil) pure
 
-prettyConstraint :: Constraint -> ShowS
-prettyConstraint (Constraint lvl _ iso lhs rhs) =
-  ( if lvl > 0
-      then
-        showString "∀ "
-          . punctuate (showString " ") (map shows $ reverse vars)
-          . showString ". "
-      else id
-  )
-    . prettyTerm vars 0 lhs'
-    . showString eq
-    . prettyTerm vars 0 rhs'
-  where
-    lhs' = quote lvl lhs
-    rhs' = quote lvl rhs
-    vars = map (\i -> Name $ "x" <> T.pack (show i)) $ down (lvl - 1) 0
-    eq = case iso of
-      DefEq -> " ≡ "
-      Iso -> " ≅ "
+-- prettyConstraint :: Constraint -> ShowS
+-- prettyConstraint (Constraint lvl _ iso lhs rhs) =
+--   ( if lvl > 0
+--       then
+--         showString "∀ "
+--           . punctuate (showString " ") (map shows $ reverse vars)
+--           . showString ". "
+--       else id
+--   )
+--     . prettyTerm vars 0 lhs'
+--     . showString eq
+--     . prettyTerm vars 0 rhs'
+--   where
+--     lhs' = quote lvl lhs
+--     rhs' = quote lvl rhs
+--     vars = map (\i -> Name $ "x" <> T.pack (show i)) $ down (lvl - 1) 0
+--     eq = case iso of
+--       DefEq -> " ≡ "
+--       Iso -> " ≅ "
 
 --------------------------------------------------------------------------------
 -- Zonking (unfold all metavariables in terms)
@@ -1132,8 +1129,9 @@ unifyValue' modulo topEnv v v' = do
 -- | Unification modulo βη-equivalence and type isomorphisms related to Π and Σ.
 unifyValue :: Modulo -> TopEnv -> Value -> Value -> IO (Maybe MetaSubst)
 unifyValue modulo topEnv v v' = do
-  xs <- withFile "/dev/null" AppendMode \h -> do
-    observeManyT 1 $ runReaderT (unifyValue' modulo topEnv v v') h
+  -- xs <- withFile "unify.log" AppendMode \h -> do
+  --   observeManyT 1 $ runReaderT (unifyValue' modulo topEnv v v') (hPutStrLn h)
+  xs <- observeManyT 1 $ runReaderT (unifyValue' modulo topEnv v v') (\_ -> pure ())
   case xs of
     [] -> pure Nothing
     (subst, _) : _ -> pure (Just (zonkMetaSubst modulo topEnv subst))
@@ -1157,8 +1155,9 @@ unifyValueInst' modulo topEnv v v' = do
 -- The left hand side is instantiated.
 unifyValueInst :: Modulo -> TopEnv -> Value -> Value -> IO (Maybe MetaSubst)
 unifyValueInst modulo topEnv v v' = do
-  xs <- withFile "/dev/null" AppendMode \h -> do
-    observeManyT 1 $ runReaderT (unifyValueInst' modulo topEnv v v') h
+  -- xs <- withFile "unify.log" AppendMode \h -> do
+  --   observeManyT 1 $ runReaderT (unifyValue' modulo topEnv v v') (hPutStrLn h)
+  xs <- observeManyT 1 $ runReaderT (unifyValueInst' modulo topEnv v v') (\_ -> pure ())
   case xs of
     [] -> pure Nothing
     (subst, _) : _ -> pure (Just (zonkMetaSubst modulo topEnv subst))
