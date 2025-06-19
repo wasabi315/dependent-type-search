@@ -30,7 +30,7 @@ You search with a query type, then the tool will show you components of the libr
 ```haskell
 > (m : Nat) -> Eq Nat (add 42 m) (add m 42)
 Natural.add-comm : Equality.Commutativity Nat add
-  by instantiating {y[x0] ↦ x0, x[x0] ↦ 42}
+  instantiation: {x ↦ 42, y ↦ m}
 ```
 
 You can turn on and off whether to search up to generalisation or search modulo the type isomorphisms.
@@ -41,7 +41,7 @@ You can turn on and off whether to search up to generalisation or search modulo 
 > :set generalise
 > (A : Type) -> (A * A -> A) -> List A -> A -> A
 List.foldr : (A : Type) (B : Type) → (A → B → B) → B → List A → B
-  by instantiating {A[x0] ↦ x0, B[x0] ↦ x0}
+  instantiation: {A ↦ A, B ↦ A}
 
 > :set no-modulo-iso
 > (A : Type) -> (A * A -> A) -> List A -> A -> A
@@ -50,18 +50,23 @@ List.foldr : (A : Type) (B : Type) → (A → B → B) → B → List A → B
 You can include (parametrised) metavariables in the query type.
 
 ```haskell
+> :set modulo-iso
 > (m : Nat) -> Eq Nat (?F m ?E) m
 Natural.add-id-l : Equality.LeftIdentity Nat add 0
-  by instantiating {x[x0] ↦ x0, ?F ↦ λ x x'. x}
+  instantiation: {x ↦ m}
+  substitution: {?F ↦ λ x x'. x}
 
 Natural.add-id-r : Equality.RightIdentity Nat add 0
-  by instantiating {x[x0] ↦ x0, ?E ↦ 0, ?F ↦ add}
+  instantiation: {x ↦ m}
+  substitution: {?E ↦ 0, ?F ↦ add}
 
 Natural.mul-id-l : Equality.LeftIdentity Nat mul 1
-  by instantiating {x[x0] ↦ x0, ?F ↦ λ x x'. natElim (λ x''. Nat) (λ x'' x'''. suc x''') 0 x}
+  instantiation: {x ↦ m}
+  substitution: {?E ↦ 0, ?F ↦ λ x. add x}
 
 Natural.mul-id-r : Equality.RightIdentity Nat mul 1
-  by instantiating {?E ↦ 1, ?F ↦ mul, x[x0] ↦ x0}
+  instantiation: {x ↦ m}
+  substitution: {?E ↦ 1, ?F ↦ mul}
 ```
 
 The syntax for the query type is the following:
