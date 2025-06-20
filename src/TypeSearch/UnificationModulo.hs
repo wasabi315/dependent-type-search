@@ -848,7 +848,7 @@ guessMetaIso ctx todo@(Constraint lvl _ iso lhs rhs) todos = do
                     -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
                     do
                       guard $ isSigma other || isMeta other
-                      (m,) <$> imitation (ISigma "x") ar
+                      postpone $ (m,) <$> imitation (ISigma "x") ar
                   ]
               _ -> empty,
             -- Σ x : A. M[t0, ..., tn]
@@ -860,7 +860,7 @@ guessMetaIso ctx todo@(Constraint lvl _ iso lhs rhs) todos = do
                     -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
                     do
                       guard $ isSigma other || isMeta other
-                      (m,) <$> imitation (ISigma "x") ar
+                      postpone $ (m,) <$> imitation (ISigma "x") ar
                   ]
               _ -> empty
           ]
@@ -875,7 +875,7 @@ guessMetaIso ctx todo@(Constraint lvl _ iso lhs rhs) todos = do
                     -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
                     do
                       guard $ isSigma other || isMeta other
-                      (m,) <$> imitation (ISigma "x") ar
+                      postpone $ (m,) <$> imitation (ISigma "x") ar
                   ]
               _ -> empty,
             -- A * M[t0, ..., tn]
@@ -887,7 +887,7 @@ guessMetaIso ctx todo@(Constraint lvl _ iso lhs rhs) todos = do
                     -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
                     do
                       guard $ isSigma other || isMeta other
-                      (m,) <$> imitation (ISigma "x") ar
+                      postpone $ (m,) <$> imitation (ISigma "x") ar
                   ]
               _ -> empty
           ]
@@ -902,7 +902,7 @@ guessMetaIso ctx todo@(Constraint lvl _ iso lhs rhs) todos = do
                     -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
                     do
                       guard $ isPi other || isMeta other
-                      (m,) <$> imitation (ISigma "x") ar
+                      postpone $ (m,) <$> imitation (ISigma "x") ar
                   ]
               _ -> empty,
             -- (x : A) -> M[t0, ..., tn]
@@ -911,7 +911,7 @@ guessMetaIso ctx todo@(Constraint lvl _ iso lhs rhs) todos = do
                 -- M[x0, ..., xn] ↦ (y : M1[x0, ..., xn]). M2[x0, ..., xn, y]
                 do
                   guard $ isPi other || isMeta other
-                  (m,) <$> imitation (IPi "x") ar
+                  postpone $ (m,) <$> imitation (IPi "x") ar
               _ -> empty
           ]
       VArr a b ->
@@ -925,7 +925,7 @@ guessMetaIso ctx todo@(Constraint lvl _ iso lhs rhs) todos = do
                     -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
                     do
                       guard $ isSigma other || isMeta other
-                      (m,) <$> imitation (ISigma "x") ar
+                      postpone $ (m,) <$> imitation (ISigma "x") ar
                   ]
               _ -> empty,
             -- A → M[t0, ..., tn]
@@ -1059,7 +1059,7 @@ unify ctx todos = do
             (ctx,) <$> decomposeIso ctx todo todos',
             guessMeta ctx todo todos',
             unfold ctx todo todos',
-            guard (ctx.numGuessMetaIso < 3) >> guessMetaIso ctx todo todos',
+            guard (ctx.numGuessMetaIso < 5) >> guessMetaIso ctx todo todos',
             flexRigid ctx todo todos'
           ]
       unify ctx' todos''

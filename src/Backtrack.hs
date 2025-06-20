@@ -4,7 +4,7 @@ module Backtrack
   ( Backtrack,
     nil,
     cons,
-    postpone,
+    MonadPostpone (..),
     head,
     take,
   )
@@ -13,11 +13,12 @@ where
 import Control.Applicative
 import Control.Monad
 import Control.Monad.IO.Class
-import Control.Monad.Trans
+import Control.Monad.Reader
 import Prelude hiding (head, take)
 
 --------------------------------------------------------------------------------
 
+-- Levels monad Transformer
 newtype Backtrack m a = Backtrack (m (Step m a))
   deriving stock (Functor)
 
@@ -42,10 +43,6 @@ nil = Backtrack $ pure Nil
 cons :: (Applicative m) => a -> Backtrack m a -> Backtrack m a
 cons x m = Backtrack $ pure $ Cons x m
 {-# INLINE cons #-}
-
-postpone :: (Applicative m) => Backtrack m a -> Backtrack m a
-postpone m = Backtrack $ pure $ Postpone m
-{-# INLINE postpone #-}
 
 instance (Monad m) => Applicative (Backtrack m) where
   pure x = cons x nil
@@ -89,6 +86,17 @@ instance MonadTrans Backtrack where
 instance (MonadIO m) => MonadIO (Backtrack m) where
   liftIO m = Backtrack $ (`Cons` nil) <$> liftIO m
   {-# INLINE liftIO #-}
+
+class (MonadPlus m) => MonadPostpone m where
+  postpone :: m a -> m a
+
+instance (Monad m) => MonadPostpone (Backtrack m) where
+  postpone m = Backtrack $ pure $ Postpone m
+  {-# INLINE postpone #-}
+
+instance (MonadPostpone m) => MonadPostpone (ReaderT r m) where
+  postpone (ReaderT m) = ReaderT \r -> postpone (m r)
+  {-# INLINE postpone #-}
 
 head :: (Monad m) => Backtrack m a -> m (Maybe a)
 head (Backtrack m) =
