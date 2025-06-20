@@ -6,6 +6,7 @@ module Backtrack
     cons,
     postpone,
     head,
+    take,
   )
 where
 
@@ -13,11 +14,10 @@ import Control.Applicative
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans
-import Prelude hiding (head)
+import Prelude hiding (head, take)
 
 --------------------------------------------------------------------------------
 
--- | NOT a lawful Monad/MonadPlus.
 newtype Backtrack m a = Backtrack (m (Step m a))
   deriving stock (Functor)
 
@@ -26,6 +26,10 @@ data Step m a
   | Cons a (Backtrack m a)
   | Postpone (Backtrack m a)
   deriving stock (Functor)
+
+deriving stock instance (Show (m (Step m a))) => Show (Backtrack m a)
+
+deriving stock instance (Show (m (Step m a)), Show a) => Show (Step m a)
 
 unBacktrack :: Backtrack m a -> m (Step m a)
 unBacktrack (Backtrack m) = m
@@ -93,3 +97,10 @@ head (Backtrack m) =
     Cons x _ -> pure $ Just x
     Postpone m' -> head m'
 {-# INLINE head #-}
+
+take :: (Monad m) => Int -> Backtrack m a -> m [a]
+take n (Backtrack m) =
+  m >>= \case
+    Nil -> pure []
+    Cons x m' -> (x :) <$> take (n - 1) m'
+    Postpone m' -> take n m'

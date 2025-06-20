@@ -822,72 +822,119 @@ guessMeta ctx todo@(Constraint _ _ _ lhs rhs) todos = do
       VFlex m arity _ (SSnd' {}) -> (m,) <$> imitation IPair arity
       _ -> empty
 
+isMeta :: Value -> Bool
+isMeta = \case
+  VFlex {} -> True
+  _ -> False
+
 -- | Like @guessMeta@, but for type isomorphisms.
 -- Π and Σ types act as "eliminators" when considering type isomorphisms!
 guessMetaIso :: SharedCtx -> Constraint -> [Constraint] -> UnifyM (SharedCtx, [Constraint])
 guessMetaIso ctx todo@(Constraint lvl _ iso lhs rhs) todos = do
   guard $ iso == Iso
-  (m, mabs) <- guessMetaIso' lhs <|> guessMetaIso' rhs
+  (m, mabs) <- guessMetaIso' lhs rhs <|> guessMetaIso' rhs lhs
   let ctx' = incrNumGuessMetaIso $ addMetaSubst m mabs ctx
   pure (ctx', todo : todos)
   where
-    guessMetaIso' = \case
+    guessMetaIso' subj other = case subj of
       VSigma _ a b ->
         asum
           [ -- Σ x : M[t0, ..., tn]. B[x]
             case force' ctx a of
-              -- M[x0, ..., xn] ↦ Unit or
-              -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
-              VFlex m ar _ _ -> (m,) <$> (imitation IUnit ar <|> imitation (ISigma "x") ar)
+              VFlex m ar _ _ ->
+                asum
+                  [ -- M[x0, ..., xn] ↦ Unit
+                    (m,) <$> imitation IUnit ar,
+                    -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
+                    do
+                      guard $ isSigma other || isMeta other
+                      (m,) <$> imitation (ISigma "x") ar
+                  ]
               _ -> empty,
             -- Σ x : A. M[t0, ..., tn]
             case force' ctx (b $ VVar lvl) of
-              -- M[x0, ..., xn] ↦ Unit or
-              -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
-              VFlex m ar _ _ -> (m,) <$> (imitation IUnit ar <|> imitation (ISigma "x") ar)
+              VFlex m ar _ _ ->
+                asum
+                  [ -- M[x0, ..., xn] ↦ Unit
+                    (m,) <$> imitation IUnit ar,
+                    -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
+                    do
+                      guard $ isSigma other || isMeta other
+                      (m,) <$> imitation (ISigma "x") ar
+                  ]
               _ -> empty
           ]
       VProd a b ->
         asum
           [ -- M[t0, ..., tn] * B
             case force' ctx a of
-              -- M[x0, ..., xn] ↦ Unit or
-              -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
-              VFlex m ar _ _ -> (m,) <$> (imitation IUnit ar <|> imitation (ISigma "x") ar)
+              VFlex m ar _ _ ->
+                asum
+                  [ -- M[x0, ..., xn] ↦ Unit
+                    (m,) <$> imitation IUnit ar,
+                    -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
+                    do
+                      guard $ isSigma other || isMeta other
+                      (m,) <$> imitation (ISigma "x") ar
+                  ]
               _ -> empty,
             -- A * M[t0, ..., tn]
             case force' ctx b of
-              -- M[x0, ..., xn] ↦ Unit or
-              -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
-              VFlex m ar _ _ -> (m,) <$> (imitation IUnit ar <|> imitation (ISigma "x") ar)
+              VFlex m ar _ _ ->
+                asum
+                  [ -- M[x0, ..., xn] ↦ Unit
+                    (m,) <$> imitation IUnit ar,
+                    -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
+                    do
+                      guard $ isSigma other || isMeta other
+                      (m,) <$> imitation (ISigma "x") ar
+                  ]
               _ -> empty
           ]
       VPi _ a b ->
         asum
           [ -- (x : M[t0, ..., tn]) → B[x]
             case force' ctx a of
-              -- M[x0, ..., xn] ↦ Unit or
-              -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
-              VFlex m ar _ _ -> (m,) <$> (imitation IUnit ar <|> imitation (ISigma "x") ar)
+              VFlex m ar _ _ ->
+                asum
+                  [ -- M[x0, ..., xn] ↦ Unit
+                    (m,) <$> imitation IUnit ar,
+                    -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
+                    do
+                      guard $ isPi other || isMeta other
+                      (m,) <$> imitation (ISigma "x") ar
+                  ]
               _ -> empty,
             -- (x : A) -> M[t0, ..., tn]
             case force' ctx (b $ VVar lvl) of
-              -- M[x0, ..., xn] ↦ (y : M1[x0, ..., xn]). M2[x0, ..., xn, y]
-              VFlex m ar _ _ -> (m,) <$> imitation (IPi "x") ar
+              VFlex m ar _ _ ->
+                -- M[x0, ..., xn] ↦ (y : M1[x0, ..., xn]). M2[x0, ..., xn, y]
+                do
+                  guard $ isPi other || isMeta other
+                  (m,) <$> imitation (IPi "x") ar
               _ -> empty
           ]
       VArr a b ->
         asum
           [ -- M[t0, ..., tn] → B
             case force' ctx a of
-              -- M[x0, ..., xn] ↦ Unit or
-              -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
-              VFlex m ar _ _ -> (m,) <$> (imitation IUnit ar <|> imitation (ISigma "x") ar)
+              VFlex m ar _ _ ->
+                asum
+                  [ -- M[x0, ..., xn] ↦ Unit
+                    (m,) <$> imitation IUnit ar,
+                    -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
+                    do
+                      guard $ isSigma other || isMeta other
+                      (m,) <$> imitation (ISigma "x") ar
+                  ]
               _ -> empty,
             -- A → M[t0, ..., tn]
             case force' ctx b of
-              -- M[x0, ..., xn] ↦ (y : M1[x0, ..., xn]). M2[x0, ..., xn, y]
-              VFlex m ar _ _ -> (m,) <$> imitation (IPi "x") ar
+              VFlex m ar _ _ ->
+                -- M[x0, ..., xn] ↦ (y : M1[x0, ..., xn]). M2[x0, ..., xn, y]
+                do
+                  guard $ isPi other || isMeta other
+                  (m,) <$> imitation (IPi "x") ar
               _ -> empty
           ]
       _ -> empty
