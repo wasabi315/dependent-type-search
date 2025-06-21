@@ -65,14 +65,7 @@ prettyRaw = go
       RAbs n b -> par p absP $ showString "λ " . shows n . goAbs b
       RApp RSuc n -> goSuc p 1 n
       RApp a b -> par p appP $ go appP a . showChar ' ' . go projP b
-      RSigma n a b ->
-        par p sigmaP $
-          showString "Σ "
-            . shows n
-            . showString " : "
-            . go appP a
-            . showString ". "
-            . go sigmaP b
+      RSigma n a b -> par p sigmaP $ piBind n a . showString " × " . go sigmaP b
       RProd a b -> par p sigmaP $ go appP a . showString " × " . go sigmaP b
       RPair a b -> par p pairP $ go absP a . showString ", " . go absP b
       RFst a -> par p projP $ go projP a . showString ".1"
@@ -126,13 +119,7 @@ prettyTerm = go
       Suc `App` n -> goSuc p ns 1 n
       App t u -> par p appP $ go ns appP t . showChar ' ' . go ns projP u
       Sigma (freshen ns -> n) a b ->
-        par p sigmaP $
-          showString "Σ "
-            . shows n
-            . showString " : "
-            . go ns appP a
-            . showString ". "
-            . go (n : ns) sigmaP b
+        par p sigmaP $ piBind n ns a . showString " × " . go (n : ns) sigmaP b
       Prod a b -> par p sigmaP $ go ns appP a . showString " × " . go ns sigmaP b
       Fst t -> par p projP $ go ns projP t . showString ".1"
       Snd t -> par p projP $ go ns projP t . showString ".2"
@@ -169,6 +156,20 @@ prettyTerm = go
         showChar ' ' . shows n . goAbs (n : ns) t
       t -> showString ". " . go ns absP t
 
+subscript :: Char -> Char
+subscript = \case
+  '0' -> '₀'
+  '1' -> '₁'
+  '2' -> '₂'
+  '3' -> '₃'
+  '4' -> '₄'
+  '5' -> '₅'
+  '6' -> '₆'
+  '7' -> '₇'
+  '8' -> '₈'
+  '9' -> '₉'
+  c -> c
+
 prettyMetaSubst :: MetaSubst -> ShowS
 prettyMetaSubst = \subst ->
   HM.toList subst
@@ -188,7 +189,7 @@ prettyMetaSubst = \subst ->
         . showString " ↦ "
         . prettyTerm (reverse params) absP body
       where
-        params = map (\i -> Name $ "x" <> T.pack (show i)) [0 .. arity - 1]
+        params = map (\i -> Name $ "x" <> T.map subscript (T.pack (show i))) [0 .. arity - 1]
 
 prettyInst :: [Name] -> HM.HashMap Name Term -> ShowS
 prettyInst ns = \subst ->
