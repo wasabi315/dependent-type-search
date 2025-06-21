@@ -235,7 +235,7 @@ hasNoElimRule = \case
   _ -> False
 
 huetProjection' :: Value -> Int -> [Term] -> [Term] -> UnifyM Term
-huetProjection' t arity params params' = hd >>= lift . go
+huetProjection' t arity params params' = hd >>= go
   where
     kind = case t of
       VRigid {} -> empty
@@ -528,7 +528,9 @@ data Modulo = DefEq | Iso
 -- | Monad for unification.
 -- @HeapT@ is like list transformer with priority.
 -- @IO@ is for generating fresh metavariables.
-type UnifyM = ReaderT (String -> IO ()) (Backtrack IO)
+type UnifyM = Backtrack IO
+
+-- type UnifyM = ReaderT (String -> IO ()) (Backtrack IO)
 
 -- unifyLog :: ((String -> IO ()) -> IO ()) -> UnifyM ()
 -- unifyLog f = ask >>= liftIO . (f $)
@@ -1182,7 +1184,7 @@ unifyValue :: Modulo -> TopEnv -> Value -> Value -> IO (Maybe MetaSubst)
 unifyValue modulo topEnv v v' = do
   -- xs <- withFile "unify.log" AppendMode \h -> do
   --   observeManyT 1 $ runReaderT (unifyValue' modulo topEnv v v') (hPutStrLn h)
-  xs <- Backtrack.head $ runReaderT (unifyValue' modulo topEnv v v') (\_ -> pure ())
+  xs <- Backtrack.head $ unifyValue' modulo topEnv v v'
   case xs of
     Nothing -> pure Nothing
     Just (subst, _) -> pure (Just (zonkMetaSubst modulo topEnv subst))
@@ -1208,7 +1210,7 @@ unifyValueInst :: Modulo -> TopEnv -> Value -> Value -> IO (Maybe MetaSubst)
 unifyValueInst modulo topEnv v v' = do
   -- xs <- withFile "unify.log" AppendMode \h -> do
   --   Backtrack.head $ runReaderT (unifyValueInst' modulo topEnv v v') (hPutStrLn h)
-  xs <- Backtrack.head $ runReaderT (unifyValueInst' modulo topEnv v v') (\_ -> pure ())
+  xs <- Backtrack.head $ unifyValueInst' modulo topEnv v v'
   case xs of
     Nothing -> pure Nothing
     Just (subst, _) -> pure (Just (zonkMetaSubst modulo topEnv subst))
