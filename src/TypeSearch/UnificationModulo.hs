@@ -839,9 +839,9 @@ guessMetaIso ctx todo@(Constraint lvl _ iso lhs rhs) todos = do
     guessMetaIso' subj other = case subj of
       VSigma _ a b ->
         asum
-          [ -- Σ x : M[t0, ..., tn]. B[x]
-            case force' ctx a of
-              VFlex m ar _ _ ->
+          [ case force' ctx a of
+              -- Σ x : M[t0, ..., tn]. B[x]
+              VFlex m ar _ SNil ->
                 asum
                   [ -- M[x0, ..., xn] ↦ Unit
                     (m,) <$> imitation IUnit ar,
@@ -850,10 +850,13 @@ guessMetaIso ctx todo@(Constraint lvl _ iso lhs rhs) todos = do
                       guard $ isSigma other || isMeta other
                       postpone $ (m,) <$> imitation (ISigma "x") ar
                   ]
+              VFlex m ar _ (SApp' {}) -> (m,) <$> imitation (IAbs "x") ar
+              VFlex m ar _ (SFst' {}) -> (m,) <$> imitation IPair ar
+              VFlex m ar _ (SSnd' {}) -> (m,) <$> imitation IPair ar
               _ -> empty,
-            -- Σ x : A. M[t0, ..., tn]
             case force' ctx (b $ VVar lvl) of
-              VFlex m ar _ _ ->
+              -- Σ x : A. M[t0, ..., tn]
+              VFlex m ar _ SNil ->
                 asum
                   [ -- M[x0, ..., xn] ↦ Unit
                     (m,) <$> imitation IUnit ar,
@@ -862,13 +865,16 @@ guessMetaIso ctx todo@(Constraint lvl _ iso lhs rhs) todos = do
                       guard $ isSigma other || isMeta other
                       postpone $ (m,) <$> imitation (ISigma "x") ar
                   ]
+              VFlex m ar _ (SApp' {}) -> (m,) <$> imitation (IAbs "x") ar
+              VFlex m ar _ (SFst' {}) -> (m,) <$> imitation IPair ar
+              VFlex m ar _ (SSnd' {}) -> (m,) <$> imitation IPair ar
               _ -> empty
           ]
       VProd a b ->
         asum
-          [ -- M[t0, ..., tn] * B
-            case force' ctx a of
-              VFlex m ar _ _ ->
+          [ case force' ctx a of
+              -- M[t0, ..., tn] * B
+              VFlex m ar _ SNil ->
                 asum
                   [ -- M[x0, ..., xn] ↦ Unit
                     (m,) <$> imitation IUnit ar,
@@ -877,10 +883,13 @@ guessMetaIso ctx todo@(Constraint lvl _ iso lhs rhs) todos = do
                       guard $ isSigma other || isMeta other
                       postpone $ (m,) <$> imitation (ISigma "x") ar
                   ]
+              VFlex m ar _ (SApp' {}) -> (m,) <$> imitation (IAbs "x") ar
+              VFlex m ar _ (SFst' {}) -> (m,) <$> imitation IPair ar
+              VFlex m ar _ (SSnd' {}) -> (m,) <$> imitation IPair ar
               _ -> empty,
-            -- A * M[t0, ..., tn]
             case force' ctx b of
-              VFlex m ar _ _ ->
+              -- A * M[t0, ..., tn]
+              VFlex m ar _ SNil ->
                 asum
                   [ -- M[x0, ..., xn] ↦ Unit
                     (m,) <$> imitation IUnit ar,
@@ -889,13 +898,16 @@ guessMetaIso ctx todo@(Constraint lvl _ iso lhs rhs) todos = do
                       guard $ isSigma other || isMeta other
                       postpone $ (m,) <$> imitation (ISigma "x") ar
                   ]
+              VFlex m ar _ (SApp' {}) -> (m,) <$> imitation (IAbs "x") ar
+              VFlex m ar _ (SFst' {}) -> (m,) <$> imitation IPair ar
+              VFlex m ar _ (SSnd' {}) -> (m,) <$> imitation IPair ar
               _ -> empty
           ]
       VPi _ a b ->
         asum
-          [ -- (x : M[t0, ..., tn]) → B[x]
-            case force' ctx a of
-              VFlex m ar _ _ ->
+          [ case force' ctx a of
+              -- (x : M[t0, ..., tn]) → B[x]
+              VFlex m ar _ SNil ->
                 asum
                   [ -- M[x0, ..., xn] ↦ Unit
                     (m,) <$> imitation IUnit ar,
@@ -904,10 +916,13 @@ guessMetaIso ctx todo@(Constraint lvl _ iso lhs rhs) todos = do
                       guard $ isPi other || isMeta other
                       postpone $ (m,) <$> imitation (ISigma "x") ar
                   ]
+              VFlex m ar _ (SApp' {}) -> (m,) <$> imitation (IAbs "x") ar
+              VFlex m ar _ (SFst' {}) -> (m,) <$> imitation IPair ar
+              VFlex m ar _ (SSnd' {}) -> (m,) <$> imitation IPair ar
               _ -> empty,
-            -- (x : A) -> M[t0, ..., tn]
             case force' ctx (b $ VVar lvl) of
-              VFlex m ar _ _ ->
+              -- (x : A) -> M[t0, ..., tn]
+              VFlex m ar _ SNil ->
                 -- M[x0, ..., xn] ↦ (y : M1[x0, ..., xn]). M2[x0, ..., xn, y]
                 do
                   guard $ isPi other || isMeta other
@@ -918,23 +933,29 @@ guessMetaIso ctx todo@(Constraint lvl _ iso lhs rhs) todos = do
         asum
           [ -- M[t0, ..., tn] → B
             case force' ctx a of
-              VFlex m ar _ _ ->
+              VFlex m ar _ SNil ->
                 asum
                   [ -- M[x0, ..., xn] ↦ Unit
                     (m,) <$> imitation IUnit ar,
                     -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
                     do
-                      guard $ isSigma other || isMeta other
+                      guard $ isPi other || isMeta other
                       postpone $ (m,) <$> imitation (ISigma "x") ar
                   ]
+              VFlex m ar _ (SApp' {}) -> (m,) <$> imitation (IAbs "x") ar
+              VFlex m ar _ (SFst' {}) -> (m,) <$> imitation IPair ar
+              VFlex m ar _ (SSnd' {}) -> (m,) <$> imitation IPair ar
               _ -> empty,
             -- A → M[t0, ..., tn]
             case force' ctx b of
-              VFlex m ar _ _ ->
+              VFlex m ar _ SNil ->
                 -- M[x0, ..., xn] ↦ (y : M1[x0, ..., xn]). M2[x0, ..., xn, y]
                 do
                   guard $ isPi other || isMeta other
-                  (m,) <$> imitation (IPi "x") ar
+                  postpone $ (m,) <$> imitation (IPi "x") ar
+              VFlex m ar _ (SApp' {}) -> (m,) <$> imitation (IAbs "x") ar
+              VFlex m ar _ (SFst' {}) -> (m,) <$> imitation IPair ar
+              VFlex m ar _ (SSnd' {}) -> (m,) <$> imitation IPair ar
               _ -> empty
           ]
       _ -> empty
