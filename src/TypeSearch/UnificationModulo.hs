@@ -19,8 +19,11 @@ import Backtrack
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Reader
+import Control.Monad.State.Strict
+import Data.Bits
+import Data.Coerce
 import Data.HashMap.Lazy qualified as HM
-import Data.HashSet qualified as HS
+import Data.IntSet qualified as IS
 -- import Data.Text qualified as T
 -- import System.IO
 import TypeSearch.Common
@@ -143,7 +146,7 @@ data ImitationKind
   deriving stock (Show)
 
 -- | Create a meta abstraction of a given arity that imitates a particular rigid value.
-imitation :: ImitationKind -> Int -> UnifyM MetaAbs
+imitation :: (MonadIO m) => ImitationKind -> Int -> m MetaAbs
 imitation kind arity =
   MetaAbs arity <$> imitation' kind params params'
   where
@@ -152,7 +155,7 @@ imitation kind arity =
     -- x. [x0, ..., xn, x]
     params' = map Var $ down (Index arity) 0
 
-imitation' :: ImitationKind -> [Term] -> [Term] -> UnifyM Term
+imitation' :: (MonadIO m) => ImitationKind -> [Term] -> [Term] -> m Term
 imitation' kind params params' = liftIO case kind of
   -- M[x0, ..., xn] ↦ n
   ITop ms n -> pure $ Top ms n
@@ -211,11 +214,11 @@ imitation' kind params params' = liftIO case kind of
     m2 <- freshMeta
     pure $ Refl `App` MetaApp m1 params `App` MetaApp m2 params
 
-jpProjection' :: Int -> UnifyM Term
+jpProjection' :: (Alternative m) => Int -> m Term
 jpProjection' arity = Var <$> choose [0 .. Index arity - 1]
 
 -- | Generate Huet-style projections for a given value.
-huetProjection :: Value -> Int -> UnifyM MetaAbs
+huetProjection :: (MonadIO m, MonadPostpone m) => Value -> Int -> m MetaAbs
 huetProjection t arity =
   MetaAbs arity <$> huetProjection' t arity params params'
   where
@@ -234,7 +237,7 @@ hasNoElimRule = \case
   Eq {} -> True
   _ -> False
 
-huetProjection' :: Value -> Int -> [Term] -> [Term] -> UnifyM Term
+huetProjection' :: (MonadIO m, MonadPostpone m) => Value -> Int -> [Term] -> [Term] -> m Term
 huetProjection' t arity params params' = hd >>= go
   where
     kind = case t of
@@ -273,6 +276,13 @@ huetProjection' t arity params params' = hd >>= go
             ]
         u' <- go u
         pure $ elim u'
+
+-- | Elimination bindings.
+elimination :: (MonadIO m) => Int -> (Int -> Bool) -> m MetaAbs
+elimination arity elim = do
+  m <- liftIO freshMeta
+  let params = [Var (Index i) | i <- (arity - 1) `down` 0, not $ elim (arity - i - 1)]
+  pure $ MetaAbs arity $ MetaApp m params
 
 --------------------------------------------------------------------------------
 -- Solving constraints in solved form
@@ -366,40 +376,114 @@ solve topEnv subst lvl m ar ts t = do
 --------------------------------------------------------------------------------
 -- Swapping domains of pi types and components of sigma types
 
--- | Compute the free variable set of a value.
-freeVarSet :: TopEnv -> MetaSubst -> Level -> Value -> HS.HashSet Level
-freeVarSet topEnv subst = go
+data PruneInfo = PruneInfo
+  { arity :: Int,
+    paramsToPrune :: Int
+  }
+  deriving stock (Show)
+
+instance Semigroup PruneInfo where
+  PruneInfo ar ps <> PruneInfo _ ps' = PruneInfo ar (ps .|. ps')
+
+newtype Prune = Prune (HM.HashMap Meta PruneInfo)
+  deriving stock (Show)
+
+instance Semigroup Prune where
+  Prune ps <> Prune ps' = Prune (HM.unionWith (<>) ps ps')
+
+instance Monoid Prune where
+  mempty = Prune mempty
+
+-- | Try to eliminate some of the arguments of parametrised metavariables in a given value in order to prune dependencies to the given set of free variables.
+tryPrune :: TopEnv -> MetaSubst -> IS.IntSet -> Level -> Value -> IO (Maybe (Value, MetaSubst))
+tryPrune topEnv subst wantPrunes = \lvl t -> case execStateT (go lvl t) mempty of
+  Nothing -> pure Nothing
+  Just (Prune prune) -> do
+    subst' <-
+      foldM
+        ( \acc (m, PruneInfo ar is) -> do
+            mabs <- elimination ar (testBit is)
+            pure $! HM.insert m mabs acc
+        )
+        subst
+        (HM.toList prune)
+    let t' = deepForce topEnv subst' t
+    pure (Just (t', subst'))
   where
     go lvl t = case force topEnv subst t of
-      VRigid l sp -> HS.insert l (goSpine lvl sp)
-      VFlex _ _ ts sp -> foldMap (go lvl) ts <> goSpine lvl sp
+      VRigid (Level l) sp
+        | IS.member l wantPrunes -> empty
+        | otherwise -> goSpine lvl sp
+      VFlex m ar ts sp -> goSpine lvl sp >> goArgs m ar lvl ts
       VTop _ sp _ -> goSpine lvl sp
-      VType -> HS.empty
-      VPi _ a b -> go lvl a <> goScope lvl b
-      VArr a b -> go lvl a <> go lvl b
+      VType -> pure ()
+      VPi _ a b -> go lvl a >> goScope lvl b
+      VArr a b -> go lvl a >> go lvl b
       VAbs _ b -> goScope lvl b
-      VSigma _ a b -> go lvl a <> goScope lvl b
-      VProd a b -> go lvl a <> go lvl b
-      VPair a b -> go lvl a <> go lvl b
-      VUnit -> HS.empty
-      VTT -> HS.empty
-      VNat -> HS.empty
-      VZero -> HS.empty
+      VSigma _ a b -> go lvl a >> goScope lvl b
+      VProd a b -> go lvl a >> go lvl b
+      VPair a b -> go lvl a >> go lvl b
+      VUnit -> pure ()
+      VTT -> pure ()
+      VNat -> pure ()
+      VZero -> pure ()
       VSuc u -> go lvl u
-      VEq a u v -> go lvl a <> go lvl u <> go lvl v
-      VRefl a u -> go lvl a <> go lvl u
-      VStuck {} -> HS.empty
+      VEq a u v -> go lvl a >> go lvl u >> go lvl v
+      VRefl a u -> go lvl a >> go lvl u
+      VStuck {} -> empty
 
-    goScope lvl f = HS.delete lvl $ go (lvl + 1) (f $ VVar lvl)
+    goArgs m ar lvl ts = mapM_ (goArg m ar lvl) $ zip [0 ..] ts
 
-    goSpine lvl = foldMap (goElim lvl)
+    goArg m ar lvl (i :: Int, t)
+      | isFree topEnv subst wantPrunes lvl t = do
+          modify' (<> Prune (HM.singleton m (PruneInfo ar (bit i))))
+      | otherwise = pure ()
+
+    goScope lvl f = go (lvl + 1) (f $ VVar lvl)
+
+    goSpine lvl = mapM_ (goElim lvl)
+
+    goElim lvl = \case
+      EApp u -> go lvl u
+      EFst -> pure ()
+      ESnd -> pure ()
+      ENatElim p s z -> go lvl p >> go lvl s >> go lvl z
+      EEqElim a x p r y -> go lvl a >> go lvl x >> go lvl p >> go lvl r >> go lvl y
+
+-- | Check if some of the variables in the set is free in the value.
+isFree :: TopEnv -> MetaSubst -> IS.IntSet -> Level -> Value -> Bool
+isFree topEnv subst fv = go
+  where
+    go lvl t = case force topEnv subst t of
+      VRigid (Level l) sp -> IS.member l fv || goSpine lvl sp
+      VFlex _ _ ts sp -> any (go lvl) ts || goSpine lvl sp
+      VTop _ sp _ -> goSpine lvl sp
+      VType -> False
+      VPi _ a b -> go lvl a || goScope lvl b
+      VArr a b -> go lvl a || go lvl b
+      VAbs _ b -> goScope lvl b
+      VSigma _ a b -> go lvl a || goScope lvl b
+      VProd a b -> go lvl a || go lvl b
+      VPair a b -> go lvl a || go lvl b
+      VUnit -> False
+      VTT -> False
+      VNat -> False
+      VZero -> False
+      VSuc u -> go lvl u
+      VEq a u v -> go lvl a || go lvl u || go lvl v
+      VRefl a u -> go lvl a || go lvl u
+      VStuck {} -> False
+
+    goScope lvl f = go (lvl + 1) (f $ VVar lvl)
+
+    goSpine lvl = any (goElim lvl)
 
     goElim lvl = \case
       EApp t -> go lvl t
-      EFst -> HS.empty
-      ESnd -> HS.empty
-      ENatElim p s z -> go lvl p <> go lvl s <> go lvl z
-      EEqElim a x p r y -> go lvl a <> go lvl x <> go lvl p <> go lvl r <> go lvl y
+      EFst -> False
+      ESnd -> False
+      ENatElim p s z -> go lvl p || go lvl s || go lvl z
+      EEqElim a x p r y -> go lvl a || go lvl x || go lvl p || go lvl r || go lvl y
 
 isPi :: Value -> Bool
 isPi = \case
@@ -408,6 +492,7 @@ isPi = \case
   _ -> False
 
 -- | From a pi type, generate the same type but with single domain is hoisted to the top respecting dependencies.
+-- When the domain trying to be hoisted is a parametrised metavariable, we try to eliminate some of the parameters to prune dependencies that block the hoisting.
 -- Example 1:
 --   * Input:   (A B : Type) -> A -> B -> A
 --   * Output: [(B A : Type) -> A -> B -> A]
@@ -415,39 +500,39 @@ isPi = \case
 --   * Input:    (A -> B -> B) -> B -> List A -> B  (where A and B are free)
 --   * Output: [ B -> (A -> B -> B) -> List A -> B,
 --               List A -> (A -> B -> B) -> B -> B ]
-possibleDomainHoists :: TopEnv -> MetaSubst -> Level -> Value -> [Value]
-possibleDomainHoists topEnv subst lvl t = do
-  guard $ isPi t
-  go HS.empty 0 lvl t
+-- Example 3:
+--   * Input:    (A : Type) -> ?M[A] -> Type
+--   * Output: [?N[] -> (A : Type) -> Type] where ?M[x] := ?N[] (?N is fresh)
+possibleDomainHoists :: (MonadIO m, MonadPlus m) => TopEnv -> MetaSubst -> Level -> Value -> m (Value, MetaSubst)
+possibleDomainHoists topEnv subst lvl t = case t of
+  VPi _ _ b -> go (IS.singleton (coerce lvl)) (1 :: Int) (lvl + 1) (b $ VVar lvl)
+  VArr _ b -> go IS.empty 1 lvl b
+  _ -> empty
   where
     go lvls i lvl' u = case force topEnv subst u of
-      VPi x a b
-        | hoistable a ->
-            VPi x a (\ ~v -> deletePi i v t)
-              : go (HS.insert lvl' lvls) (i + 1) (lvl' + 1) (b $ VVar lvl')
-        | otherwise ->
-            go (HS.insert lvl' lvls) (i + 1) (lvl' + 1) (b $ VVar lvl')
-      VArr a b
-        | hoistable a ->
-            VArr a (deleteArr i t)
-              : go lvls (i + 1) lvl' b
-        | otherwise ->
-            go lvls (i + 1) lvl' b
-      _ -> []
-      where
-        hoistable a =
-          HS.null lvls
-            || HS.null (HS.intersection (freeVarSet topEnv subst lvl' a) lvls)
+      VPi x a b ->
+        ( do
+            (a', subst') <- choose =<< liftIO (tryPrune topEnv subst lvls lvl' a)
+            pure (VPi x a' (\ ~v -> deletePi i v t), subst')
+        )
+          <|> go (IS.insert (coerce lvl') lvls) (i + 1) (lvl' + 1) (b $ VVar lvl')
+      VArr a b ->
+        ( do
+            (a', subst') <- choose =<< liftIO (tryPrune topEnv subst lvls lvl' a)
+            pure (VArr a' (deleteArr i t), subst')
+        )
+          <|> go lvls (i + 1) lvl' b
+      _ -> empty
 
     deleteArr i u = case (i, force topEnv subst u) of
-      (0 :: Int, VArr _ b) -> b
+      (0, VArr _ b) -> b
       (0, _) -> error "deleteArr: not an arrow"
       (_, VPi x a b) -> VPi x a (deleteArr (i - 1) . b)
       (_, VArr a b) -> VArr a (deleteArr (i - 1) b)
       _ -> error "deleteArr: not an arrow"
 
     deletePi i u v = case (i, force topEnv subst v) of
-      (0 :: Int, VPi _ _ b) -> b u
+      (0, VPi _ _ b) -> b u
       (0, _) -> error "deletePi: not a pi"
       (_, VPi x a b) -> VPi x a (deletePi (i - 1) u . b)
       (_, VArr a b) -> VArr a (deletePi (i - 1) u b)
@@ -460,34 +545,31 @@ isSigma = \case
   _ -> False
 
 -- | Like @possibleDomainHoists@, generate sigma types with single component is hoisted to the top respecting dependencies.
-possibleComponentHoists :: TopEnv -> MetaSubst -> Level -> Value -> [Value]
-possibleComponentHoists topEnv subst lvl t = do
-  guard $ isSigma t
-  go HS.empty 0 lvl t
+possibleComponentHoists :: (MonadIO m, MonadPlus m) => TopEnv -> MetaSubst -> Level -> Value -> m (Value, MetaSubst)
+possibleComponentHoists topEnv subst lvl t = case t of
+  VSigma _ _ b -> go (IS.singleton (coerce lvl)) (1 :: Int) (lvl + 1) (b $ VVar lvl)
+  VProd _ b -> go IS.empty 1 lvl b
+  _ -> empty
   where
     go lvls i lvl' u = case force topEnv subst u of
-      VSigma x a b
-        | hoistable a ->
-            VSigma x a (\ ~v -> deleteSigma i v t)
-              : go (HS.insert lvl' lvls) (i + 1) (lvl' + 1) (b $ VVar lvl')
-        | otherwise ->
-            go (HS.insert lvl' lvls) (i + 1) (lvl' + 1) (b $ VVar lvl')
-      VProd a b
-        | hoistable a ->
-            VProd a (deleteProd i t)
-              : go lvls (i + 1) lvl' b
-        | otherwise ->
-            go lvls (i + 1) lvl' b
-      a
-        | hoistable a -> [VProd a (deleteProd i t)]
-        | otherwise -> []
-      where
-        hoistable a =
-          HS.null lvls
-            || HS.null (HS.intersection (freeVarSet topEnv subst lvl' a) lvls)
+      VSigma x a b ->
+        ( do
+            (a', subst') <- choose =<< liftIO (tryPrune topEnv subst lvls lvl' a)
+            pure (VSigma x a' (\ ~v -> deleteSigma i v t), subst')
+        )
+          <|> go (IS.insert (coerce lvl') lvls) (i + 1) (lvl' + 1) (b $ VVar lvl')
+      VProd a b ->
+        ( do
+            (a', subst') <- choose =<< liftIO (tryPrune topEnv subst lvls lvl' a)
+            pure (VProd a' (deleteProd i t), subst')
+        )
+          <|> go lvls (i + 1) lvl' b
+      a -> do
+        (a', subst') <- choose =<< liftIO (tryPrune topEnv subst lvls lvl' a)
+        pure (VProd a' (deleteProd i t), subst')
 
     deleteProd i u = case (i, force topEnv subst u) of
-      (0 :: Int, VProd _ b) -> b
+      (0, VProd _ b) -> b
       (0, _) -> error "deleteProd: not a prod"
       (1, VProd a b) -> case force topEnv subst b of
         b'@VProd {} -> VProd a (deleteProd (i - 1) b')
@@ -497,7 +579,7 @@ possibleComponentHoists topEnv subst lvl t = do
       _ -> error "deleteProd: not a prod"
 
     deleteSigma i u v = case (i, force topEnv subst v) of
-      (0 :: Int, VSigma _ _ b) -> b u
+      (0, VSigma _ _ b) -> b u
       (0, _) -> error "deleteSigma: not a sigma"
       (_, VSigma x a b) -> VSigma x a (deleteSigma (i - 1) u . b)
       (_, VProd a b) -> VProd a (deleteSigma (i - 1) u b)
@@ -791,24 +873,26 @@ decomposeMetaArgs cm lvl lhs rhs todos = case (lhs, rhs) of
   _ -> empty
 
 -- | Like @decompose@, but function domains, sigma components, or equality sides are permuted.
-decomposeIso :: SharedCtx -> Constraint -> [Constraint] -> UnifyM [Constraint]
+decomposeIso :: SharedCtx -> Constraint -> [Constraint] -> UnifyM (SharedCtx, [Constraint])
 decomposeIso ctx (Constraint lvl cm iso lhs rhs) todos = do
   guard (iso == Iso)
   case (lhs, rhs) of
     -- Hoist one of the domains respecting dependencies
     (isPi -> True, isPi -> True) -> do
-      lhs' <- choose $ tail $ possibleDomainHoists ctx.topEnv ctx.metaSubst lvl lhs
-      let todo1 = Constraint lvl cm iso lhs' rhs
-      decompose ctx todo1 todos
+      (lhs', subst') <- possibleDomainHoists ctx.topEnv ctx.metaSubst lvl lhs
+      let ctx' = ctx {metaSubst = subst'}
+          todo1 = Constraint lvl cm iso lhs' rhs
+      (ctx',) <$> decompose ctx' todo1 todos
     -- Hoist one of the components respecting dependencies
     (isSigma -> True, isSigma -> True) -> do
-      lhs' <- choose $ tail $ possibleComponentHoists ctx.topEnv ctx.metaSubst lvl lhs
-      let todo1 = Constraint lvl cm iso lhs' rhs
-      decompose ctx todo1 todos
+      (lhs', subst') <- possibleComponentHoists ctx.topEnv ctx.metaSubst lvl lhs
+      let ctx' = ctx {metaSubst = subst'}
+          todo1 = Constraint lvl cm iso lhs' rhs
+      (ctx',) <$> decompose ctx' todo1 todos
     -- swap the sides of the equality
     (VEq a t u, VEq {}) -> do
       let todo1 = Constraint lvl cm iso (VEq a u t) rhs
-      decompose ctx todo1 todos
+      (ctx,) <$> decompose ctx todo1 todos
     _ -> empty
 
 -- | Guess a metavariable from how they are eliminated.
@@ -1079,7 +1163,7 @@ unify ctx todos = do
       (ctx', todos'') <-
         asum
           [ (ctx,) <$> decompose ctx todo todos',
-            (ctx,) <$> decomposeIso ctx todo todos',
+            decomposeIso ctx todo todos',
             guessMeta ctx todo todos',
             unfold ctx todo todos',
             guard (ctx.numGuessMetaIso < 5) >> guessMetaIso ctx todo todos',
@@ -1183,7 +1267,7 @@ unifyValue' modulo topEnv v v' = do
 unifyValue :: Modulo -> TopEnv -> Value -> Value -> IO (Maybe MetaSubst)
 unifyValue modulo topEnv v v' = do
   -- xs <- withFile "unify.log" AppendMode \h -> do
-  --   observeManyT 1 $ runReaderT (unifyValue' modulo topEnv v v') (hPutStrLn h)
+  --   Backtrack.head $ runReaderT (unifyValue' modulo topEnv v v') (hPutStrLn h)
   xs <- Backtrack.head $ unifyValue' modulo topEnv v v'
   case xs of
     Nothing -> pure Nothing

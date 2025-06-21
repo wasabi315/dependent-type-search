@@ -36,23 +36,29 @@ import Text.Megaparsec
 -- | @[x, x - 1, ..., y]@
 down :: (Enum a, Num a) => a -> a -> [a]
 down x y = [x, x - 1 .. y]
+{-# INLINE down #-}
 
 choose :: (Alternative f, Foldable t) => t a -> f a
 choose = foldr ((<|>) . pure) empty
+{-# INLINE choose #-}
 
 applyN :: Int -> (a -> a) -> a -> a
 applyN n _ _ | n < 0 = error "applyN: negative argument"
 applyN 0 _ x = x
 applyN n f x = f (applyN (n - 1) f x)
+{-# INLINE applyN #-}
 
 par :: Int -> Int -> ShowS -> ShowS
 par p q = showParen (p > q)
+{-# INLINE par #-}
 
 punctuate :: ShowS -> [ShowS] -> ShowS
 punctuate sep xs = foldr (.) id (intersperse sep xs)
+{-# INLINE punctuate #-}
 
 enclose :: ShowS -> ShowS -> ShowS -> ShowS
 enclose open close x = open . x . close
+{-# INLINE enclose #-}
 
 --------------------------------------------------------------------------------
 -- Names

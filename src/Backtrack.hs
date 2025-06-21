@@ -14,7 +14,7 @@ import Control.Applicative
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader
-import Prelude hiding (head, take)
+import Prelude hiding (head, tail, take)
 
 --------------------------------------------------------------------------------
 
@@ -87,6 +87,10 @@ instance (MonadIO m) => MonadIO (Backtrack m) where
   liftIO m = Backtrack $ (`Cons` nil) <$> liftIO m
   {-# INLINE liftIO #-}
 
+instance (Monad m) => MonadFail (Backtrack m) where
+  fail _ = empty
+  {-# INLINE fail #-}
+
 class (MonadPlus m) => MonadPostpone m where
   postpone :: m a -> m a
 
@@ -104,7 +108,6 @@ head (Backtrack m) =
     Nil -> pure Nothing
     Cons x _ -> pure $ Just x
     Postpone m' -> head m'
-{-# INLINE head #-}
 
 take :: (Monad m) => Int -> Backtrack m a -> m [a]
 take n (Backtrack m) =
