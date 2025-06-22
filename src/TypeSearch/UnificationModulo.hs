@@ -281,7 +281,7 @@ huetProjection' t arity params params' = hd >>= go
 elimination :: (MonadIO m) => Int -> (Int -> Bool) -> m MetaAbs
 elimination arity elim = do
   m <- liftIO freshMeta
-  let params = [Var (Index i) | i <- (arity - 1) `down` 0, not $ elim (arity - i - 1)]
+  let params = [Var (Index (arity - i - 1)) | i <- [0 .. arity - 1], not (elim i)]
   pure $ MetaAbs arity $ MetaApp m params
 
 --------------------------------------------------------------------------------
@@ -757,8 +757,11 @@ decompose ctx (Constraint lvl cm iso lhs rhs) todos = do
       pure (todo1 : todos)
     (VType, VType) -> pure todos
     (VPi _ a b, VPi _ a' b') -> do
-      let todo1 = Constraint lvl cm DefEq a a'
-          todo2 = Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl)
+      let bx = b $ VVar lvl
+          b'x = b' $ VVar lvl
+          free = any (isFree ctx.topEnv ctx.metaSubst (IS.singleton (coerce lvl)) lvl) [bx, b'x]
+          todo1 = Constraint lvl cm (if free then DefEq else Iso) a a'
+          todo2 = Constraint (lvl + 1) cm iso bx b'x
       pure (todo1 : todo2 : todos)
     (VPi _ a b, VArr a' b') -> do
       let todo1 = Constraint lvl cm iso a a'
@@ -783,8 +786,11 @@ decompose ctx (Constraint lvl cm iso lhs rhs) todos = do
       let todo1 = Constraint (lvl + 1) cm DefEq (vapp t $ VVar lvl) (f $ VVar lvl)
       pure (todo1 : todos)
     (VSigma _ a b, VSigma _ a' b') -> do
-      let todo1 = Constraint lvl cm DefEq a a'
-          todo2 = Constraint (lvl + 1) cm iso (b $ VVar lvl) (b' $ VVar lvl)
+      let bx = b $ VVar lvl
+          b'x = b' $ VVar lvl
+          free = any (isFree ctx.topEnv ctx.metaSubst (IS.singleton (coerce lvl)) lvl) [bx, b'x]
+          todo1 = Constraint lvl cm (if free then DefEq else Iso) a a'
+          todo2 = Constraint (lvl + 1) cm iso bx b'x
       pure (todo1 : todo2 : todos)
     (VSigma _ a b, VProd a' b') -> do
       let todo1 = Constraint lvl cm iso a a'
