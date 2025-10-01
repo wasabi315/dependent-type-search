@@ -936,7 +936,9 @@ guessMetaIso ctx todo@(Constraint lvl _ iso lhs rhs) todos = do
               VFlex m ar _ SNil ->
                 asum
                   [ -- M[x0, ..., xn] ↦ Unit
-                    (m,) <$> imitation IUnit ar,
+                    do
+                      guard $ canBeUnit m
+                      (m,) <$> imitation IUnit ar,
                     -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
                     do
                       guard $ isSigma other || isMeta other
@@ -951,7 +953,9 @@ guessMetaIso ctx todo@(Constraint lvl _ iso lhs rhs) todos = do
               VFlex m ar _ SNil ->
                 asum
                   [ -- M[x0, ..., xn] ↦ Unit
-                    (m,) <$> imitation IUnit ar,
+                    do
+                      guard $ canBeUnit m
+                      (m,) <$> imitation IUnit ar,
                     -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
                     do
                       guard $ isSigma other || isMeta other
@@ -969,7 +973,9 @@ guessMetaIso ctx todo@(Constraint lvl _ iso lhs rhs) todos = do
               VFlex m ar _ SNil ->
                 asum
                   [ -- M[x0, ..., xn] ↦ Unit
-                    (m,) <$> imitation IUnit ar,
+                    do
+                      guard $ canBeUnit m
+                      (m,) <$> imitation IUnit ar,
                     -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
                     do
                       guard $ isSigma other || isMeta other
@@ -984,7 +990,9 @@ guessMetaIso ctx todo@(Constraint lvl _ iso lhs rhs) todos = do
               VFlex m ar _ SNil ->
                 asum
                   [ -- M[x0, ..., xn] ↦ Unit
-                    (m,) <$> imitation IUnit ar,
+                    do
+                      guard $ canBeUnit m
+                      (m,) <$> imitation IUnit ar,
                     -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
                     do
                       guard $ isSigma other || isMeta other
@@ -1002,7 +1010,9 @@ guessMetaIso ctx todo@(Constraint lvl _ iso lhs rhs) todos = do
               VFlex m ar _ SNil ->
                 asum
                   [ -- M[x0, ..., xn] ↦ Unit
-                    (m,) <$> imitation IUnit ar,
+                    do
+                      guard $ canBeUnit m
+                      (m,) <$> imitation IUnit ar,
                     -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
                     do
                       guard $ isPi other || isMeta other
@@ -1028,7 +1038,9 @@ guessMetaIso ctx todo@(Constraint lvl _ iso lhs rhs) todos = do
               VFlex m ar _ SNil ->
                 asum
                   [ -- M[x0, ..., xn] ↦ Unit
-                    (m,) <$> imitation IUnit ar,
+                    do
+                      guard $ canBeUnit m
+                      (m,) <$> imitation IUnit ar,
                     -- M[x0, ..., xn] ↦ Σ y : M1[x0, ..., xn]. M2[x0, ..., xn, y]
                     do
                       guard $ isPi other || isMeta other

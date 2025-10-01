@@ -11,6 +11,8 @@ module TypeSearch.Common
     Index (..),
     Meta (..),
     freshMeta,
+    freshMetaCannotBeUnit,
+    canBeUnit,
     Name (..),
     ModuleName (..),
     QName (..),
@@ -71,7 +73,7 @@ newtype Index = Index Int
 data Meta
   = Src Name
   | Inst Name [Name] -- generated during instantiation
-  | Gen Unique -- generated during unification
+  | Gen Unique CanBeUnit -- generated during unification
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (Hashable)
 
@@ -79,11 +81,23 @@ instance Show Meta where
   showsPrec _ = \case
     Src n -> shows n
     Inst n _ -> showString "?I$" . shows n
-    Gen u -> showString "?G$" . shows (hashUnique u)
+    Gen u _ -> showString "?G$" . shows (hashUnique u)
+
+data CanBeUnit = CanBeUnit | CannotBeUnit
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving anyclass (Hashable)
 
 -- | Generate a fresh metavariable.
 freshMeta :: IO Meta
-freshMeta = Gen <$> newUnique
+freshMeta = flip Gen CanBeUnit <$> newUnique
+
+-- | Generate a fresh metavariable that cannot be unit.
+freshMetaCannotBeUnit :: IO Meta
+freshMetaCannotBeUnit = flip Gen CannotBeUnit <$> newUnique
+
+canBeUnit :: Meta -> Bool
+canBeUnit (Gen _ CannotBeUnit) = False
+canBeUnit _ = True
 
 -- | Names
 newtype Name = Name T.Text
