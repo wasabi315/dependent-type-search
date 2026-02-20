@@ -21,15 +21,21 @@ description: Please see the README on GitHub at <https://github.com/githubuser/d
 
 dependencies:
   - base >= 4.7 && < 5
+  - aeson
+  - Agda
+  - bytestring
   - containers
   - directory
   - filepath
+  - filemanip
   - hashable
   - haskeline
   - megaparsec
   - mtl
+  - optparse-applicative
   - text
   - unordered-containers
+  - directory
   - witherable
 
 language: GHC2021

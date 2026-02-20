@@ -83,14 +83,19 @@ library
       ViewPatterns
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -O2 -funbox-strict-fields
   build-depends:
-      base >=4.7 && <5
+      Agda
+    , aeson
+    , base >=4.7 && <5
+    , bytestring
     , containers
     , directory
+    , filemanip
     , filepath
     , hashable
     , haskeline
     , megaparsec
     , mtl
+    , optparse-applicative
     , text
     , unordered-containers
     , witherable
@@ -147,15 +152,20 @@ executable dependent-type-search-exe
       ViewPatterns
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -O2 -funbox-strict-fields
   build-depends:
-      base >=4.7 && <5
+      Agda
+    , aeson
+    , base >=4.7 && <5
+    , bytestring
     , containers
     , dependent-type-search
     , directory
+    , filemanip
     , filepath
     , hashable
     , haskeline
     , megaparsec
     , mtl
+    , optparse-applicative
     , text
     , unordered-containers
     , witherable
@@ -213,15 +223,20 @@ test-suite dependent-type-search-test
       ViewPatterns
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -O2 -funbox-strict-fields
   build-depends:
-      base >=4.7 && <5
+      Agda
+    , aeson
+    , base >=4.7 && <5
+    , bytestring
     , containers
     , dependent-type-search
     , directory
+    , filemanip
     , filepath
     , hashable
     , haskeline
     , megaparsec
     , mtl
+    , optparse-applicative
     , text
     , unordered-containers
     , witherable
