@@ -93,6 +93,7 @@ ghc-options:
   - -Wmissing-home-modules
   - -Wpartial-fields
   - -Wredundant-constraints
+  - -Wno-name-shadowing
   - -O2
   - -funbox-strict-fields
 

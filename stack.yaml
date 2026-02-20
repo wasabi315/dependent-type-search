@@ -1,4 +1,6 @@
-snapshot: lts-20.26
+resolver: nightly-2025-08-02
+compiler: ghc-9.12.2
+compiler-check: match-exact
 
 packages:
   - .

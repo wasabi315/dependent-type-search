@@ -3,19 +3,15 @@ module TypeSearch.Common
     down,
     choose,
     applyN,
-    par,
-    punctuate,
-    enclose,
+    foldMapA,
+    (//),
 
     -- * Names
     Index (..),
-    Meta (..),
-    freshMeta,
-    freshMetaCannotBeUnit,
-    canBeUnit,
+    GenMetaVar (..),
+    MetaVar (..),
     Name (..),
     ModuleName (..),
-    QName (..),
     freshen,
 
     -- * Position
@@ -23,12 +19,12 @@ module TypeSearch.Common
   )
 where
 
+import Data.Monoid
 import Control.Applicative
+import Data.Coerce
 import Data.Hashable
-import Data.List (intersperse)
 import Data.String
 import Data.Text qualified as T
-import Data.Unique
 import GHC.Generics (Generic)
 import Text.Megaparsec
 
@@ -50,17 +46,14 @@ applyN 0 _ x = x
 applyN n f x = f (applyN (n - 1) f x)
 {-# INLINE applyN #-}
 
-par :: Int -> Int -> ShowS -> ShowS
-par p q = showParen (p > q)
-{-# INLINE par #-}
+infix 2 //
 
-punctuate :: ShowS -> [ShowS] -> ShowS
-punctuate sep xs = foldr (.) id (intersperse sep xs)
-{-# INLINE punctuate #-}
+-- strict pair construction
+(//) :: a -> b -> (a, b)
+a // b = (a, b)
 
-enclose :: ShowS -> ShowS -> ShowS -> ShowS
-enclose open close x = open . x . close
-{-# INLINE enclose #-}
+foldMapA :: (Alternative f, Foldable t) => (a -> f b) -> t a -> f b
+foldMapA f = getAlt . foldMap (Alt . f)
 
 --------------------------------------------------------------------------------
 -- Names
@@ -69,35 +62,21 @@ enclose open close x = open . x . close
 newtype Index = Index Int
   deriving newtype (Num, Eq, Ord, Show, Hashable, Enum)
 
+-- | Generated metavariables
+newtype GenMetaVar = GenMetaVar Int
+  deriving newtype (Num, Eq, Ord, Show, Hashable, Enum)
+
 -- | Metavariables
-data Meta
+data MetaVar
   = Src Name
-  | Inst Name [Name] -- generated during instantiation
-  | Gen Unique CanBeUnit -- generated during unification
+  | Gen GenMetaVar -- generated during unification
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (Hashable)
 
-instance Show Meta where
+instance Show MetaVar where
   showsPrec _ = \case
     Src n -> shows n
-    Inst n _ -> showString "?I$" . shows n
-    Gen u _ -> showString "?G$" . shows (hashUnique u)
-
-data CanBeUnit = CanBeUnit | CannotBeUnit
-  deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (Hashable)
-
--- | Generate a fresh metavariable.
-freshMeta :: IO Meta
-freshMeta = flip Gen CanBeUnit <$> newUnique
-
--- | Generate a fresh metavariable that cannot be unit.
-freshMetaCannotBeUnit :: IO Meta
-freshMetaCannotBeUnit = flip Gen CannotBeUnit <$> newUnique
-
-canBeUnit :: Meta -> Bool
-canBeUnit (Gen _ CannotBeUnit) = False
-canBeUnit _ = True
+    Gen (GenMetaVar u) -> showString "?G$" . shows u
 
 -- | Names
 newtype Name = Name T.Text
@@ -113,21 +92,28 @@ newtype ModuleName = ModuleName T.Text
 instance Show ModuleName where
   showsPrec _ (ModuleName n) = showString (T.unpack n)
 
--- | Qualified names
-data QName
-  = Unqual Name
-  | Qual ModuleName Name
-  deriving stock (Eq)
-
-instance IsString QName where
-  fromString = Unqual . Name . T.pack
-
-instance Show QName where
-  showsPrec _ = \case
-    Unqual n -> shows n
-    Qual m n -> shows m . showChar '.' . shows n
 
 freshen :: [Name] -> Name -> Name
-freshen ns n@(Name n')
-  | n `elem` ns = freshen ns (Name $ T.snoc n' '\'')
+freshen ns n
+  | n `elem` ns = go 0
   | otherwise = n
+  where
+    go (i :: Int)
+      | n' `notElem` ns = n'
+      | otherwise = go (i + 1)
+      where
+        n' = Name $ coerce n <> T.pack (map subscript (show i))
+
+subscript :: Char -> Char
+subscript = \case
+  '0' -> '₀'
+  '1' -> '₁'
+  '2' -> '₂'
+  '3' -> '₃'
+  '4' -> '₄'
+  '5' -> '₅'
+  '6' -> '₆'
+  '7' -> '₇'
+  '8' -> '₈'
+  '9' -> '₉'
+  c -> c

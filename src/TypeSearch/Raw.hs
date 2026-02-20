@@ -1,18 +1,35 @@
 module TypeSearch.Raw
-  ( -- * Modules
+  ( -- * Possibly qualified names
+    QName (..),
+
+    -- * Modules
     Module (..),
     Decl (..),
 
     -- * Raw terms
     Raw (..),
-    rnatLit,
     unRPos,
   )
 where
 
+import Data.String
 import TypeSearch.Common
 
 --------------------------------------------------------------------------------
+
+-- | Qualified names
+data QName
+  = Unqual Name
+  | Qual ModuleName Name
+  deriving stock (Eq)
+
+instance IsString QName where
+  fromString = Unqual . Name . fromString
+
+instance Show QName where
+  showsPrec _ = \case
+    Unqual n -> shows n
+    Qual m n -> shows m . showChar '.' . shows n
 
 data Module = Module
   { name :: ModuleName,
@@ -27,33 +44,17 @@ data Decl = DLet SourcePos Name Raw Raw
 -- | Raw terms
 data Raw
   = RVar QName
-  | RMetaApp Meta [Raw]
-  | RType
+  | RMeta MetaVar
+  | RU
   | RPi Name Raw Raw
-  | RArr Raw Raw -- non-dependent pi
-  | RAbs Name Raw
+  | RLam Name Raw
   | RApp Raw Raw
   | RSigma Name Raw Raw
-  | RProd Raw Raw -- non-dependent sigma
   | RPair Raw Raw
   | RFst Raw
   | RSnd Raw
-  | RUnit
-  | RTT
-  | RNat
-  | RZero
-  | RSuc
-  | RNatElim
-  | REq
-  | RRefl
-  | REqElim
   | RPos Raw SourcePos
   deriving stock (Show)
-
-rnatLit :: Int -> Raw
-rnatLit = \case
-  0 -> RZero
-  n -> RSuc `RApp` rnatLit (n - 1)
 
 unRPos :: Raw -> Raw
 unRPos = \case

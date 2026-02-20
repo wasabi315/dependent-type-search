@@ -117,18 +117,8 @@ pAtom :: Parser Raw
 pAtom =
   withPos
     ( (RVar <$> pQName)
-        <|> (RMetaApp . Src <$> pMeta <*> option [] (brackets (pAbsPi `sepBy` char ',')))
-        <|> (RType <$ pKeyword "Type")
-        <|> (RUnit <$ pKeyword "Unit")
-        <|> (RTT <$ pKeyword "tt")
-        <|> (RNat <$ pKeyword "Nat")
-        <|> (RZero <$ pKeyword "zero")
-        <|> (RSuc <$ pKeyword "suc")
-        <|> (RNatElim <$ pKeyword "natElim")
-        <|> (REq <$ pKeyword "Eq")
-        <|> (RRefl <$ pKeyword "refl")
-        <|> (REqElim <$ pKeyword "eqElim")
-        <|> (rnatLit <$> decimal)
+        <|> (RMeta . Src <$> pMeta)
+        <|> (RU <$ pKeyword "U")
     )
     <|> parens pRaw
 
@@ -155,7 +145,7 @@ pSigmaExp = do
   optional (try (char '(' *> pName <* char ':')) >>= \case
     Nothing -> do
       t <- pApp
-      (RProd t <$> (pProd *> pSigmaExp)) <|> pure t
+      (RSigma "_" t <$> (pProd *> pSigmaExp)) <|> pure t
     Just x -> do
       a <- pRaw
       _ <- char ')'
@@ -169,7 +159,7 @@ pAbs = do
   xs <- some pBind
   _ <- pArrow
   t <- pAbsPi
-  pure $ foldr RAbs t xs
+  pure $ foldr RLam t xs
 
 pPiBinder :: Parser ([Name], Raw)
 pPiBinder = parens $ (,) <$> some pName <*> (char ':' *> pRaw)
@@ -179,13 +169,13 @@ pPiExp = do
   optional (try (some pPiBinder)) >>= \case
     Nothing -> do
       t <- pSigmaExp
-      (pArrow *> (RArr t <$> pPiExp)) <|> pure t
+      (pArrow *> (RPi "_" t <$> pPiExp)) <|> pure t
     Just bs -> case bs of
       [([x], a)] ->
         (RPi x a <$> (pArrow *> pPiExp))
           <|> ( do
                   dom <- RSigma x a <$> (pProd *> pSigmaExp)
-                  (RArr dom <$> (pArrow *> pPiExp)) <|> pure dom
+                  (RPi "_" dom <$> (pArrow *> pPiExp)) <|> pure dom
               )
       dom -> do
         _ <- pArrow

@@ -4,21 +4,29 @@ module TypeSearch.Pretty
     prettyDecl,
     prettyRaw,
     prettyTerm,
-    prettyMetaSubst,
-    prettyInst,
   )
 where
 
-import Data.Function
-import Data.HashMap.Strict qualified as HM
+import Data.List (intersperse)
 import Data.Monoid
-import Data.Text qualified as T
 import TypeSearch.Common
-import TypeSearch.Raw
-import TypeSearch.Term
+import TypeSearch.Raw as Raw
+import TypeSearch.Term as Term
 
 --------------------------------------------------------------------------------
 -- Pretty printing
+
+par :: Int -> Int -> ShowS -> ShowS
+par p q = showParen (p > q)
+{-# INLINE par #-}
+
+punctuate :: ShowS -> [ShowS] -> ShowS
+punctuate sep xs = foldr (.) id (intersperse sep xs)
+{-# INLINE punctuate #-}
+
+enclose :: ShowS -> ShowS -> ShowS -> ShowS
+enclose open close x = open . x . close
+{-# INLINE enclose #-}
 
 -- Operator precedence
 projP, appP, sigmaP, piP, absP, pairP :: Int
@@ -54,35 +62,16 @@ prettyRaw = go
   where
     go p = \case
       RVar n -> shows n
-      RMetaApp m [] -> shows m
-      RMetaApp m ts ->
-        shows m . showChar '[' . punctuate (showChar ',') (map (go absP) ts) . showChar ']'
-      RType -> showString "Type"
-      RUnit -> showString "Unit"
-      RTT -> showString "tt"
+      RMeta m -> shows m
+      RU -> showString "U"
       RPi n a b -> par p piP $ piBind n a . goPi b
-      RArr a b -> par p piP $ go sigmaP a . showString " → " . go piP b
-      RAbs n b -> par p absP $ showString "λ " . shows n . goAbs b
-      RApp RSuc n -> goSuc p 1 n
+      RLam n b -> par p absP $ showString "λ " . shows n . goAbs b
       RApp a b -> par p appP $ go appP a . showChar ' ' . go projP b
       RSigma n a b -> par p sigmaP $ piBind n a . showString " × " . go sigmaP b
-      RProd a b -> par p sigmaP $ go appP a . showString " × " . go sigmaP b
       RPair a b -> par p pairP $ go absP a . showString ", " . go absP b
       RFst a -> par p projP $ go projP a . showString ".1"
       RSnd a -> par p projP $ go projP a . showString ".2"
-      RNat -> showString "Nat"
-      RZero -> showString "0"
-      RSuc -> showString "suc"
-      RNatElim -> showString "natElim"
-      REq -> showString "Eq"
-      RRefl -> showString "refl"
-      REqElim -> showString "eqElim"
       RPos t _ -> go p t
-
-    goSuc p n = \case
-      RZero -> shows n
-      RSuc `RApp` m -> goSuc p (n + 1) m
-      t -> applyN n (\f q -> par q appP $ showString "suc " . f projP) (\q -> go q t) p
 
     piBind n a =
       showString "("
@@ -97,7 +86,7 @@ prettyRaw = go
       b -> showString " → " . go piP b
 
     goAbs = \case
-      (unRPos -> RAbs n t) -> showChar ' ' . shows n . goAbs t
+      (unRPos -> RLam n t) -> showChar ' ' . shows n . goAbs t
       t -> showString " → " . go absP t
 
 prettyTerm :: [Name] -> Int -> Term -> ShowS
@@ -105,39 +94,20 @@ prettyTerm = go
   where
     go ns p = \case
       Var (Index i) -> shows (ns !! i)
-      MetaApp m [] -> shows m
-      MetaApp m ts ->
-        shows m . showChar '[' . punctuate (showChar ',') (map (go ns absP) ts) . showChar ']'
-      Top _ n -> shows n
-      Type -> showString "Type"
+      Meta m -> shows m
+      Top n -> shows n
+      U -> showString "U"
       Pi (freshen ns -> n) a b ->
         par p piP $ piBind n ns a . goPi (n : ns) b
-      Arr a b -> par p piP $ go ns sigmaP a . showString " → " . go ns piP b
-      Abs (freshen ns -> n) t ->
+      Lam (freshen ns -> n) t ->
         par p absP $
           showString "λ " . shows n . goAbs (n : ns) t
-      Suc `App` n -> goSuc p ns 1 n
       App t u -> par p appP $ go ns appP t . showChar ' ' . go ns projP u
       Sigma (freshen ns -> n) a b ->
         par p sigmaP $ piBind n ns a . showString " × " . go (n : ns) sigmaP b
-      Prod a b -> par p sigmaP $ go ns appP a . showString " × " . go ns sigmaP b
       Fst t -> par p projP $ go ns projP t . showString ".1"
       Snd t -> par p projP $ go ns projP t . showString ".2"
       Pair t u -> par p pairP $ go ns absP t . showString ", " . go ns pairP u
-      Unit -> showString "Unit"
-      TT -> showString "tt"
-      Nat -> showString "Nat"
-      Zero -> showString "0"
-      Suc -> showString "suc"
-      NatElim -> showString "natElim"
-      Eq -> showString "Eq"
-      Refl -> showString "refl"
-      EqElim -> showString "eqElim"
-
-    goSuc p ns n = \case
-      Zero -> shows n
-      Suc `App` m -> goSuc p ns (n + 1) m
-      t -> applyN n (\f q -> par q appP $ showString "suc " . f projP) (\q -> go ns q t) p
 
     piBind n ns a =
       showString "("
@@ -152,53 +122,21 @@ prettyTerm = go
       b -> showString " → " . go ns piP b
 
     goAbs ns = \case
-      Abs (freshen ns -> n) t ->
+      Lam (freshen ns -> n) t ->
         showChar ' ' . shows n . goAbs (n : ns) t
       t -> showString ". " . go ns absP t
 
-subscript :: Char -> Char
-subscript = \case
-  '0' -> '₀'
-  '1' -> '₁'
-  '2' -> '₂'
-  '3' -> '₃'
-  '4' -> '₄'
-  '5' -> '₅'
-  '6' -> '₆'
-  '7' -> '₇'
-  '8' -> '₈'
-  '9' -> '₉'
-  c -> c
-
-prettyMetaSubst :: MetaSubst -> ShowS
-prettyMetaSubst = \subst ->
-  HM.toList subst
-    & map (uncurry prettyMetaAbs)
-    & punctuate (showString ", ")
-    & enclose (showChar '{') (showChar '}')
-  where
-    prettyMetaAbs m (MetaAbs arity body) =
-      shows m
-        . ( if arity > 0
-              then
-                showChar '['
-                  . punctuate (showChar ',') (map shows params)
-                  . showString "]"
-              else id
-          )
-        . showString " ↦ "
-        . prettyTerm (reverse params) absP body
-      where
-        params = map (\i -> Name $ "x" <> T.map subscript (T.pack (show i))) [0 .. arity - 1]
-
-prettyInst :: [Name] -> HM.HashMap Name Term -> ShowS
-prettyInst ns = \subst ->
-  HM.toList subst
-    & map (uncurry prettyBody)
-    & punctuate (showString ", ")
-    & enclose (showChar '{') (showChar '}')
-  where
-    prettyBody m t =
-      shows m
-        . showString " ↦ "
-        . prettyTerm ns absP t
+prettyIso :: Int -> Iso -> ShowS
+prettyIso p = \case
+  Refl -> showString "refl"
+  Sym i -> par p 11 $ prettyIso 12 i . showString " ⁻¹"
+  Trans i j -> par p 9 $ prettyIso 9 i . showString " · " . prettyIso 9 j
+  Assoc -> showString "Assoc"
+  Comm -> showString "Comm"
+  SigmaSwap -> showString "ΣSwap"
+  Curry -> showString "Curry"
+  PiSwap -> showString "ΠSwap"
+  PiCongL i -> par p 10 $ showString "ΠL " . prettyIso 11 i
+  PiCongR i -> par p 10 $ showString "ΠR " . prettyIso 11 i
+  SigmaCongL i -> par p 10 $ showString "ΣL " . prettyIso 11 i
+  SigmaCongR i -> par p 10 $ showString "ΣR " . prettyIso 11 i
