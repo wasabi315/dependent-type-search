@@ -4,6 +4,7 @@ module TypeSearch.Pretty
     prettyDecl,
     prettyRaw,
     prettyTerm,
+    prettyIso,
   )
 where
 
@@ -56,6 +57,11 @@ prettyDecl = \case
       . prettyRaw pairP t
       . showString " = "
       . prettyRaw pairP u
+  DAxiom _ n t ->
+    showString "postulate "
+      . shows n
+      . showString " : "
+      . prettyRaw pairP t
 
 prettyRaw :: Int -> Raw -> ShowS
 prettyRaw = go
@@ -64,9 +70,11 @@ prettyRaw = go
       RVar n -> shows n
       RMeta m -> shows m
       RU -> showString "U"
+      RPi "_" a b -> par p piP $ go sigmaP a . showString " → " . go piP b
       RPi n a b -> par p piP $ piBind n a . goPi b
       RLam n b -> par p absP $ showString "λ " . shows n . goAbs b
       RApp a b -> par p appP $ go appP a . showChar ' ' . go projP b
+      RSigma "_" a b -> par p piP $ go appP a . showString " × " . go sigmaP b
       RSigma n a b -> par p sigmaP $ piBind n a . showString " × " . go sigmaP b
       RPair a b -> par p pairP $ go absP a . showString ", " . go absP b
       RFst a -> par p projP $ go projP a . showString ".1"
@@ -81,12 +89,16 @@ prettyRaw = go
         . showChar ')'
 
     goPi = \case
-      (unRPos -> RPi n a b) ->
+      RPi "_" a b ->
+        showString " → " . go sigmaP a . showString " → " . go piP b
+      RPi n a b ->
         showChar ' ' . piBind n a . goPi b
+      RPos t _ -> goPi t
       b -> showString " → " . go piP b
 
     goAbs = \case
-      (unRPos -> RLam n t) -> showChar ' ' . shows n . goAbs t
+      RLam n t -> showChar ' ' . shows n . goAbs t
+      RPos t _ -> goAbs t
       t -> showString " → " . go absP t
 
 prettyTerm :: [Name] -> Int -> Term -> ShowS
@@ -97,17 +109,21 @@ prettyTerm = go
       Meta m -> shows m
       Top n -> shows n
       U -> showString "U"
+      Pi "_" a b ->
+        par p piP $ go ns sigmaP a . showString " → " . go ("_" : ns) piP b
       Pi (freshen ns -> n) a b ->
         par p piP $ piBind n ns a . goPi (n : ns) b
       Lam (freshen ns -> n) t ->
         par p absP $
           showString "λ " . shows n . goAbs (n : ns) t
       App t u -> par p appP $ go ns appP t . showChar ' ' . go ns projP u
+      Sigma "_" a b ->
+        par p sigmaP $ go ns appP a . showString " × " . go ("_" : ns) sigmaP b
       Sigma (freshen ns -> n) a b ->
         par p sigmaP $ piBind n ns a . showString " × " . go (n : ns) sigmaP b
       Fst t -> par p projP $ go ns projP t . showString ".1"
       Snd t -> par p projP $ go ns projP t . showString ".2"
-      Pair t u -> par p pairP $ go ns absP t . showString ", " . go ns pairP u
+      Pair t u -> par p pairP $ go ns absP t . showString " , " . go ns pairP u
 
     piBind n ns a =
       showString "("
@@ -117,6 +133,7 @@ prettyTerm = go
         . showChar ')'
 
     goPi ns = \case
+      Pi "_" a b -> showString " → " . go ns sigmaP a . showString " → " . go ("_" : ns) piP b
       Pi (freshen ns -> n) a b ->
         showChar ' ' . piBind n ns a . goPi (n : ns) b
       b -> showString " → " . go ns piP b

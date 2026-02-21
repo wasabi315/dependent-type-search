@@ -68,17 +68,9 @@ keyword x =
     || x == "where"
     || x == "import"
     || x == "let"
+    || x == "postulate"
     || x == "λ"
-    || x == "Type"
-    || x == "Unit"
-    || x == "tt"
-    || x == "Nat"
-    || x == "zero"
-    || x == "suc"
-    || x == "natElim"
-    || x == "Eq"
-    || x == "refl"
-    || x == "eqElim"
+    || x == "U"
 
 pIdent :: Parser T.Text
 pIdent = try do
@@ -194,12 +186,24 @@ pLet :: Parser Decl
 pLet = do
   pos <- getSourcePos
   pKeyword "let"
-  x <- pName
+  x <- pQName
   _ <- char ':'
   ann <- pRaw
   _ <- char '='
   t <- pRaw
   pure $ DLet pos x ann t
+
+pAxiom :: Parser Decl
+pAxiom = do
+  pos <- getSourcePos
+  pKeyword "postulate"
+  x <- pQName
+  _ <- char ':'
+  ann <- pRaw
+  pure $ DAxiom pos x ann
+
+pDecl :: Parser Decl
+pDecl = pLet <|> pAxiom
 
 pModule :: Parser Module
 pModule = do
@@ -207,7 +211,7 @@ pModule = do
   m <- pModuleName
   _ <- pKeyword "where"
   imports <- many $ pKeyword "import" *> pModuleName
-  decls <- many pLet
+  decls <- many pDecl
   pure $ Module m imports decls
 
 parseModule :: FilePath -> T.Text -> Either ParserError Module
