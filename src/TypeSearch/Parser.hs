@@ -191,7 +191,7 @@ pLet = do
   ann <- pRaw
   _ <- char '='
   t <- pRaw
-  pure $ DLet pos x ann t
+  pure $ DLet (Just pos) x ann t
 
 pAxiom :: Parser Decl
 pAxiom = do
@@ -200,7 +200,7 @@ pAxiom = do
   x <- pQName
   _ <- char ':'
   ann <- pRaw
-  pure $ DAxiom pos x ann
+  pure $ DAxiom (Just pos) x ann
 
 pDecl :: Parser Decl
 pDecl = pLet <|> pAxiom

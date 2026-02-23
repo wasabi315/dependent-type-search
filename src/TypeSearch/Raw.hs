@@ -39,8 +39,8 @@ data Module = Module
   deriving stock (Show)
 
 data Decl
-  = DLet SourcePos QName Raw Raw
-  | DAxiom SourcePos QName Raw
+  = DLet (Maybe SourcePos) QName Raw Raw
+  | DAxiom (Maybe SourcePos) QName Raw
   deriving stock (Show)
 
 -- | Raw terms

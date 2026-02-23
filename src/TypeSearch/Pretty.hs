@@ -76,7 +76,7 @@ prettyRaw = go
       RApp a b -> par p appP $ go appP a . showChar ' ' . go projP b
       RSigma "_" a b -> par p piP $ go appP a . showString " × " . go sigmaP b
       RSigma n a b -> par p sigmaP $ piBind n a . showString " × " . go sigmaP b
-      RPair a b -> par p pairP $ go absP a . showString ", " . go absP b
+      RPair a b -> par p pairP $ go absP a . showString " , " . go absP b
       RFst a -> par p projP $ go projP a . showString ".1"
       RSnd a -> par p projP $ go projP a . showString ".2"
       RPos t _ -> go p t

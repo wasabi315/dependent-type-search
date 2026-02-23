@@ -33,6 +33,7 @@ library
       TypeSearch.Pretty
       TypeSearch.Raw
       TypeSearch.Term
+      TypeSearch.Translate
   other-modules:
       Paths_dependent_type_search
   autogen-modules:
