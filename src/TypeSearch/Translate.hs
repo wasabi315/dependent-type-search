@@ -6,8 +6,6 @@ import Agda.Interaction.FindFile qualified as Agda
 import Agda.Interaction.Imports qualified as Agda
 import Agda.Interaction.Library qualified as Agda
 import Agda.Interaction.Options qualified as Agda
-import Agda.Syntax.Abstract.Name qualified as Agda
-import Agda.Syntax.Builtin qualified as Agda
 import Agda.Syntax.Common qualified as Agda
 import Agda.Syntax.Common.Pretty qualified as Agda
 import Agda.Syntax.Concrete qualified as Concrete
@@ -18,8 +16,6 @@ import Agda.Syntax.Position qualified as Agda
 import Agda.Syntax.Scope.Base qualified as Agda
 import Agda.TypeChecking.Datatypes qualified as Agda
 import Agda.TypeChecking.Level qualified as Agda
-import Agda.TypeChecking.Monad.Context qualified as Agda
-import Agda.TypeChecking.Pretty qualified as Agda
 import Agda.TypeChecking.Pretty.Warning qualified as Agda
 import Agda.TypeChecking.ProjectionLike qualified as Agda
 import Agda.TypeChecking.Records qualified as Agda
@@ -31,12 +27,10 @@ import Agda.Utils.FileName qualified as Agda
 import Agda.Utils.IO.Directory qualified as Agda
 import Agda.Utils.Impossible (__IMPOSSIBLE__)
 import Agda.Utils.Monad qualified as Agda
-import Agda.Utils.Size qualified as Agda
 import Control.Monad (forM, forM_, when)
 import Control.Monad.Except (catchError, throwError)
 import Control.Monad.IO.Class (liftIO)
-import Data.Bifunctor
-import Data.List (isPrefixOf, sort)
+import Data.List (sort)
 import Data.List.NonEmpty (toList)
 import Data.Map.Strict qualified as Map
 import Data.Maybe
@@ -48,7 +42,7 @@ import System.FilePath (addExtension, takeDirectory, (</>))
 import System.FilePath.Find qualified as Find
 import System.IO (hPutStrLn, stderr)
 import TypeSearch.Common
-import TypeSearch.Pretty (prettyModule, prettyRaw)
+import TypeSearch.Pretty (prettyModule)
 import TypeSearch.Raw
 
 --------------------------------------------------------------------------------
@@ -190,8 +184,8 @@ translateTerm ty v = do
       ty <- Agda.defType <$> Agda.getConstInfo f
       translateSpined (translateDef f ty) (Internal.Def f) ty es
     Internal.Con ch ci es -> do
-      Just (_, ty) <- Agda.getConType ch ty
-      translateSpined (translateCon ch ci ty) (Internal.Con ch ci) ty es
+      Just ((_, _, pars), ty) <- Agda.getConType ch ty
+      translateSpined (translateCon ch ci ty pars) (Internal.Con ch ci) ty es
     Internal.Lam v b -> translateLam ty v b
     Internal.Lit x -> translateLit x
     Internal.Level {} ->
@@ -213,17 +207,20 @@ translateDef f ty args = do
   let name = translateQName f
   translateApp (RVar name) ty args
 
-translateCon :: Internal.ConHead -> Internal.ConInfo -> Internal.Type -> [Internal.Term] -> M Raw
-translateCon h i ty args = do
-  let c = h.conName
-  info <- Agda.getConstInfo c
-  if Agda.defCopy info
-    then do
-      let Agda.Constructor {conSrcCon = ch'} = Agda.theDef info
-      translateCon ch' i ty args
+translateCon :: Internal.ConHead -> Internal.ConInfo -> Internal.Type -> Internal.Args -> [Internal.Term] -> M Raw
+translateCon ch i ty pars args = do
+  let c = ch.conName
+  conDef <- Agda.getConstInfo c
+  let Agda.Constructor {..} = conDef.theDef
+  if Agda.defCopy conDef
+    then translateCon conSrcCon i ty pars args
     else do
       let name = translateQName c
-      translateApp (RVar name) ty args
+      dataDef <- Agda.getConstInfo conData
+      -- For making parameters explicit
+      -- e.g) Agda.Builtin.List._∷_ x xs -> Agda.Builtin.List._∷_ A x xs
+      t <- translateApp (RVar name) dataDef.defType $ map Agda.unArg pars
+      translateApp t ty args
 
 translateSpined ::
   ([Internal.Term] -> M Raw) ->
@@ -443,6 +440,8 @@ offendingDefs =
     -- getConType
     "Algebra.Construct.NaturalChoice.MinOp.⊓-zero",
     -- getConType
+    "Algebra.Properties.CommutativeMagma.Divisibility.x∣xy",
+    -- getConType
     "Algebra.Properties.Magma.Divisibility.xy≈z⇒x∣ˡz",
     -- getConType
     "Algebra.Properties.Magma.Divisibility.xy≈z⇒y∣z",
@@ -450,6 +449,8 @@ offendingDefs =
     "Algebra.Properties.Magma.Divisibility.xy≈z⇒y∣ʳz",
     -- getConType
     "Algebra.Properties.Semigroup.alternative",
+    -- getConType
+    "Algebra.Solver.Ring.0H",
     -- getConType
     "Algebra.Solver.Ring._:*_",
     -- getConType
@@ -460,6 +461,22 @@ offendingDefs =
     "Data.AVL.Indexed.⊥⁺<[_]<⊤⁺",
     -- getConType
     "Data.AVL.Key.⊥⁺<[_]<⊤⁺",
+    -- getConType
+    "Data.Fin.Properties.inject≤-irrelevant",
+    -- getConType
+    "Data.List._∷ʳ'_",
+    -- getConType
+    "Data.List.Base._∷ʳ'_",
+    -- getConType
+    "Data.List.NonEmpty._∷ʳ'_",
+    -- getConType
+    "Data.List.NonEmpty.Properties.toList-⁺++",
+    -- getConType
+    "Data.List.NonEmpty.Properties.toList-⁺++⁺",
+    -- getConType
+    "Data.List.NonEmpty.Properties.η",
+    -- getConType
+    "Data.Nat.Properties.guarded-∸≗∸",
     -- huge nat lit
     "Data.Nat.PseudoRandom.LCG.glibc",
     -- huge nat lit
@@ -469,7 +486,9 @@ offendingDefs =
     -- getConType
     "Data.Tree.AVL.Key.⊥⁺<[_]<⊤⁺",
     -- getConType
-    "Tactic.RingSolver.Core.Polynomial.Base.κ"
+    "Tactic.RingSolver.Core.Polynomial.Base.κ",
+    -- getConType
+    "Tactic.RingSolver.NonReflective._⊜_"
   ]
 
 translateFun :: QName -> Agda.Definition -> M [Decl]
@@ -504,14 +523,14 @@ translatePatternArgs ty naps = do
 
 translateRecordDef :: QName -> Agda.Definition -> M [Decl]
 translateRecordDef qname def = do
-  liftIO $ putStrLn $ "translateRecordDef: " ++ show qname
+  -- liftIO $ putStrLn $ "translateRecordDef: " ++ show qname
   if isSigmaTranslatable def
     then translateToSigma qname def
     else pure <$> translateToAxiom qname def.defType
 
 translateConDef :: QName -> Agda.Definition -> M [Decl]
 translateConDef qname def = do
-  liftIO $ putStrLn $ "translateConDef: " ++ show qname
+  -- liftIO $ putStrLn $ "translateConDef: " ++ show qname
   let Agda.Constructor {..} = def.theDef
   recDef <- Agda.getConstInfo conData
   if isSigmaTranslatable recDef
