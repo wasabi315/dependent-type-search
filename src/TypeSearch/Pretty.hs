@@ -43,10 +43,10 @@ prettyModule (Module name imports decls) =
   showString "module "
     . shows name
     . showString " where"
-    . showString "\n"
+    . showString "\n\n"
     . appEndo (foldMap (\m -> Endo $ showString "import " . shows m . showChar '\n') imports)
     . showChar '\n'
-    . appEndo (foldMap (\d -> Endo $ prettyDecl d . showChar '\n') decls)
+    . appEndo (foldMap (\d -> Endo $ prettyDecl d . showString "\n\n") decls)
 
 prettyDecl :: Decl -> ShowS
 prettyDecl = \case
