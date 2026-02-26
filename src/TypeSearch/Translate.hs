@@ -107,20 +107,22 @@ translateModule m src = do
   mi <- Agda.getNonMainModuleInfo m (Just src)
   let isInfectiveWarning Agda.InfectiveImport {} = True
       isInfectiveWarning _ = False
-      warns = filter (not . isInfectiveWarning . Agda.tcWarning) $ Set.toAscList $ mi.miWarnings
+      warns = filter (not . isInfectiveWarning . Agda.tcWarning) $ Set.toAscList mi.miWarnings
   Agda.tcWarningsToError warns
   translateInterface mi.miInterface
 
 exportedPairs :: Agda.Interface -> [(Concrete.Name, Internal.QName)]
 exportedPairs intf =
-  let si = Agda.iInsideScope intf
+  let si = intf.iInsideScope
       modName = intf.iModuleName
       mods = si._scopeModules
       mscope = Map.findWithDefault Agda.emptyScope modName mods
       exported = Agda.exportedNamesInScope mscope :: Agda.NamesInScope
-   in [ (cname, Agda.anameName an)
+   in [ (cname, an')
       | (cname, ans) <- Map.toList exported,
-        an <- toList ans
+        an <- toList ans,
+        let an' = Agda.anameName an,
+        not (Map.member an' intf.iPatternSyns)
       ]
 
 translateInterface :: Agda.Interface -> M Module
