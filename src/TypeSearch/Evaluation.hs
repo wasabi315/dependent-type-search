@@ -44,7 +44,7 @@ type TopEnv = HM.HashMap QName (Maybe Value)
 -- | Meta-context
 data MetaCtx = MetaCtx
   { nextMeta :: GenMetaVar,
-    metaEnv :: HM.HashMap MetaVar MetaEntry
+    metaCtx :: HM.HashMap MetaVar MetaEntry
   }
 
 data MetaEntry = Unsolved | Solved Value
@@ -52,31 +52,31 @@ data MetaEntry = Unsolved | Solved Value
 --------------------------------------------------------------------------------
 -- Evaluation
 
-eval :: TopEnv -> Env -> MetaCtx -> Term -> Value
-eval tenv env mctx = \case
+eval :: MetaCtx -> TopEnv -> Env -> Term -> Value
+eval mctx tenv env = \case
   Var (Index x) -> env !! x
   Meta m -> vMeta mctx m
   Top x -> vTop tenv x
   U -> VU
-  Pi x a b -> VPi x (eval tenv env mctx a) (evalBind tenv env mctx b)
-  Lam x t -> VLam x (evalBind' tenv env mctx t)
-  App t u -> eval tenv env mctx t $$ eval tenv env mctx u
-  Sigma x a b -> VSigma x (eval tenv env mctx a) (evalBind tenv env mctx b)
-  Pair t u -> VPair (eval tenv env mctx t) (eval tenv env mctx u)
-  Fst t -> vFst (eval tenv env mctx t)
-  Snd t -> vSnd (eval tenv env mctx t)
+  Pi x a b -> VPi x (eval mctx tenv env a) (evalBind mctx tenv env b)
+  Lam x t -> VLam x (evalBind' mctx tenv env t)
+  App t u -> eval mctx tenv env t $$ eval mctx tenv env u
+  Sigma x a b -> VSigma x (eval mctx tenv env a) (evalBind mctx tenv env b)
+  Pair t u -> VPair (eval mctx tenv env t) (eval mctx tenv env u)
+  Fst t -> vFst (eval mctx tenv env t)
+  Snd t -> vSnd (eval mctx tenv env t)
 
-evalBind :: TopEnv -> Env -> MetaCtx -> Term -> (Value -> Value)
-evalBind tenv env mctx t ~u = eval tenv (u : env) mctx t
+evalBind :: MetaCtx -> TopEnv -> Env -> Term -> (Value -> Value)
+evalBind mctx tenv env t ~u = eval mctx tenv (u : env) t
 
-evalBind' :: TopEnv -> Env -> MetaCtx -> Term -> (Value -> Value)
-evalBind' tenv env mctx t u = eval tenv (u : env) mctx t
+evalBind' :: MetaCtx -> TopEnv -> Env -> Term -> (Value -> Value)
+evalBind' mctx tenv env t u = eval mctx tenv (u : env) t
 
 vTop :: TopEnv -> QName -> Value
 vTop tenv x = VTop x SNil (tenv HM.! x)
 
 vMeta :: MetaCtx -> MetaVar -> Value
-vMeta mctx x = case mctx.metaEnv HM.! x of
+vMeta mctx x = case mctx.metaCtx HM.! x of
   Unsolved -> VMeta x
   Solved v -> v
 
@@ -113,33 +113,39 @@ vAppSpine t = \case
   SFst sp -> vFst $ vAppSpine t sp
   SSnd sp -> vSnd $ vAppSpine t sp
 
+force :: MetaCtx -> Value -> Value
+force mctx = \case
+  VFlex m sp
+    | Solved v <- mctx.metaCtx HM.! m -> force mctx (vAppSpine v sp)
+  v -> v
+
 --------------------------------------------------------------------------------
 -- Quotation
 
 levelToIndex :: Level -> Level -> Index
 levelToIndex (Level l) (Level x) = Index (l - x - 1)
 
-quote :: Level -> Value -> Term
-quote l = \case
-  VRigid x sp -> quoteSpine l (Var (levelToIndex l x)) sp
-  VFlex m sp -> quoteSpine l (Meta m) sp
-  VTop x sp _ -> quoteSpine l (Top x) sp
+quote :: MetaCtx -> Level -> Value -> Term
+quote mctx l t = case force mctx t of
+  VRigid x sp -> quoteSpine mctx l (Var (levelToIndex l x)) sp
+  VFlex m sp -> quoteSpine mctx l (Meta m) sp
+  VTop x sp _ -> quoteSpine mctx l (Top x) sp
   VU -> U
-  VPi x a b -> Pi x (quote l a) (quoteBind l b)
-  VLam x t -> Lam x (quoteBind l t)
-  VSigma x a b -> Sigma x (quote l a) (quoteBind l b)
-  VPair t u -> Pair (quote l t) (quote l u)
-  VStuck t sp -> quoteSpine l (quote l t) sp
+  VPi x a b -> Pi x (quote mctx l a) (quoteBind mctx l b)
+  VLam x t -> Lam x (quoteBind mctx l t)
+  VSigma x a b -> Sigma x (quote mctx l a) (quoteBind mctx l b)
+  VPair t u -> Pair (quote mctx l t) (quote mctx l u)
+  VStuck t sp -> quoteSpine mctx l (quote mctx l t) sp
 
-quoteBind :: Level -> (Value -> Value) -> Term
-quoteBind l b = quote (l + 1) (b $ VVar l)
+quoteBind :: MetaCtx -> Level -> (Value -> Value) -> Term
+quoteBind mctx l b = quote mctx (l + 1) (b $ VVar l)
 
-quoteSpine :: Level -> Term -> Spine -> Term
-quoteSpine l h = \case
+quoteSpine :: MetaCtx -> Level -> Term -> Spine -> Term
+quoteSpine mctx l h = \case
   SNil -> h
-  SApp sp u -> quoteSpine l h sp `App` quote l u
-  SFst sp -> Fst $ quoteSpine l h sp
-  SSnd sp -> Snd $ quoteSpine l h sp
+  SApp sp u -> quoteSpine mctx l h sp `App` quote mctx l u
+  SFst sp -> Fst $ quoteSpine mctx l h sp
+  SSnd sp -> Snd $ quoteSpine mctx l h sp
 
 --------------------------------------------------------------------------------
 -- Transport
