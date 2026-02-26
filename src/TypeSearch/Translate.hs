@@ -408,7 +408,28 @@ translateToFstSnd qname recDef projDef = do
   pure [DLet Nothing qname projTy projBody]
 
 --------------------------------------------------------------------------------
--- Non-pattern-matching function with no where clause → Let
+-- Translate type-alias-like into let
+--   * The return type *can* be Set
+--   * No where clause
+--   * No pattern matching
+
+isTypeAliasLike :: Agda.Definition -> M Bool
+isTypeAliasLike def =
+  Agda.andM
+    [ canEndInSort def.defType,
+      hasNoLocalDefs def,
+      pure $ isNonPatternMatching def
+    ]
+
+canEndInSort :: Internal.Type -> M Bool
+canEndInSort t = do
+  Agda.TelV tel b <- Agda.telView t
+  Agda.addContext tel do
+    b <- Agda.reduce b
+    case b.unEl of
+      Internal.Sort {} -> pure True
+      Internal.Var {} -> pure True
+      _ -> pure False
 
 hasNoLocalDefs :: Agda.Definition -> M Bool
 hasNoLocalDefs def = do
@@ -434,65 +455,11 @@ isNonPatternMatching def = do
 offendingDefs :: [String]
 offendingDefs =
   [ -- mustBePi
-    "Algebra.Consequences.Setoid.subst+comm⇒sym",
-    -- getConType
-    "Algebra.Construct.NaturalChoice.MinOp.⊓-identity",
-    -- getConType
-    "Algebra.Construct.NaturalChoice.MinOp.⊓-zero",
-    -- getConType
-    "Algebra.Properties.CommutativeMagma.Divisibility.x∣xy",
-    -- getConType
-    "Algebra.Properties.Magma.Divisibility.xy≈z⇒x∣ˡz",
-    -- getConType
-    "Algebra.Properties.Magma.Divisibility.xy≈z⇒y∣z",
-    -- getConType
-    "Algebra.Properties.Magma.Divisibility.xy≈z⇒y∣ʳz",
-    -- getConType
-    "Algebra.Properties.Semigroup.alternative",
-    -- getConType
-    "Algebra.Solver.Ring.0H",
-    -- getConType
-    "Algebra.Solver.Ring._:*_",
-    -- getConType
-    "Algebra.Solver.Ring._:+_",
-    -- getConType
-    "Algebra.Solver.Ring._:-_",
-    -- getConType
-    "Data.AVL.Indexed.⊥⁺<[_]<⊤⁺",
-    -- getConType
-    "Data.AVL.Key.⊥⁺<[_]<⊤⁺",
-    -- getConType
-    "Data.Fin.Properties.inject≤-irrelevant",
-    -- getConType
-    "Data.List._∷ʳ'_",
-    -- getConType
-    "Data.List.Base._∷ʳ'_",
-    -- getConType
-    "Data.List.NonEmpty._∷ʳ'_",
-    -- getConType
-    "Data.List.NonEmpty.Properties.toList-⁺++",
-    -- getConType
-    "Data.List.NonEmpty.Properties.toList-⁺++⁺",
-    -- getConType
-    "Data.List.NonEmpty.Properties.η",
-    -- getConType
-    "Data.Nat.Properties.guarded-∸≗∸",
-    -- huge nat lit
-    "Data.Nat.PseudoRandom.LCG.glibc",
-    -- huge nat lit
-    "Data.Nat.PseudoRandom.LCG.random0",
-    -- getConType
-    "Data.Tree.AVL.Indexed.⊥⁺<[_]<⊤⁺",
-    -- getConType
-    "Data.Tree.AVL.Key.⊥⁺<[_]<⊤⁺",
-    -- getConType
-    "Tactic.RingSolver.Core.Polynomial.Base.κ",
-    -- getConType
-    "Tactic.RingSolver.NonReflective._⊜_"
+    "Algebra.Consequences.Setoid.subst+comm⇒sym"
   ]
 
-translateFun :: QName -> Agda.Definition -> M [Decl]
-translateFun qname def = do
+translateTypeAliasLike :: QName -> Agda.Definition -> M [Decl]
+translateTypeAliasLike qname def = do
   when (show qname `elem` offendingDefs) do
     translateError "skip for now"
   let Agda.Function {..} = def.theDef
@@ -512,25 +479,22 @@ translatePatternArgs ty naps = do
           Internal.allApplyElims $
             Internal.patternsToElims naps
 
-  let go lams = \case
-        [] -> pure (ty, lams)
-        RVar (Unqual n) : ns -> go (lams . RLam n) ns
+  let varToLam = \case
+        RVar (Unqual n) -> RLam n
         _ -> __IMPOSSIBLE__
 
-  go id args
+  pure (ty, foldr ((.) . varToLam) id args)
 
 --------------------------------------------------------------------------------
 
 translateRecordDef :: QName -> Agda.Definition -> M [Decl]
 translateRecordDef qname def = do
-  -- liftIO $ putStrLn $ "translateRecordDef: " ++ show qname
   if isSigmaTranslatable def
     then translateToSigma qname def
     else pure <$> translateToAxiom qname def.defType
 
 translateConDef :: QName -> Agda.Definition -> M [Decl]
 translateConDef qname def = do
-  -- liftIO $ putStrLn $ "translateConDef: " ++ show qname
   let Agda.Constructor {..} = def.theDef
   recDef <- Agda.getConstInfo conData
   if isSigmaTranslatable recDef
@@ -539,7 +503,6 @@ translateConDef qname def = do
 
 translateFunDef :: QName -> Agda.Definition -> M [Decl]
 translateFunDef qname def = do
-  liftIO $ putStrLn $ "translateFunDef: " ++ show qname
   let Agda.Function {..} = def.theDef
 
   Agda.inTopContext $
@@ -552,8 +515,8 @@ translateFunDef qname def = do
             else pure <$> translateToAxiom qname def.defType
         _ ->
           Agda.ifM
-            (Agda.andM [hasNoLocalDefs def, pure $ isNonPatternMatching def])
-            do translateFun qname def
+            (isTypeAliasLike def)
+            do translateTypeAliasLike qname def
             do pure <$> translateToAxiom qname def.defType
 
 --------------------------------------------------------------------------------
