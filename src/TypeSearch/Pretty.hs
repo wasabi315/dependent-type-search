@@ -107,7 +107,7 @@ prettyTerm = go
     go ns p = \case
       Var (Index i) -> shows (ns !! i)
       Meta m -> shows m
-      Top n -> shows n
+      Top n _ -> shows n
       U -> showString "U"
       Pi "_" a b ->
         par p piP $ go ns sigmaP a . showString " → " . go ("_" : ns) piP b

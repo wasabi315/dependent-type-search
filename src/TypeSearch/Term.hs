@@ -1,20 +1,6 @@
-module TypeSearch.Term
-  ( -- * Qualified names
-    QName(..),
+module TypeSearch.Term where
 
-    -- * Terms
-    Term (..),
-
-    -- * Isomorphisms
-    Iso (..),
-    sym,
-    piCongL,
-    piCongR,
-    sigmaCongL,
-    sigmaCongR,
-  )
-where
-
+import Data.HashMap.Strict qualified as HM
 import Data.Hashable
 import GHC.Generics
 import TypeSearch.Common
@@ -35,7 +21,7 @@ instance Show QName where
 data Term
   = Var Index -- x
   | Meta MetaVar -- ?m
-  | Top {-# UNPACK #-} QName -- M.f
+  | Top {-# UNPACK #-} QName (DontPrint (Maybe Value)) -- M.f
   | U -- U
   | Pi Name Term Term -- (x : A) → B
   | Lam Name Term -- λ x → t
@@ -45,6 +31,53 @@ data Term
   | Fst Term -- t.1
   | Snd Term -- t.2
   deriving stock (Show)
+
+--------------------------------------------------------------------------------
+-- Values
+
+-- | De Bruijn levels
+newtype Level = Level Int
+  deriving newtype (Eq, Ord, Num, Show, Hashable)
+
+-- | Values
+data Value
+  = VRigid Level Spine
+  | VFlex MetaVar Spine
+  | VTop {-# UNPACK #-} QName (Maybe Value) Spine (Maybe Value)
+  | VU
+  | VPi Name Value (Value -> Value)
+  | VLam Name (Value -> Value)
+  | VSigma Name Value (Value -> Value)
+  | VPair Value Value
+
+data Spine
+  = SNil
+  | SApp Spine Value
+  | SFst Spine
+  | SSnd Spine
+
+pattern VVar :: Level -> Value
+pattern VVar x = VRigid x SNil
+
+pattern VMeta :: MetaVar -> Value
+pattern VMeta m = VFlex m SNil
+
+-- | Environment keyed by De Bruijn indices
+type Env = [Value]
+
+-- | Environment keyed by top-level names
+type TopEnv = HM.HashMap QName (Maybe Value)
+
+-- | Meta-context
+data MetaCtx = MetaCtx
+  { nextMeta :: GenMetaVar,
+    metaCtx :: HM.HashMap MetaVar MetaEntry
+  }
+
+data MetaEntry = Unsolved | Solved Value
+
+emptyMetaCtx :: MetaCtx
+emptyMetaCtx = MetaCtx 0 mempty
 
 --------------------------------------------------------------------------------
 -- Isomorphisms

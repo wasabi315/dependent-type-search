@@ -5,6 +5,7 @@ module TypeSearch.Common
     applyN,
     foldMapA,
     (//),
+    DontPrint (..),
 
     -- * Names
     Index (..),
@@ -19,10 +20,10 @@ module TypeSearch.Common
   )
 where
 
-import Data.Monoid
 import Control.Applicative
 import Data.Coerce
 import Data.Hashable
+import Data.Monoid
 import Data.String
 import Data.Text qualified as T
 import GHC.Generics (Generic)
@@ -55,6 +56,11 @@ a // b = (a, b)
 foldMapA :: (Alternative f, Foldable t) => (a -> f b) -> t a -> f b
 foldMapA f = getAlt . foldMap (Alt . f)
 
+newtype DontPrint a = DontPrint a
+
+instance Show (DontPrint a) where
+  showsPrec _ _ = id
+
 --------------------------------------------------------------------------------
 -- Names
 
@@ -72,6 +78,9 @@ data MetaVar
   | Gen GenMetaVar -- generated during unification
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (Hashable)
+
+instance IsString MetaVar where
+  fromString = Src . fromString
 
 instance Show MetaVar where
   showsPrec _ = \case
@@ -91,7 +100,6 @@ newtype ModuleName = ModuleName T.Text
 
 instance Show ModuleName where
   showsPrec _ (ModuleName n) = showString (T.unpack n)
-
 
 freshen :: [Name] -> Name -> Name
 freshen ns n

@@ -1,79 +1,119 @@
 module TypeSearch.Evaluation where
 
+import Data.Coerce
 import Data.HashMap.Strict qualified as HM
-import Data.Hashable
 import TypeSearch.Common
 import TypeSearch.Term
 
---------------------------------------------------------------------------------
--- Values
+tequality :: Term
+tequality =
+  Top
+    (QName "Agda.Builtin.Equality" "_≡_")
+    (DontPrint Nothing)
 
--- | De Bruijn levels
-newtype Level = Level Int
-  deriving newtype (Eq, Ord, Num, Show, Hashable)
+vequality :: Value
+vequality =
+  VTop
+    (QName "Agda.Builtin.Equality" "_≡_")
+    Nothing
+    SNil
+    Nothing
 
-data Value
-  = VRigid Level Spine
-  | VFlex MetaVar Spine
-  | VTop {-# UNPACK #-} QName Spine (Maybe Value)
-  | VU
-  | VPi Name Value (Value -> Value)
-  | VLam Name (Value -> Value)
-  | VSigma Name Value (Value -> Value)
-  | VPair Value Value
-  | VStuck Value Spine
+tnat :: Term
+tnat =
+  Top
+    (QName "Agda.Builtin.Nat" "Nat")
+    (DontPrint Nothing)
 
-data Spine
-  = SNil
-  | SApp Spine Value
-  | SFst Spine
-  | SSnd Spine
+vnat :: Value
+vnat =
+  VTop
+    (QName "Agda.Builtin.Nat" "Nat")
+    Nothing
+    SNil
+    Nothing
 
-pattern VVar :: Level -> Value
-pattern VVar x = VRigid x SNil
+tidentityR :: Term
+tidentityR =
+  Top
+    (QName "Algebra.Definitions" "Commutative")
+    ( DontPrint $
+        Just $
+          VLam "A" \a ->
+            VLam "op" \op ->
+              VPi "x" a \x -> VPi "y" a \y ->
+                vequality $$ a $$ (op $$ x $$ y) $$ (op $$ y $$ x)
+    )
 
-pattern VMeta :: MetaVar -> Value
-pattern VMeta m = VFlex m SNil
+tadd :: Term
+tadd =
+  Top
+    (QName "Agda.Builtin.Nat" "_+_")
+    (DontPrint Nothing)
 
--- | Environment keyed by De Bruijn indices
-type Env = [Value]
+vadd :: Value
+vadd =
+  VTop
+    (QName "Agda.Builtin.Nat" "_+_")
+    Nothing
+    SNil
+    Nothing
 
--- | Environment keyed by top-level names
-type TopEnv = HM.HashMap QName (Maybe Value)
+tAddIdR1 :: Term
+tAddIdR1 = tidentityR `App` tnat `App` tadd
 
--- | Meta-context
-data MetaCtx = MetaCtx
-  { nextMeta :: GenMetaVar,
-    metaCtx :: HM.HashMap MetaVar MetaEntry
-  }
+tAddIdR2 :: Term
+tAddIdR2 = quote emptyMetaCtx 0 $
+  VPi "m" vnat \m -> VPi "n" vnat \n ->
+    vequality $$ vnat $$ (vadd $$ m $$ n) $$ (vadd $$ n $$ m)
 
-data MetaEntry = Unsolved | Solved Value
+exMetaCtx :: MetaCtx
+exMetaCtx = MetaCtx 0 (HM.singleton "α" Unsolved)
+
+valpha :: Value
+valpha = VMeta "α"
+
+tAddIdR3 :: Term
+tAddIdR3 = quote exMetaCtx 0 $
+  VPi "m" vnat \m -> VPi "n" valpha \n ->
+    vequality $$ valpha $$ (vadd $$ m $$ n) $$ (vadd $$ n $$ m)
+
+exMetaCtx' :: MetaCtx
+exMetaCtx' = MetaCtx 0 (HM.fromList [("β", Unsolved), ("γ", Unsolved)])
+
+vbeta :: Value
+vbeta = VMeta "β"
+
+vgamma :: Value
+vgamma = VMeta "γ"
+
+tAddIdR4 :: Term
+tAddIdR4 = quote exMetaCtx' 0 $
+  VPi "m" vbeta \m -> VPi "n" vbeta \n ->
+    vequality $$ vbeta $$ (vgamma $$ m $$ n) $$ (vgamma $$ n $$ m)
 
 --------------------------------------------------------------------------------
 -- Evaluation
 
-eval :: MetaCtx -> TopEnv -> Env -> Term -> Value
-eval mctx tenv env = \case
+eval :: MetaCtx -> Env -> Term -> Value
+eval mctx env = \case
   Var (Index x) -> env !! x
   Meta m -> vMeta mctx m
-  Top x -> vTop tenv x
+  Top x v -> VTop x (coerce v) SNil (coerce v)
   U -> VU
-  Pi x a b -> VPi x (eval mctx tenv env a) (evalBind mctx tenv env b)
-  Lam x t -> VLam x (evalBind' mctx tenv env t)
-  App t u -> eval mctx tenv env t $$ eval mctx tenv env u
-  Sigma x a b -> VSigma x (eval mctx tenv env a) (evalBind mctx tenv env b)
-  Pair t u -> VPair (eval mctx tenv env t) (eval mctx tenv env u)
-  Fst t -> vFst (eval mctx tenv env t)
-  Snd t -> vSnd (eval mctx tenv env t)
+  Pi x a b -> VPi x (eval mctx env a) (evalBind mctx env b)
+  Lam x t -> VLam x (evalBind' mctx env t)
+  App t u -> eval mctx env t $$ eval mctx env u
+  Sigma x a b -> VSigma x (eval mctx env a) (evalBind mctx env b)
+  Pair t u -> VPair (eval mctx env t) (eval mctx env u)
+  Fst t -> vFst (eval mctx env t)
+  Snd t -> vSnd (eval mctx env t)
 
-evalBind :: MetaCtx -> TopEnv -> Env -> Term -> (Value -> Value)
-evalBind mctx tenv env t ~u = eval mctx tenv (u : env) t
+evalBind :: MetaCtx -> Env -> Term -> (Value -> Value)
+evalBind mctx env t ~u = eval mctx (u : env) t
 
-evalBind' :: MetaCtx -> TopEnv -> Env -> Term -> (Value -> Value)
-evalBind' mctx tenv env t u = eval mctx tenv (u : env) t
-
-vTop :: TopEnv -> QName -> Value
-vTop tenv x = VTop x SNil (tenv HM.! x)
+evalBind' :: MetaCtx -> Env -> Term -> (Value -> Value)
+evalBind' mctx env t u = eval mctx (u : env) t
 
 vMeta :: MetaCtx -> MetaVar -> Value
 vMeta mctx x = case mctx.metaCtx HM.! x of
@@ -81,30 +121,28 @@ vMeta mctx x = case mctx.metaCtx HM.! x of
   Solved v -> v
 
 ($$) :: Value -> Value -> Value
-VLam _ t $$ u = t u
-VRigid x sp $$ u = VRigid x (SApp sp u)
-VFlex m sp $$ u = VFlex m (SApp sp u)
-VTop x sp t $$ u = VTop x (SApp sp u) (fmap ($$ u) t)
-VStuck t sp $$ u = VStuck t (SApp sp u)
-t $$ u = VStuck t (SApp SNil u)
+t $$ u = case t of
+  VLam _ t -> t u
+  VRigid x sp -> VRigid x (SApp sp u)
+  VFlex m sp -> VFlex m (SApp sp u)
+  VTop x f sp t -> VTop x f (SApp sp u) (fmap ($$ u) t)
+  _ -> error "($$): not a function"
 
 vFst :: Value -> Value
 vFst = \case
   VPair t _ -> t
   VRigid x sp -> VRigid x (SFst sp)
   VFlex m sp -> VFlex m (SFst sp)
-  VTop x sp t -> VTop x (SFst sp) (vFst <$> t)
-  VStuck t sp -> VStuck t (SFst sp)
-  t -> VStuck t (SFst SNil)
+  VTop x f sp t -> VTop x f (SFst sp) (vFst <$> t)
+  _ -> error "vFst: not a pair"
 
 vSnd :: Value -> Value
 vSnd = \case
   VPair _ t -> t
   VRigid x sp -> VRigid x (SSnd sp)
   VFlex m sp -> VFlex m (SSnd sp)
-  VTop x sp t -> VTop x (SSnd sp) (vSnd <$> t)
-  VStuck t sp -> VStuck t (SSnd sp)
-  t -> VStuck t (SSnd SNil)
+  VTop x f sp t -> VTop x f (SSnd sp) (vSnd <$> t)
+  _ -> error "vSnd: not a pair"
 
 vAppSpine :: Value -> Spine -> Value
 vAppSpine t = \case
@@ -116,8 +154,8 @@ vAppSpine t = \case
 force :: MetaCtx -> Value -> Value
 force mctx = \case
   VFlex m sp
-    | Solved v <- mctx.metaCtx HM.! m -> force mctx (vAppSpine v sp)
-  v -> v
+    | Solved t <- mctx.metaCtx HM.! m -> force mctx (vAppSpine t sp)
+  t -> t
 
 --------------------------------------------------------------------------------
 -- Quotation
@@ -129,13 +167,12 @@ quote :: MetaCtx -> Level -> Value -> Term
 quote mctx l t = case force mctx t of
   VRigid x sp -> quoteSpine mctx l (Var (levelToIndex l x)) sp
   VFlex m sp -> quoteSpine mctx l (Meta m) sp
-  VTop x sp _ -> quoteSpine mctx l (Top x) sp
+  VTop x f sp _ -> quoteSpine mctx l (Top x (coerce f)) sp
   VU -> U
   VPi x a b -> Pi x (quote mctx l a) (quoteBind mctx l b)
   VLam x t -> Lam x (quoteBind mctx l t)
   VSigma x a b -> Sigma x (quote mctx l a) (quoteBind mctx l b)
   VPair t u -> Pair (quote mctx l t) (quote mctx l u)
-  VStuck t sp -> quoteSpine mctx l (quote mctx l t) sp
 
 quoteBind :: MetaCtx -> Level -> (Value -> Value) -> Term
 quoteBind mctx l b = quote mctx (l + 1) (b $ VVar l)
