@@ -21,7 +21,7 @@ instance Show QName where
 data Term
   = Var Index -- x
   | Meta MetaVar -- ?m
-  | Top {-# UNPACK #-} QName (DontPrint (Maybe Value)) -- M.f
+  | Top {-# UNPACK #-} QName (DontPrint (Maybe Value)) -- M.f, Nothing for axioms
   | U -- U
   | Pi Name Term Term -- (x : A) → B
   | Lam Name Term -- λ x → t
@@ -43,7 +43,7 @@ newtype Level = Level Int
 data Value
   = VRigid Level Spine
   | VFlex MetaVar Spine
-  | VTop {-# UNPACK #-} QName (Maybe Value) Spine (Maybe Value)
+  | VTop {-# UNPACK #-} QName (Maybe Value) Spine (Maybe Value) -- Nothing for axioms
   | VU
   | VPi Name Value (Value -> Value)
   | VLam Name (Value -> Value)

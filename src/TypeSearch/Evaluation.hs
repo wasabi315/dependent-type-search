@@ -5,6 +5,16 @@ import Data.HashMap.Strict qualified as HM
 import TypeSearch.Common
 import TypeSearch.Term
 
+infixr 6 -->
+
+infixr 7 ***
+
+(-->) :: Value -> Value -> Value
+a --> b = VPi "_" a \_ -> b
+
+(***) :: Value -> Value -> Value
+a *** b = VSigma "_" a \_ -> b
+
 tequality :: Term
 tequality =
   Top
@@ -68,18 +78,10 @@ tAddIdR2 = quote emptyMetaCtx 0 $
     vequality $$ vnat $$ (vadd $$ m $$ n) $$ (vadd $$ n $$ m)
 
 exMetaCtx :: MetaCtx
-exMetaCtx = MetaCtx 0 (HM.singleton "α" Unsolved)
+exMetaCtx = MetaCtx 0 (HM.fromList [("α", Unsolved), ("β", Unsolved), ("γ", Unsolved)])
 
 valpha :: Value
 valpha = VMeta "α"
-
-tAddIdR3 :: Term
-tAddIdR3 = quote exMetaCtx 0 $
-  VPi "m" vnat \m -> VPi "n" valpha \n ->
-    vequality $$ valpha $$ (vadd $$ m $$ n) $$ (vadd $$ n $$ m)
-
-exMetaCtx' :: MetaCtx
-exMetaCtx' = MetaCtx 0 (HM.fromList [("β", Unsolved), ("γ", Unsolved)])
 
 vbeta :: Value
 vbeta = VMeta "β"
@@ -87,10 +89,33 @@ vbeta = VMeta "β"
 vgamma :: Value
 vgamma = VMeta "γ"
 
+tAddIdR3 :: Term
+tAddIdR3 = quote exMetaCtx 0 $
+  VPi "m" vnat \m -> VPi "n" valpha \n ->
+    vequality $$ valpha $$ (vadd $$ m $$ n) $$ (vadd $$ n $$ m)
+
 tAddIdR4 :: Term
-tAddIdR4 = quote exMetaCtx' 0 $
+tAddIdR4 = quote exMetaCtx 0 $
   VPi "m" vbeta \m -> VPi "n" vbeta \n ->
     vequality $$ vbeta $$ (vgamma $$ m $$ n) $$ (vgamma $$ n $$ m)
+
+vlist :: Value
+vlist = VTop (QName "Agda.Builtin.List" "List") Nothing SNil Nothing
+
+tFoldr1 :: Term
+tFoldr1 =
+  quote exMetaCtx 0 $
+    (valpha --> vbeta --> vbeta) --> vbeta --> (vlist $$ valpha) --> vbeta
+
+tFoldr2 :: Term
+tFoldr2 =
+  quote exMetaCtx 0 $
+    (vgamma --> vgamma --> vgamma) --> vgamma --> (vlist $$ vgamma) --> vgamma
+
+tFoldr3 :: Term
+tFoldr3 =
+  quote exMetaCtx 0 $
+    (vgamma *** vgamma --> vgamma) --> vgamma --> (vlist $$ vgamma) --> vgamma
 
 --------------------------------------------------------------------------------
 -- Evaluation
