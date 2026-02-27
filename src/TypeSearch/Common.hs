@@ -1,5 +1,6 @@
 module TypeSearch.Common
   ( -- * Utils
+    impossible,
     down,
     choose,
     applyN,
@@ -27,10 +28,14 @@ import Data.Monoid
 import Data.String
 import Data.Text qualified as T
 import GHC.Generics (Generic)
+import GHC.Stack
 import Text.Megaparsec
 
 --------------------------------------------------------------------------------
 -- Utils
+
+impossible :: (HasCallStack) => a
+impossible = error "impossible"
 
 -- | @[x, x - 1, ..., y]@
 down :: (Enum a, Num a) => a -> a -> [a]

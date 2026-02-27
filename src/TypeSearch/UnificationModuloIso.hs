@@ -5,190 +5,189 @@ import Data.Maybe
 import TypeSearch.Evaluation
 import TypeSearch.Term
 import TypeSearch.Unification
-import Prelude hiding (curry)
 
 --------------------------------------------------------------------------------
 
-unifySpineRefl :: MetaCtx -> ConvState -> Level -> Spine -> Spine -> Maybe (MetaCtx, Iso, Iso)
-unifySpineRefl mctx cs l sp sp' = do
-  mctx <- unifySpine mctx cs l sp sp'
-  pure (mctx, Refl, Refl)
+-- unifyIso0 :: MetaCtx -> Term -> Term -> Maybe (MetaCtx, Iso)
+-- unifyIso0 mctx t t' = do
+--   let v = eval mctx [] t
+--       v' = eval mctx [] t'
+--   (mctx, i, i') <- unifyIso mctx Rigid 0 v v'
+--   let j = i <> sym i'
+--   pure (mctx, j)
 
-unifyIso0 :: MetaCtx -> Term -> Term -> Maybe (MetaCtx, Iso)
-unifyIso0 mctx t t' = do
-  let v = eval mctx [] t
-      v' = eval mctx [] t'
-  (mctx, i, i') <- unifyIso mctx Rigid 0 v v'
-  let j = i <> sym i'
-  pure (mctx, j)
+-- unifyIso :: MetaCtx -> ConvState -> Level -> Value -> Value -> Maybe (MetaCtx, Iso, Iso)
+-- unifyIso mctx cs l t u = case (force mctx t, force mctx u) of
+--   (VPi _ a b, VPi _ a' b') -> case cs of
+--     Rigid ->
+--       unifyPi mctx Flex l a b a' b'
+--         <|> curryThenUnify mctx l a b a' b'
+--     Flex -> unifyPi mctx Flex l a b a' b'
+--     Full -> curryThenUnify mctx l a b a' b'
+--   (VSigma _ a b, VSigma _ a' b') -> case cs of
+--     Rigid ->
+--       unifySigma mctx Flex l a b a' b'
+--         <|> assocThenUnify mctx l a b a' b'
+--     Flex -> unifySigma mctx Flex l a b a' b'
+--     Full -> assocThenUnify mctx l a b a' b'
+--   (t@(VTop x _ sp ft), t'@(VTop x' _ sp' ft')) -> case cs of
+--     Rigid
+--       | x == x' ->
+--           unifySpineRefl mctx Flex l sp sp'
+--             <|> unifyIso mctx Full l (unfold t) (unfold t')
+--       | otherwise -> unifyIso mctx Rigid l (unfold t) (unfold t')
+--     Flex
+--       | x == x' -> unifySpineRefl mctx Flex l sp sp'
+--       | otherwise -> Nothing
+--     Full
+--       | x == x' && isNothing ft && isNothing ft' ->
+--           unifySpineRefl mctx Full l sp sp'
+--       | otherwise -> unifyIso mctx Full l (unfold t) (unfold t')
+--   (VTop _ _ _ t, t') -> case cs of
+--     Flex -> Nothing
+--     _
+--       | Just t <- t -> unifyIso mctx cs l t t'
+--       | otherwise -> Nothing
+--   (t, VTop _ _ _ t') -> case cs of
+--     Flex -> Nothing
+--     _
+--       | Just t' <- t' -> unifyIso mctx cs l t t'
+--       | otherwise -> Nothing
+--   (t, u) -> do
+--     mctx <- unify mctx cs l t u
+--     pure (mctx, Refl, Refl)
 
-unifyIso :: MetaCtx -> ConvState -> Level -> Value -> Value -> Maybe (MetaCtx, Iso, Iso)
-unifyIso mctx cs l t u = case (force mctx t, force mctx u) of
-  (VPi _ a b, VPi _ a' b') -> case cs of
-    Rigid ->
-      unifyPi mctx Flex l a b a' b'
-        <|> curryThenUnify mctx l a b a' b'
-    Flex -> unifyPi mctx Flex l a b a' b'
-    Full -> curryThenUnify mctx l a b a' b'
-  (VSigma _ a b, VSigma _ a' b') -> case cs of
-    Rigid ->
-      unifySigma mctx Flex l a b a' b'
-        <|> assocThenUnify mctx l a b a' b'
-    Flex -> unifySigma mctx Flex l a b a' b'
-    Full -> assocThenUnify mctx l a b a' b'
-  (t@(VTop x _ sp ft), t'@(VTop x' _ sp' ft')) -> case cs of
-    Rigid
-      | x == x' ->
-          unifySpineRefl mctx Flex l sp sp'
-            <|> unifyIso mctx Full l (unfold t) (unfold t')
-      | otherwise -> unifyIso mctx Rigid l (unfold t) (unfold t')
-    Flex
-      | x == x' -> unifySpineRefl mctx Flex l sp sp'
-      | otherwise -> Nothing
-    Full
-      | x == x' && isNothing ft && isNothing ft' ->
-          unifySpineRefl mctx Full l sp sp'
-      | otherwise -> unifyIso mctx Full l (unfold t) (unfold t')
-  (VTop _ _ _ t, t') -> case cs of
-    Flex -> Nothing
-    _
-      | Just t <- t -> unifyIso mctx cs l t t'
-      | otherwise -> Nothing
-  (t, VTop _ _ _ t') -> case cs of
-    Flex -> Nothing
-    _
-      | Just t' <- t' -> unifyIso mctx cs l t t'
-      | otherwise -> Nothing
-  (t, u) -> do
-    mctx <- unify mctx cs l t u
-    pure (mctx, Refl, Refl)
+-- unifySpineRefl :: MetaCtx -> ConvState -> Level -> Spine -> Spine -> Maybe (MetaCtx, Iso, Iso)
+-- unifySpineRefl mctx cs l sp sp' = do
+--   mctx <- unifySpine mctx cs l sp sp'
+--   pure (mctx, Refl, Refl)
 
-unifyPi ::
-  MetaCtx ->
-  ConvState ->
-  Level ->
-  Value ->
-  (Value -> Value) ->
-  Value ->
-  (Value -> Value) ->
-  Maybe (MetaCtx, Iso, Iso)
-unifyPi mctx cs l a b a' b' = do
-  (mctx, ia, ia') <- unifyIso mctx cs l a a'
-  let v = transportInv ia (VVar l)
-      v' = transportInv ia' (VVar l)
-  (mctx, ib, ib') <- unifyIso mctx cs l (b v) (b' v')
-  let i = piCongL ia <> piCongL ib
-      i' = piCongL ia' <> piCongL ib'
-  pure (mctx, i, i')
+-- unifyPi ::
+--   MetaCtx ->
+--   ConvState ->
+--   Level ->
+--   Value ->
+--   (Value -> Value) ->
+--   Value ->
+--   (Value -> Value) ->
+--   Maybe (MetaCtx, Iso, Iso)
+-- unifyPi mctx cs l a b a' b' = do
+--   (mctx, ia, ia') <- unifyIso mctx cs l a a'
+--   let v = transportInv ia (VVar l)
+--       v' = transportInv ia' (VVar l)
+--   (mctx, ib, ib') <- unifyIso mctx cs l (b v) (b' v')
+--   let i = piCongL ia <> piCongL ib
+--       i' = piCongL ia' <> piCongL ib'
+--   pure (mctx, i, i')
 
-curryThenUnify ::
-  MetaCtx ->
-  Level ->
-  Value ->
-  (Value -> Value) ->
-  Value ->
-  (Value -> Value) ->
-  Maybe (MetaCtx, Iso, Iso)
-curryThenUnify mctx l = go Refl Refl
-  where
-    go i i' dom cod dom' cod' = case (force mctx dom, force mctx dom') of
-      (VTop _ _ _ (Just dom), VTop _ _ _ (Just dom')) ->
-        go i i' dom cod dom' cod
-      (VTop _ _ _ (Just dom), dom') ->
-        go i i' dom cod dom' cod
-      (dom, VTop _ _ _ (Just dom')) ->
-        go i i dom cod dom' cod
-      (VSigma x a b, VSigma x' a' b') ->
-        go
-          (i <> Curry)
-          (i' <> Curry)
-          a
-          (\ ~u -> VPi x (b u) \ ~v -> cod (VPair u v))
-          a'
-          (\ ~u' -> VPi x' (b' u') \ ~v' -> cod' (VPair u' v'))
-      (VSigma x a b, dom') ->
-        go
-          (i <> Curry)
-          i'
-          a
-          (\ ~u -> VPi x (b u) \ ~v -> cod (VPair u v))
-          dom'
-          cod'
-      (dom, VSigma x' a' b') ->
-        go
-          i
-          (i' <> Curry)
-          dom
-          cod
-          a'
-          (\ ~u' -> VPi x' (b' u') \ ~v' -> cod' (VPair u' v'))
-      (dom, dom') -> do
-        (mctx, ires, ires') <- unifyPi mctx Full l dom cod dom' cod'
-        let ires1 = i <> ires
-            ires1' = i' <> ires'
-        pure (mctx, ires1, ires1')
+-- curryThenUnify ::
+--   MetaCtx ->
+--   Level ->
+--   Value ->
+--   (Value -> Value) ->
+--   Value ->
+--   (Value -> Value) ->
+--   Maybe (MetaCtx, Iso, Iso)
+-- curryThenUnify mctx l = go Refl Refl
+--   where
+--     go i i' dom cod dom' cod' = case (force mctx dom, force mctx dom') of
+--       (VTop _ _ _ (Just dom), VTop _ _ _ (Just dom')) ->
+--         go i i' dom cod dom' cod
+--       (VTop _ _ _ (Just dom), dom') ->
+--         go i i' dom cod dom' cod
+--       (dom, VTop _ _ _ (Just dom')) ->
+--         go i i dom cod dom' cod
+--       (VSigma x a b, VSigma x' a' b') ->
+--         go
+--           (i <> Curry)
+--           (i' <> Curry)
+--           a
+--           (\ ~u -> VPi x (b u) \ ~v -> cod (VPair u v))
+--           a'
+--           (\ ~u' -> VPi x' (b' u') \ ~v' -> cod' (VPair u' v'))
+--       (VSigma x a b, dom') ->
+--         go
+--           (i <> Curry)
+--           i'
+--           a
+--           (\ ~u -> VPi x (b u) \ ~v -> cod (VPair u v))
+--           dom'
+--           cod'
+--       (dom, VSigma x' a' b') ->
+--         go
+--           i
+--           (i' <> Curry)
+--           dom
+--           cod
+--           a'
+--           (\ ~u' -> VPi x' (b' u') \ ~v' -> cod' (VPair u' v'))
+--       (dom, dom') -> do
+--         (mctx, ires, ires') <- unifyPi mctx Full l dom cod dom' cod'
+--         let ires1 = i <> ires
+--             ires1' = i' <> ires'
+--         pure (mctx, ires1, ires1')
 
-unifySigma ::
-  MetaCtx ->
-  ConvState ->
-  Level ->
-  Value ->
-  (Value -> Value) ->
-  Value ->
-  (Value -> Value) ->
-  Maybe (MetaCtx, Iso, Iso)
-unifySigma mctx cs l a b a' b' = do
-  (mctx, ia, ia') <- unifyIso mctx cs l a a'
-  let v = transportInv ia (VVar l)
-      v' = transportInv ia' (VVar l)
-  (mctx, ib, ib') <- unifyIso mctx cs l (b v) (b' v')
-  let i = sigmaCongL ia <> sigmaCongL ib
-      i' = sigmaCongL ia' <> sigmaCongL ib'
-  pure (mctx, i, i')
+-- unifySigma ::
+--   MetaCtx ->
+--   ConvState ->
+--   Level ->
+--   Value ->
+--   (Value -> Value) ->
+--   Value ->
+--   (Value -> Value) ->
+--   Maybe (MetaCtx, Iso, Iso)
+-- unifySigma mctx cs l a b a' b' = do
+--   (mctx, ia, ia') <- unifyIso mctx cs l a a'
+--   let v = transportInv ia (VVar l)
+--       v' = transportInv ia' (VVar l)
+--   (mctx, ib, ib') <- unifyIso mctx cs l (b v) (b' v')
+--   let i = sigmaCongL ia <> sigmaCongL ib
+--       i' = sigmaCongL ia' <> sigmaCongL ib'
+--   pure (mctx, i, i')
 
-assocThenUnify ::
-  MetaCtx ->
-  Level ->
-  Value ->
-  (Value -> Value) ->
-  Value ->
-  (Value -> Value) ->
-  Maybe (MetaCtx, Iso, Iso)
-assocThenUnify mctx l = go Refl Refl
-  where
-    go i i' dom cod dom' cod' = case (force mctx dom, force mctx dom') of
-      (VTop _ _ _ (Just dom), VTop _ _ _ (Just dom')) ->
-        go i i' dom cod dom' cod
-      (VTop _ _ _ (Just dom), dom') ->
-        go i i' dom cod dom' cod
-      (dom, VTop _ _ _ (Just dom')) ->
-        go i i dom cod dom' cod
-      (VSigma x a b, VSigma x' a' b') ->
-        go
-          (i <> Assoc)
-          (i' <> Assoc)
-          a
-          (\ ~u -> VSigma x (b u) \ ~v -> cod (VPair u v))
-          a'
-          (\ ~u' -> VSigma x' (b' u') \ ~v' -> cod' (VPair u' v'))
-      (VSigma x a b, dom') ->
-        go
-          (i <> Assoc)
-          i'
-          a
-          (\ ~u -> VSigma x (b u) \ ~v -> cod (VPair u v))
-          dom'
-          cod'
-      (dom, VSigma x' a' b') ->
-        go
-          i
-          (i' <> Assoc)
-          dom
-          cod
-          a'
-          (\ ~u' -> VSigma x' (b' u') \ ~v' -> cod' (VPair u' v'))
-      (dom, dom') -> do
-        (mctx, ires, ires') <- unifySigma mctx Full l dom cod dom' cod'
-        let ires1 = i <> ires
-            ires1' = i' <> ires'
-        pure (mctx, ires1, ires1')
+-- assocThenUnify ::
+--   MetaCtx ->
+--   Level ->
+--   Value ->
+--   (Value -> Value) ->
+--   Value ->
+--   (Value -> Value) ->
+--   Maybe (MetaCtx, Iso, Iso)
+-- assocThenUnify mctx l = go Refl Refl
+--   where
+--     go i i' dom cod dom' cod' = case (force mctx dom, force mctx dom') of
+--       (VTop _ _ _ (Just dom), VTop _ _ _ (Just dom')) ->
+--         go i i' dom cod dom' cod
+--       (VTop _ _ _ (Just dom), dom') ->
+--         go i i' dom cod dom' cod
+--       (dom, VTop _ _ _ (Just dom')) ->
+--         go i i dom cod dom' cod
+--       (VSigma x a b, VSigma x' a' b') ->
+--         go
+--           (i <> Assoc)
+--           (i' <> Assoc)
+--           a
+--           (\ ~u -> VSigma x (b u) \ ~v -> cod (VPair u v))
+--           a'
+--           (\ ~u' -> VSigma x' (b' u') \ ~v' -> cod' (VPair u' v'))
+--       (VSigma x a b, dom') ->
+--         go
+--           (i <> Assoc)
+--           i'
+--           a
+--           (\ ~u -> VSigma x (b u) \ ~v -> cod (VPair u v))
+--           dom'
+--           cod'
+--       (dom, VSigma x' a' b') ->
+--         go
+--           i
+--           (i' <> Assoc)
+--           dom
+--           cod
+--           a'
+--           (\ ~u' -> VSigma x' (b' u') \ ~v' -> cod' (VPair u' v'))
+--       (dom, dom') -> do
+--         (mctx, ires, ires') <- unifySigma mctx Full l dom cod dom' cod'
+--         let ires1 = i <> ires
+--             ires1' = i' <> ires'
+--         pure (mctx, ires1, ires1')

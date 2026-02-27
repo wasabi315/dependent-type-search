@@ -26,6 +26,7 @@ data Term
   | Pi Name Term Term -- (x : A) → B
   | Lam Name Term -- λ x → t
   | App Term Term -- t1 t2
+  | AppPruning Term Pruning
   | Sigma Name Term Term -- (x : A) × B
   | Pair Term Term -- (t1, t2)
   | Fst Term -- t.1
@@ -74,10 +75,19 @@ data MetaCtx = MetaCtx
     metaCtx :: HM.HashMap MetaVar MetaEntry
   }
 
-data MetaEntry = Unsolved | Solved Value
+data MetaEntry
+  = Unsolved ~Value
+  | Solved Value ~Value
 
 emptyMetaCtx :: MetaCtx
 emptyMetaCtx = MetaCtx 0 mempty
+
+type Pruning = [Bool]
+
+newtype RevPruning = RevPruning Pruning
+
+revPruning :: Pruning -> RevPruning
+revPruning = RevPruning . reverse
 
 --------------------------------------------------------------------------------
 -- Isomorphisms

@@ -10,75 +10,19 @@ infixr 6 -->
 infixr 7 ***
 
 (-->) :: Value -> Value -> Value
-a --> b = VPi "_" a \_ -> b
+a --> b = VPi "_" a \ ~_ -> b
 
 (***) :: Value -> Value -> Value
-a *** b = VSigma "_" a \_ -> b
-
-tequality :: Term
-tequality =
-  Top
-    (QName "Agda.Builtin.Equality" "_≡_")
-    (DontPrint Nothing)
-
-vequality :: Value
-vequality =
-  VTop
-    (QName "Agda.Builtin.Equality" "_≡_")
-    Nothing
-    SNil
-    Nothing
-
-tnat :: Term
-tnat =
-  Top
-    (QName "Agda.Builtin.Nat" "Nat")
-    (DontPrint Nothing)
-
-vnat :: Value
-vnat =
-  VTop
-    (QName "Agda.Builtin.Nat" "Nat")
-    Nothing
-    SNil
-    Nothing
-
-tidentityR :: Term
-tidentityR =
-  Top
-    (QName "Algebra.Definitions" "Commutative")
-    ( DontPrint $
-        Just $
-          VLam "A" \a ->
-            VLam "op" \op ->
-              VPi "x" a \x -> VPi "y" a \y ->
-                vequality $$ a $$ (op $$ x $$ y) $$ (op $$ y $$ x)
-    )
-
-tadd :: Term
-tadd =
-  Top
-    (QName "Agda.Builtin.Nat" "_+_")
-    (DontPrint Nothing)
-
-vadd :: Value
-vadd =
-  VTop
-    (QName "Agda.Builtin.Nat" "_+_")
-    Nothing
-    SNil
-    Nothing
-
-tAddIdR1 :: Term
-tAddIdR1 = tidentityR `App` tnat `App` tadd
-
-tAddIdR2 :: Term
-tAddIdR2 = quote emptyMetaCtx 0 $
-  VPi "m" vnat \m -> VPi "n" vnat \n ->
-    vequality $$ vnat $$ (vadd $$ m $$ n) $$ (vadd $$ n $$ m)
+a *** b = VSigma "_" a \ ~_ -> b
 
 exMetaCtx :: MetaCtx
-exMetaCtx = MetaCtx 0 (HM.fromList [("α", Unsolved), ("β", Unsolved), ("γ", Unsolved)])
+exMetaCtx =
+  MetaCtx 0 $
+    HM.fromList
+      [ ("α", Unsolved VU),
+        ("β", Unsolved VU),
+        ("γ", Unsolved VU)
+      ]
 
 valpha :: Value
 valpha = VMeta "α"
@@ -88,16 +32,6 @@ vbeta = VMeta "β"
 
 vgamma :: Value
 vgamma = VMeta "γ"
-
-tAddIdR3 :: Term
-tAddIdR3 = quote exMetaCtx 0 $
-  VPi "m" vnat \m -> VPi "n" valpha \n ->
-    vequality $$ valpha $$ (vadd $$ m $$ n) $$ (vadd $$ n $$ m)
-
-tAddIdR4 :: Term
-tAddIdR4 = quote exMetaCtx 0 $
-  VPi "m" vbeta \m -> VPi "n" vbeta \n ->
-    vequality $$ vbeta $$ (vgamma $$ m $$ n) $$ (vgamma $$ n $$ m)
 
 vlist :: Value
 vlist = VTop (QName "Agda.Builtin.List" "List") Nothing SNil Nothing
@@ -133,6 +67,7 @@ eval mctx env = \case
   Pair t u -> VPair (eval mctx env t) (eval mctx env u)
   Fst t -> vFst (eval mctx env t)
   Snd t -> vSnd (eval mctx env t)
+  AppPruning t pr -> vAppPruning env (eval mctx env t) pr
 
 evalBind :: MetaCtx -> Env -> Term -> (Value -> Value)
 evalBind mctx env t ~u = eval mctx (u : env) t
@@ -142,8 +77,15 @@ evalBind' mctx env t u = eval mctx (u : env) t
 
 vMeta :: MetaCtx -> MetaVar -> Value
 vMeta mctx x = case mctx.metaCtx HM.! x of
-  Unsolved -> VMeta x
-  Solved v -> v
+  Unsolved {} -> VMeta x
+  Solved v _ -> v
+
+vAppPruning :: Env -> Value -> Pruning -> Value
+vAppPruning env ~v pr = case (env, pr) of
+  ([], []) -> v
+  (t : env, True : pr) -> vAppPruning env v pr $$ t
+  (_ : env, False : pr) -> vAppPruning env v pr
+  _ -> error "impossible"
 
 ($$) :: Value -> Value -> Value
 t $$ u = case t of
@@ -179,7 +121,7 @@ vAppSpine t = \case
 force :: MetaCtx -> Value -> Value
 force mctx = \case
   VFlex m sp
-    | Solved t <- mctx.metaCtx HM.! m -> force mctx (vAppSpine t sp)
+    | Solved t _ <- mctx.metaCtx HM.! m -> force mctx (vAppSpine t sp)
   t -> t
 
 --------------------------------------------------------------------------------
