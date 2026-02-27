@@ -13,22 +13,35 @@ import TypeSearch.Common
 import TypeSearch.Evaluation
 import TypeSearch.Term
 
+-- This file contains an implementation of pattern unification with pruning.
+-- The implementation is embarrassingly based on András Kovács's
+-- elaboration-zoo/05-pruning and smalltt.
+
 --------------------------------------------------------------------------------
 
+-- | Partial renaming from @Γ@ to @Δ@.
 data PartialRenaming = PRen
-  { occ :: Maybe MetaVar,
+  { -- | optional occurs check.
+    occ :: Maybe MetaVar,
+    -- | size of @Γ@.
     dom :: Level,
+    -- | size of @Δ@.
     cod :: Level,
+    -- | mapping from @Δ@ vars to @Γ@ vars.
     ren :: IM.IntMap Level
   }
 
+-- | @(σ : PRen Γ Δ) → PRen (Γ, x : A[σ]) (Δ, x : A)@.
 liftPren :: PartialRenaming -> PartialRenaming
 liftPren (PRen occ dom cod ren) =
   PRen occ (dom + 1) (cod + 1) (IM.insert (coerce cod) dom ren)
 
+-- | @PRen Γ Δ → PRen Γ (Δ, x : A)@.
 skipPren :: PartialRenaming -> PartialRenaming
 skipPren (PRen occ dom cod ren) = PRen occ dom (cod + 1) ren
 
+-- | @(Γ : Cxt) → (spine : Sub Γ Δ) → PRen Δ Γ@.
+--   Optionally returns a pruning of nonlinear spine entries, if there's any.
 invert :: MetaCtx -> Level -> Spine -> Maybe (PartialRenaming, Maybe Pruning)
 invert mctx gamma sp = do
   let go = \case
@@ -74,10 +87,11 @@ lookupUnsolved m = gets \mctx -> case mctx.metaCtx HM.! m of
   Unsolved a -> a
   Solved {} -> impossible
 
-solveMeta :: MetaVar -> Value -> Value -> P ()
-solveMeta m t ~a = modify' \mctx ->
+writeMeta :: MetaVar -> Value -> Value -> P ()
+writeMeta m t ~a = modify' \mctx ->
   mctx {metaCtx = HM.insert m (Solved t a) mctx.metaCtx}
 
+-- | Remove some arguments from a closed iterated Pi type.
 pruneType :: RevPruning -> Value -> P Term
 pruneType (RevPruning pr) a =
   go pr (PRen Nothing 0 0 mempty) a
@@ -94,20 +108,26 @@ pruneType (RevPruning pr) a =
           go pr (skipPren pren) (b $ VVar pren.cod)
         _ -> impossible
 
+-- | Prune arguments from a meta, return new meta + pruned type.
 pruneMeta :: Pruning -> MetaVar -> P MetaVar
 pruneMeta pr m = do
   mty <- lookupUnsolved m
   prunedty <- evalP [] =<< pruneType (revPruning pr) mty
   m' <- newMetaP prunedty
   solution <- evalP [] =<< lams (Level $ length pr) mty (AppPruning (Meta m') pr)
-  solveMeta m solution mty
+  writeMeta m solution mty
   pure m'
 
 data SpinePruneStatus
-  = OKRenaming
-  | OKNonRenaming
-  | NeedsPruning
+  = -- | Valid spine which is a renaming
+    OKRenaming
+  | -- | Valid spine but not a renaming (has a non-var entry)
+    OKNonRenaming
+  | -- | A spine which is a renaming and has out-of-scope var entries
+    NeedsPruning
 
+-- | Prune illegal var occurrences from a meta + spine.
+--   Returns: renamed + pruned term.
 pruneVFlex :: PartialRenaming -> MetaVar -> Spine -> P Term
 pruneVFlex pren m sp = do
   (sp :: [Maybe Term], status :: SpinePruneStatus) <- do
@@ -167,6 +187,8 @@ renameSpine pren t = \case
   SFst sp -> Fst <$> renameSpine pren t sp
   SSnd sp -> Snd <$> renameSpine pren t sp
 
+-- | Wrap a term in Level number of lambdas. We get the domain info from the Value
+--   argument.
 lams :: Level -> Value -> Term -> P Term
 lams l a t = gets \mctx -> do
   let go _ (l' :: Level) | l' == l = t
@@ -179,21 +201,46 @@ lams l a t = gets \mctx -> do
         _ -> error "impossible"
   go a (0 :: Level)
 
+-- | Solve @Γ ⊢ m spine =? rhs@.
 solve :: MetaCtx -> Level -> MetaVar -> Spine -> Value -> Maybe MetaCtx
 solve mctx gamma m sp rhs = do
   pren <- invert mctx gamma sp
   solveWithPren mctx m pren rhs
 
+-- | Solve m given the result of inversion on a spine.
 solveWithPren ::
   MetaCtx -> MetaVar -> (PartialRenaming, Maybe Pruning) -> Value -> Maybe MetaCtx
 solveWithPren mctx m (pren, pruneNonLinear) rhs = flip execStateT mctx do
   mty <- lookupUnsolved m
+  -- if the spine was non-linear, we check that the non-linear arguments
+  -- can be pruned from the meta type (i.e. that the pruned solution will
+  -- be well-typed)
   case pruneNonLinear of
     Nothing -> pure ()
     Just pr -> void $ pruneType (revPruning pr) mty
   rhs <- rename (pren {occ = Just m}) rhs
   solution <- evalP [] =<< lams pren.dom mty rhs
-  solveMeta m solution mty
+  writeMeta m solution mty
+
+spineLength :: Spine -> Int
+spineLength = \case
+  SNil -> 0
+  SApp sp _ -> 1 + spineLength sp
+  SFst sp -> spineLength sp
+  SSnd sp -> spineLength sp
+
+-- | Solve @Γ ⊢ m spine =? m' spine'@.
+flexFlex :: MetaCtx -> Level -> MetaVar -> Spine -> MetaVar -> Spine -> Maybe MetaCtx
+flexFlex mctx gamma m sp m' sp' = do
+  let -- It may be that only one of the two spines is invertible
+      go m sp m' sp' = case invert mctx gamma sp of
+        Nothing -> solve mctx gamma m' sp' (VFlex m sp)
+        Just pren -> solveWithPren mctx m pren (VFlex m' sp')
+  -- usually, a longer spine indicates that the meta is in an inner scope. If we solve
+  -- inner metas with outer metas, that means that we have to do less pruning.
+  if spineLength sp < spineLength sp'
+    then go m' sp' m sp
+    else go m sp m' sp'
 
 --------------------------------------------------------------------------------
 
@@ -285,19 +332,3 @@ unfold :: Value -> Value
 unfold = \case
   VTop _ _ _ (Just t) -> t
   t -> t
-
-spineLength :: Spine -> Int
-spineLength = \case
-  SNil -> 0
-  SApp sp _ -> 1 + spineLength sp
-  SFst sp -> spineLength sp
-  SSnd sp -> spineLength sp
-
-flexFlex :: MetaCtx -> Level -> MetaVar -> Spine -> MetaVar -> Spine -> Maybe MetaCtx
-flexFlex mctx gamma m sp m' sp' = do
-  let go m sp m' sp' = case invert mctx gamma sp of
-        Nothing -> solve mctx gamma m' sp' (VFlex m sp)
-        Just pren -> solveWithPren mctx m pren (VFlex m' sp')
-  if spineLength sp < spineLength sp'
-    then go m' sp' m sp
-    else go m sp m' sp'

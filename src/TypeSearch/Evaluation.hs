@@ -124,6 +124,13 @@ force mctx = \case
     | Solved t _ <- mctx.metaCtx HM.! m -> force mctx (vAppSpine t sp)
   t -> t
 
+forceAll :: MetaCtx -> Value -> Value
+forceAll mctx = \case
+  VFlex m sp
+    | Solved t _ <- mctx.metaCtx HM.! m -> forceAll mctx (vAppSpine t sp)
+  VTop _ _ _ (Just t) -> forceAll mctx t
+  t -> t
+
 --------------------------------------------------------------------------------
 -- Quotation
 
