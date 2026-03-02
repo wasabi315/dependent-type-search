@@ -26,32 +26,33 @@ bind (Ctx l env idRen cs) =
 data Quant = Quant Name Value (Value -> Value)
 
 -- | Curry until the first domain becomes non-sigma
-curry :: MetaCtx -> Quant -> (Quant, Iso)
-curry mctx = go Refl
+curry :: MetaCtx -> ConvState -> Quant -> (Quant, Iso)
+curry mctx cs = go Refl
   where
-    go i (Quant x a b) = case forceAll mctx a of
+    go i (Quant x a b) = case forceCS mctx cs a of
       VSigma y a1 a2 ->
         go (i <> Curry) $ Quant y a1 \ ~u -> VPi x (a2 u) \ ~v -> b (VPair u v)
       a -> (Quant x a b, i)
 
 -- | Right-nest until the first projection becomes non-sigma
-assoc :: MetaCtx -> Quant -> (Quant, Iso)
-assoc mctx = go Refl
+assoc :: MetaCtx -> ConvState -> Quant -> (Quant, Iso)
+assoc mctx cs = go Refl
   where
-    go i (Quant x a b) = case forceAll mctx a of
+    go i (Quant x a b) = case forceCS mctx cs a of
       VSigma y a1 a2 ->
         go (i <> Assoc) $ Quant y a1 \ ~u -> VPi x (a2 u) \ ~v -> b (VPair u v)
       a -> (Quant x a b, i)
 
 -- | Pick a domain without breaking dependencies.
 pickDomain :: MetaCtx -> Ctx -> Quant -> [(Quant, Iso, MetaCtx)]
-pickDomain mctx (Ctx l env idl _) q@(Quant x a b) = (q, Refl, mctx) : go l b
+pickDomain mctx (Ctx l env idl cs) q@(Quant x a b) = (q, Refl, mctx) : go l b
   where
-    go l' c = case c (VVar l') of
+    go l' c = case forceCS mctx cs $ c (VVar l') of
       VPi y c1 c2 ->
         ( maybeToList do
             let i = l' - l
-            (c1, mctx) <- flip runStateT mctx $ rename (idl {cod = idl.cod + i + 1}) c1
+            -- Strengthen c1. This may involve pruning.
+            (c1, mctx) <- flip runStateT mctx $ rename (skipPrenN (i + 1) idl) c1
             let c1' = eval mctx env c1
                 rest ~vc1 = VPi x a (instPiAt i vc1 . b)
                 s = swaps i
@@ -60,10 +61,10 @@ pickDomain mctx (Ctx l env idl _) q@(Quant x a b) = (q, Refl, mctx) : go l b
           ++ go (l' + 1) c2
       _ -> []
 
-    instPiAt = \cases
-      0 ~v (VPi _ _ b) -> b v
-      i ~v (VPi x a b) -> VPi x a (instPiAt (i - 1) v . b)
-      _ ~_ _ -> error "impossible"
+    instPiAt i ~v t = case (i, forceCS mctx cs t) of
+      (0, VPi _ _ b) -> b v
+      (i, VPi x a b) -> VPi x a (instPiAt (i - 1) v . b)
+      _ -> impossible
 
     swaps = \case
       0 -> PiSwap
@@ -71,13 +72,14 @@ pickDomain mctx (Ctx l env idl _) q@(Quant x a b) = (q, Refl, mctx) : go l b
 
 -- | Pick a projection without breaking dependencies.
 pickProjection :: MetaCtx -> Ctx -> Quant -> [(Quant, Iso, MetaCtx)]
-pickProjection mctx (Ctx l env idl _) q@(Quant x a b) = (q, Refl, mctx) : go l b
+pickProjection mctx (Ctx l env idl cs) q@(Quant x a b) = (q, Refl, mctx) : go l b
   where
-    go l' c = case c (VVar l') of
+    go l' c = case forceCS mctx cs $ c (VVar l') of
       VSigma y c1 c2 ->
         ( maybeToList do
             let i = l' - l
-            (c1, mctx) <- flip runStateT mctx $ rename (idl {cod = idl.cod + i + 1}) c1
+            -- Strengthen c1. This may involve pruning.
+            (c1, mctx) <- flip runStateT mctx $ rename (skipPrenN (i + 1) idl) c1
             let c1' = eval mctx env c1
                 rest ~vc1 = VSigma x a (instSigmaAt i vc1 . b)
                 s = swaps SigmaSwap i
@@ -86,22 +88,22 @@ pickProjection mctx (Ctx l env idl _) q@(Quant x a b) = (q, Refl, mctx) : go l b
           ++ go (l' + 1) c2
       c -> maybeToList do
         let i = l' - l
-        (c, mctx) <- flip runStateT mctx $ rename (idl {cod = idl.cod + i + 1}) c
+        (c, mctx) <- flip runStateT mctx $ rename (skipPrenN (i + 1) idl) c
         let c' = eval mctx env c
             rest ~_ = dropLastProj l' (VSigma x a b)
             s = swaps Comm i
         Just (Quant "_" c' rest, s, mctx)
 
-    instSigmaAt = \cases
-      0 ~v (VSigma _ _ b) -> b v
-      i ~v (VSigma x a b) -> VSigma x a (instSigmaAt (i - 1) v . b)
-      _ ~_ _ -> error "impossible"
+    instSigmaAt i ~v t = case (i, forceCS mctx cs t) of
+      (0, VSigma _ _ b) -> b v
+      (i, VSigma x a b) -> VSigma x a (instSigmaAt (i - 1) v . b)
+      _ -> impossible
 
-    dropLastProj l = \case
+    dropLastProj l t = case forceCS mctx cs t of
       VSigma x a b -> case b (VVar l) of
         VSigma {} -> VSigma x a (dropLastProj (l + 1) . b)
         _ -> a
-      _ -> error "impossible"
+      _ -> impossible
 
     swaps i = \case
       0 -> i
@@ -155,19 +157,17 @@ unifyIso0 mctx t t' = do
   pure (j, mctx)
 
 unifyIso :: MetaCtx -> Ctx -> Value -> Value -> [(Iso, Iso, MetaCtx)]
-unifyIso mctx ctx t u = case (force mctx t, force mctx u) of
+unifyIso mctx ctx t u = case (forceCS mctx ctx.convState t, forceCS mctx ctx.convState u) of
   (VPi x a b, VPi x' a' b') -> case ctx.convState of
     Rigid ->
       unifyPi mctx (ctx {convState = Flex}) (Quant x a b) (Quant x' a' b')
-        <|> unifyPiIso mctx (ctx {convState = Full}) (Quant x a b) (Quant x' a' b')
-    Flex -> unifyPi mctx ctx (Quant x a b) (Quant x' a' b')
-    Full -> unifyPiIso mctx ctx (Quant x a b) (Quant x' a' b')
+        <|> unifyPi mctx (ctx {convState = Full}) (Quant x a b) (Quant x' a' b')
+    _ -> unifyPi mctx ctx (Quant x a b) (Quant x' a' b')
   (VSigma x a b, VSigma x' a' b') -> case ctx.convState of
     Rigid ->
       unifySigma mctx (ctx {convState = Flex}) (Quant x a b) (Quant x' a' b')
-        <|> unifySigmaIso mctx (ctx {convState = Full}) (Quant x a b) (Quant x' a' b')
-    Flex -> unifySigma mctx ctx (Quant x a b) (Quant x' a' b')
-    Full -> unifySigmaIso mctx ctx (Quant x a b) (Quant x' a' b')
+        <|> unifySigma mctx (ctx {convState = Full}) (Quant x a b) (Quant x' a' b')
+    _ -> unifySigma mctx ctx (Quant x a b) (Quant x' a' b')
   (VTop x _ sp Nothing, VTop x' _ sp' Nothing)
     | x == x' -> unifySpineRefl mctx ctx sp sp'
   (VTop x _ sp (Just t), VTop x' _ sp' (Just t')) -> case ctx.convState of
@@ -179,13 +179,15 @@ unifyIso mctx ctx t u = case (force mctx t, force mctx u) of
     Flex
       | x == x' -> unifySpineRefl mctx ctx sp sp'
       | otherwise -> []
-    Full -> unifyIso mctx ctx t t'
+    Full -> impossible
   (VTop _ _ _ (Just t), t') -> case ctx.convState of
+    Rigid -> unifyIso mctx ctx t t'
     Flex -> []
-    _ -> unifyIso mctx ctx t t'
+    _ -> impossible
   (t, VTop _ _ _ (Just t')) -> case ctx.convState of
+    Rigid -> unifyIso mctx ctx t t'
     Flex -> []
-    _ -> unifyIso mctx ctx t t'
+    _ -> impossible
   (t, u) -> do
     mctx <- maybeToList $ unify mctx ctx.convState ctx.level t u
     pure (Refl, Refl, mctx)
@@ -196,18 +198,8 @@ unifySpineRefl mctx ctx sp sp' = do
   pure (Refl, Refl, mctx)
 
 unifyPi :: MetaCtx -> Ctx -> Quant -> Quant -> [(Iso, Iso, MetaCtx)]
-unifyPi mctx ctx (Quant _ a b) (Quant _ a' b') = do
-  (ia, ia', mctx) <- unifyIso mctx ctx a a'
-  let v = transportInv ia (VVar ctx.level)
-      v' = transportInv ia' (VVar ctx.level)
-  (ib, ib', mctx) <- unifyIso mctx (bind ctx) (b v) (b' v')
-  let i = piCongL ia <> piCongL ib
-      i' = piCongL ia' <> piCongL ib'
-  pure (i, i', mctx)
-
-unifyPiIso :: MetaCtx -> Ctx -> Quant -> Quant -> [(Iso, Iso, MetaCtx)]
-unifyPiIso mctx ctx q q' = do
-  let (Quant _ a b, i) = curry mctx q
+unifyPi mctx ctx q q' = do
+  let (Quant _ a b, i) = curry mctx ctx.convState q
   flip foldMapA (currySwap mctx ctx q') \(Quant _ a' b', i', mctx) -> do
     (ia, ia', mctx) <- unifyIso mctx ctx a a'
     let v = transportInv ia (VVar ctx.level)
@@ -218,18 +210,8 @@ unifyPiIso mctx ctx q q' = do
     pure (j, j', mctx)
 
 unifySigma :: MetaCtx -> Ctx -> Quant -> Quant -> [(Iso, Iso, MetaCtx)]
-unifySigma mctx ctx (Quant _ a b) (Quant _ a' b') = do
-  (ia, ia', mctx) <- unifyIso mctx ctx a a'
-  let v = transportInv ia (VVar ctx.level)
-      v' = transportInv ia' (VVar ctx.level)
-  (ib, ib', mctx) <- unifyIso mctx (bind ctx) (b v) (b' v')
-  let i = sigmaCongL ia <> sigmaCongL ib
-      i' = sigmaCongL ia' <> sigmaCongL ib'
-  pure (i, i', mctx)
-
-unifySigmaIso :: MetaCtx -> Ctx -> Quant -> Quant -> [(Iso, Iso, MetaCtx)]
-unifySigmaIso mctx ctx q q' = do
-  let (Quant _ a b, i) = assoc mctx q
+unifySigma mctx ctx q q' = do
+  let (Quant _ a b, i) = assoc mctx ctx.convState q
   flip foldMapA (assocSwap mctx ctx q') \(Quant _ a' b', i', mctx) -> do
     (ia, ia', mctx) <- unifyIso mctx ctx a a'
     let v = transportInv ia (VVar ctx.level)

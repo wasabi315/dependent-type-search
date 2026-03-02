@@ -89,7 +89,7 @@ vAppPruning env ~v pr = case (env, pr) of
   ([], []) -> v
   (t : env, True : pr) -> vAppPruning env v pr $$ t
   (_ : env, False : pr) -> vAppPruning env v pr
-  _ -> error "impossible"
+  _ -> impossible
 
 ($$) :: Value -> Value -> Value
 t $$ u = case t of
@@ -97,7 +97,7 @@ t $$ u = case t of
   VRigid x sp -> VRigid x (SApp sp u)
   VFlex m sp -> VFlex m (SApp sp u)
   VTop x f sp t -> VTop x f (SApp sp u) (fmap ($$ u) t)
-  _ -> error "($$): not a function"
+  _ -> impossible
 
 vFst :: Value -> Value
 vFst = \case
@@ -105,7 +105,7 @@ vFst = \case
   VRigid x sp -> VRigid x (SFst sp)
   VFlex m sp -> VFlex m (SFst sp)
   VTop x f sp t -> VTop x f (SFst sp) (vFst <$> t)
-  _ -> error "vFst: not a pair"
+  _ -> impossible
 
 vSnd :: Value -> Value
 vSnd = \case
@@ -113,7 +113,7 @@ vSnd = \case
   VRigid x sp -> VRigid x (SSnd sp)
   VFlex m sp -> VFlex m (SSnd sp)
   VTop x f sp t -> VTop x f (SSnd sp) (vSnd <$> t)
-  _ -> error "vSnd: not a pair"
+  _ -> impossible
 
 vAppSpine :: Value -> Spine -> Value
 vAppSpine t = \case

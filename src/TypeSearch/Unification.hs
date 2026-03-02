@@ -40,6 +40,9 @@ liftPren (PRen occ dom cod ren) =
 skipPren :: PartialRenaming -> PartialRenaming
 skipPren (PRen occ dom cod ren) = PRen occ dom (cod + 1) ren
 
+skipPrenN :: Level -> PartialRenaming -> PartialRenaming
+skipPrenN n (PRen occ dom cod ren) = PRen occ dom (cod + n) ren
+
 -- | @(Γ : Cxt) → (spine : Sub Γ Δ) → PRen Δ Γ@.
 --   Optionally returns a pruning of nonlinear spine entries, if there's any.
 invert :: MetaCtx -> Level -> Spine -> Maybe (PartialRenaming, Maybe Pruning)
@@ -165,7 +168,8 @@ rename pren t =
     VRigid (Level x) sp -> case IM.lookup x pren.ren of
       Nothing -> empty -- scope error ("escaping variable" error)
       Just x' -> renameSpine pren (Var $ levelToIndex pren.dom x') sp
-    VTop x f sp _ -> renameSpine pren (Top x (coerce f)) sp
+    VTop x f sp Nothing -> renameSpine pren (Top x (coerce f)) sp
+    VTop _ _ _ (Just t) -> rename pren t
     VU -> pure U
     VPi x a b ->
       Pi x
@@ -198,7 +202,7 @@ lams l a t = gets \mctx -> do
             go (b $ VVar l') (l' + 1)
         VPi x _ b ->
           Lam x $ go (b $ VVar l') (l' + 1)
-        _ -> error "impossible"
+        _ -> impossible
   go a (0 :: Level)
 
 -- | Solve @Γ ⊢ m spine =? rhs@.
@@ -250,6 +254,11 @@ data ConvState
   | Full
   deriving stock (Show, Eq, Ord)
 
+forceCS :: MetaCtx -> ConvState -> Value -> Value
+forceCS mctx cs v = case cs of
+  Full -> forceAll mctx v
+  _ -> force mctx v
+
 unify0 :: MetaCtx -> Term -> Term -> Maybe MetaCtx
 unify0 mctx t t' = do
   let v = eval mctx [] t
@@ -257,7 +266,7 @@ unify0 mctx t t' = do
   unify mctx Rigid 0 v v'
 
 unify :: MetaCtx -> ConvState -> Level -> Value -> Value -> Maybe MetaCtx
-unify mctx cs l t t' = case (force mctx t, force mctx t') of
+unify mctx cs l t t' = case (forceCS mctx cs t, forceCS mctx cs t') of
   (VPi _ a b, VPi _ a' b') -> do
     mctx <- unify mctx cs l a a'
     unify mctx cs (l + 1) (b $ VVar l) (b' $ VVar l)
@@ -298,7 +307,7 @@ unify mctx cs l t t' = case (force mctx t, force mctx t') of
     Flex
       | x == x' -> unifySpine mctx Flex l sp sp'
       | otherwise -> Nothing
-    Full -> unify mctx Full l t t'
+    Full -> impossible
   (VFlex m sp, t') -> do
     guard $ cs /= Flex
     solve mctx l m sp t'
@@ -306,11 +315,13 @@ unify mctx cs l t t' = case (force mctx t, force mctx t') of
     guard $ cs /= Flex
     solve mctx l m' sp' t
   (VTop _ _ _ (Just t), t') -> case cs of
+    Rigid -> unify mctx cs l t t'
     Flex -> Nothing
-    _ -> unify mctx cs l t t'
+    Full -> impossible
   (t, VTop _ _ _ (Just t')) -> case cs of
+    Rigid -> unify mctx cs l t t'
     Flex -> Nothing
-    _ -> unify mctx cs l t t'
+    Full -> impossible
   _ -> Nothing
 
 unifySpine :: MetaCtx -> ConvState -> Level -> Spine -> Spine -> Maybe MetaCtx
