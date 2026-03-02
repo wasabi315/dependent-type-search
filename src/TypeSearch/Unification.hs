@@ -31,6 +31,9 @@ data PartialRenaming = PRen
     ren :: IM.IntMap Level
   }
 
+emptyPRen :: PartialRenaming
+emptyPRen = PRen Nothing 0 0 mempty
+
 -- | @(σ : PRen Γ Δ) → PRen (Γ, x : A[σ]) (Δ, x : A)@.
 liftPren :: PartialRenaming -> PartialRenaming
 liftPren (PRen occ dom cod ren) =

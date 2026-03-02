@@ -1,8 +1,10 @@
 module TypeSearch.Evaluation where
 
 import Data.Coerce
+import Data.Foldable
 import Data.HashMap.Strict qualified as HM
 import TypeSearch.Common
+import TypeSearch.Pretty
 import TypeSearch.Term
 
 infixr 6 -->
@@ -54,6 +56,15 @@ tFoldr3 :: Term
 tFoldr3 =
   quote exMetaCtx 0 $
     VPi "xs" (vlist $$ vgamma) \xs -> ((vdelta $$ xs) *** (vdelta $$ xs) --> (vdelta $$ xs)) *** (vdelta $$ xs) --> (vdelta $$ xs)
+
+printResults :: (Foldable t) => t (Iso, MetaCtx) -> IO ()
+printResults res = for_ res \(i, mctx) -> do
+  putStrLn "----------"
+  putStrLn $ "iso: " ++ prettyIso 0 i ""
+  putStrLn "subst: "
+  for_ (HM.toList mctx.metaCtx) \(v, t) -> case (v, t) of
+    (Src _, Solved sol ty) -> putStrLn $ "  " ++ show v ++ " : " ++ prettyTerm [] 0 (quote mctx 0 ty) "" ++ " = " ++ prettyTerm [] 0 (quote mctx 0 sol) ""
+    _ -> pure ()
 
 --------------------------------------------------------------------------------
 -- Evaluation

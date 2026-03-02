@@ -63,6 +63,8 @@ pattern VVar x = VRigid x SNil
 pattern VMeta :: MetaVar -> Value
 pattern VMeta m = VFlex m SNil
 
+data Quant = Quant Name Value (Value -> Value)
+
 -- | Environment keyed by De Bruijn indices
 type Env = [Value]
 

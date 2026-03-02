@@ -10,7 +10,6 @@ import TypeSearch.Unification
 import Prelude hiding (curry)
 
 --------------------------------------------------------------------------------
--- Rewriting types
 
 data Ctx = Ctx
   { level :: Level,
@@ -19,13 +18,17 @@ data Ctx = Ctx
     convState :: ConvState
   }
 
+emptyCtx :: Ctx
+emptyCtx = Ctx 0 [] emptyPRen Rigid
+
 bind :: Ctx -> Ctx
 bind (Ctx l env idRen cs) =
   Ctx (l + 1) (VVar l : env) (liftPren idRen) cs
 
-data Quant = Quant Name Value (Value -> Value)
+--------------------------------------------------------------------------------
+-- Rewriting types
 
--- | Curry until the first domain becomes non-sigma
+-- | Curry until the first domain becomes non-sigma.
 curry :: MetaCtx -> ConvState -> Quant -> (Quant, Iso)
 curry mctx cs = go Refl
   where
@@ -34,7 +37,7 @@ curry mctx cs = go Refl
         go (i <> Curry) $ Quant y a1 \ ~u -> VPi x (a2 u) \ ~v -> b (VPair u v)
       a -> (Quant x a b, i)
 
--- | Right-nest until the first projection becomes non-sigma
+-- | Right-nest until the first projection becomes non-sigma.
 assoc :: MetaCtx -> ConvState -> Quant -> (Quant, Iso)
 assoc mctx cs = go Refl
   where
@@ -152,7 +155,7 @@ unifyIso0 :: MetaCtx -> Term -> Term -> [(Iso, MetaCtx)]
 unifyIso0 mctx t t' = do
   let v = eval mctx [] t
       v' = eval mctx [] t'
-  (i, i', mctx) <- unifyIso mctx (Ctx 0 [] (PRen Nothing 0 0 mempty) Rigid) v v'
+  (i, i', mctx) <- unifyIso mctx emptyCtx v v'
   let j = i <> sym i'
   pure (j, mctx)
 
