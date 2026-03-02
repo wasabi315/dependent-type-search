@@ -1,6 +1,7 @@
 module TypeSearch.UnificationModuloIso where
 
 import Control.Applicative
+import Control.Monad.State.Strict
 import Data.Maybe
 import TypeSearch.Common
 import TypeSearch.Evaluation
@@ -10,6 +11,17 @@ import Prelude hiding (curry)
 
 --------------------------------------------------------------------------------
 -- Rewriting types
+
+data Ctx = Ctx
+  { level :: Level,
+    env :: Env,
+    idRen :: PartialRenaming,
+    convState :: ConvState
+  }
+
+bind :: Ctx -> Ctx
+bind (Ctx l env idRen cs) =
+  Ctx (l + 1) (VVar l : env) (liftPren idRen) cs
 
 data Quant = Quant Name Value (Value -> Value)
 
@@ -32,24 +44,80 @@ assoc mctx = go Refl
       a -> (Quant x a b, i)
 
 -- | Pick a domain without breaking dependencies.
-pickDomain :: MetaCtx -> Level -> Quant -> [(Quant, Iso, MetaCtx)]
-pickDomain mctx l q = undefined
+pickDomain :: MetaCtx -> Ctx -> Quant -> [(Quant, Iso, MetaCtx)]
+pickDomain mctx (Ctx l env idl _) q@(Quant x a b) = (q, Refl, mctx) : go l b
+  where
+    go l' c = case c (VVar l') of
+      VPi y c1 c2 ->
+        ( maybeToList do
+            let i = l' - l
+            (c1, mctx) <- flip runStateT mctx $ rename (idl {cod = idl.cod + i + 1}) c1
+            let c1' = eval mctx env c1
+                rest ~vc1 = VPi x a (instPiAt i vc1 . b)
+                s = swaps i
+            pure (Quant y c1' rest, s, mctx)
+        )
+          ++ go (l' + 1) c2
+      _ -> []
+
+    instPiAt = \cases
+      0 ~v (VPi _ _ b) -> b v
+      i ~v (VPi x a b) -> VPi x a (instPiAt (i - 1) v . b)
+      _ ~_ _ -> error "impossible"
+
+    swaps = \case
+      0 -> PiSwap
+      n -> piCongR (swaps (n - 1)) <> PiSwap
 
 -- | Pick a projection without breaking dependencies.
-pickProjection :: MetaCtx -> Level -> Quant -> [(Quant, Iso, MetaCtx)]
-pickProjection mctx l q = undefined
+pickProjection :: MetaCtx -> Ctx -> Quant -> [(Quant, Iso, MetaCtx)]
+pickProjection mctx (Ctx l env idl _) q@(Quant x a b) = (q, Refl, mctx) : go l b
+  where
+    go l' c = case c (VVar l') of
+      VSigma y c1 c2 ->
+        ( maybeToList do
+            let i = l' - l
+            (c1, mctx) <- flip runStateT mctx $ rename (idl {cod = idl.cod + i + 1}) c1
+            let c1' = eval mctx env c1
+                rest ~vc1 = VSigma x a (instSigmaAt i vc1 . b)
+                s = swaps SigmaSwap i
+            pure (Quant y c1' rest, s, mctx)
+        )
+          ++ go (l' + 1) c2
+      c -> maybeToList do
+        let i = l' - l
+        (c, mctx) <- flip runStateT mctx $ rename (idl {cod = idl.cod + i + 1}) c
+        let c' = eval mctx env c
+            rest ~_ = dropLastProj l' (VSigma x a b)
+            s = swaps Comm i
+        Just (Quant "_" c' rest, s, mctx)
+
+    instSigmaAt = \cases
+      0 ~v (VSigma _ _ b) -> b v
+      i ~v (VSigma x a b) -> VSigma x a (instSigmaAt (i - 1) v . b)
+      _ ~_ _ -> error "impossible"
+
+    dropLastProj l = \case
+      VSigma x a b -> case b (VVar l) of
+        VSigma {} -> VSigma x a (dropLastProj (l + 1) . b)
+        _ -> a
+      _ -> error "impossible"
+
+    swaps i = \case
+      0 -> i
+      n -> sigmaCongR (swaps i (n - 1)) <> SigmaSwap
 
 -- | Pick a **non-sigma** projection without breaking dependencies.
 -- This works even in the presence of arbitrarily nested sigmas in the type.
-assocSwap :: MetaCtx -> Level -> Quant -> [(Quant, Iso, MetaCtx)]
-assocSwap mctx l q = do
+assocSwap :: MetaCtx -> Ctx -> Quant -> [(Quant, Iso, MetaCtx)]
+assocSwap mctx ctx q = do
   -- Pick one projection first.
-  (q, i, mctx) <- pickProjection mctx l q
+  (q, i, mctx) <- pickProjection mctx ctx q
   case q of
     -- When the selected projection is a sigma type, we invoke
     -- assocSwap recursively to make the first projection of the sigma non-sigma!
     Quant x (VSigma y a b) c -> do
-      (Quant y a b, j, mctx) <- assocSwap mctx l (Quant y a b)
+      (Quant y a b, j, mctx) <- assocSwap mctx ctx (Quant y a b)
       let -- Then associate to make the first projection non-sigma.
           -- Note the transport along j!
           q = Quant y a \ ~u -> VSigma x (b u) \ ~v -> c (transportInv j (VPair u v))
@@ -65,12 +133,12 @@ assocSwap mctx l q = do
 --            ( (B × A → B) → B → List A → B , ΠSwap · Curry           ),
 --            ( B → (B × A → B) → List A → B , ΠSwap · ΠL Comm · Curry )
 --          ]
-currySwap :: MetaCtx -> Level -> Quant -> [(Quant, Iso, MetaCtx)]
-currySwap mctx l q = do
-  (q, i, mctx) <- pickDomain mctx l q
+currySwap :: MetaCtx -> Ctx -> Quant -> [(Quant, Iso, MetaCtx)]
+currySwap mctx ctx q = do
+  (q, i, mctx) <- pickDomain mctx ctx q
   case q of
     Quant x (VSigma y a b) c -> do
-      (Quant y a b, j, mctx) <- assocSwap mctx l (Quant y a b)
+      (Quant y a b, j, mctx) <- assocSwap mctx ctx (Quant y a b)
       let q = Quant y a \ ~u -> VPi x (b u) \ ~v -> c (transportInv j (VPair u v))
           k = i <> piCongL j <> Curry
       pure (q, k, mctx)
@@ -82,96 +150,91 @@ unifyIso0 :: MetaCtx -> Term -> Term -> [(Iso, MetaCtx)]
 unifyIso0 mctx t t' = do
   let v = eval mctx [] t
       v' = eval mctx [] t'
-  (i, i', mctx) <- unifyIso mctx Rigid 0 v v'
+  (i, i', mctx) <- unifyIso mctx (Ctx 0 [] (PRen Nothing 0 0 mempty) Rigid) v v'
   let j = i <> sym i'
   pure (j, mctx)
 
-unifyIso :: MetaCtx -> ConvState -> Level -> Value -> Value -> [(Iso, Iso, MetaCtx)]
-unifyIso mctx cs l t u = case (force mctx t, force mctx u) of
-  (VPi x a b, VPi x' a' b') -> case cs of
+unifyIso :: MetaCtx -> Ctx -> Value -> Value -> [(Iso, Iso, MetaCtx)]
+unifyIso mctx ctx t u = case (force mctx t, force mctx u) of
+  (VPi x a b, VPi x' a' b') -> case ctx.convState of
     Rigid ->
-      unifyPi mctx Flex l (Quant x a b) (Quant x' a' b')
-        <|> unifyPiIso mctx l (Quant x a b) (Quant x' a' b')
-    Flex -> unifyPi mctx Flex l (Quant x a b) (Quant x' a' b')
-    Full -> unifyPiIso mctx l (Quant x a b) (Quant x' a' b')
-  (VSigma x a b, VSigma x' a' b') -> case cs of
+      unifyPi mctx (ctx {convState = Flex}) (Quant x a b) (Quant x' a' b')
+        <|> unifyPiIso mctx (ctx {convState = Full}) (Quant x a b) (Quant x' a' b')
+    Flex -> unifyPi mctx ctx (Quant x a b) (Quant x' a' b')
+    Full -> unifyPiIso mctx ctx (Quant x a b) (Quant x' a' b')
+  (VSigma x a b, VSigma x' a' b') -> case ctx.convState of
     Rigid ->
-      unifySigma mctx Flex l (Quant x a b) (Quant x' a' b')
-        <|> unifySigmaIso mctx l (Quant x a b) (Quant x' a' b')
-    Flex -> unifySigma mctx Flex l (Quant x a b) (Quant x' a' b')
-    Full -> unifySigmaIso mctx l (Quant x a b) (Quant x' a' b')
-  (t@(VTop x _ sp ft), t'@(VTop x' _ sp' ft')) -> case cs of
+      unifySigma mctx (ctx {convState = Flex}) (Quant x a b) (Quant x' a' b')
+        <|> unifySigmaIso mctx (ctx {convState = Full}) (Quant x a b) (Quant x' a' b')
+    Flex -> unifySigma mctx ctx (Quant x a b) (Quant x' a' b')
+    Full -> unifySigmaIso mctx ctx (Quant x a b) (Quant x' a' b')
+  (VTop x _ sp Nothing, VTop x' _ sp' Nothing)
+    | x == x' -> unifySpineRefl mctx ctx sp sp'
+  (VTop x _ sp (Just t), VTop x' _ sp' (Just t')) -> case ctx.convState of
     Rigid
       | x == x' ->
-          unifySpineRefl mctx Flex l sp sp'
-            <|> unifyIso mctx Full l (unfold t) (unfold t')
-      | otherwise -> unifyIso mctx Rigid l (unfold t) (unfold t')
+          unifySpineRefl mctx (ctx {convState = Flex}) sp sp'
+            <|> unifyIso mctx (ctx {convState = Full}) t t'
+      | otherwise -> unifyIso mctx ctx t t'
     Flex
-      | x == x' -> unifySpineRefl mctx Flex l sp sp'
+      | x == x' -> unifySpineRefl mctx ctx sp sp'
       | otherwise -> []
-    Full
-      | x == x' && isNothing ft && isNothing ft' ->
-          unifySpineRefl mctx Full l sp sp'
-      | otherwise -> unifyIso mctx Full l (unfold t) (unfold t')
-  (VTop _ _ _ t, t') -> case cs of
+    Full -> unifyIso mctx ctx t t'
+  (VTop _ _ _ (Just t), t') -> case ctx.convState of
     Flex -> []
-    _
-      | Just t <- t -> unifyIso mctx cs l t t'
-      | otherwise -> []
-  (t, VTop _ _ _ t') -> case cs of
+    _ -> unifyIso mctx ctx t t'
+  (t, VTop _ _ _ (Just t')) -> case ctx.convState of
     Flex -> []
-    _
-      | Just t' <- t' -> unifyIso mctx cs l t t'
-      | otherwise -> []
+    _ -> unifyIso mctx ctx t t'
   (t, u) -> do
-    mctx <- maybeToList $ unify mctx cs l t u
+    mctx <- maybeToList $ unify mctx ctx.convState ctx.level t u
     pure (Refl, Refl, mctx)
 
-unifySpineRefl :: MetaCtx -> ConvState -> Level -> Spine -> Spine -> [(Iso, Iso, MetaCtx)]
-unifySpineRefl mctx cs l sp sp' = do
-  mctx <- maybeToList $ unifySpine mctx cs l sp sp'
+unifySpineRefl :: MetaCtx -> Ctx -> Spine -> Spine -> [(Iso, Iso, MetaCtx)]
+unifySpineRefl mctx ctx sp sp' = do
+  mctx <- maybeToList $ unifySpine mctx ctx.convState ctx.level sp sp'
   pure (Refl, Refl, mctx)
 
-unifyPi :: MetaCtx -> ConvState -> Level -> Quant -> Quant -> [(Iso, Iso, MetaCtx)]
-unifyPi mctx cs l (Quant _ a b) (Quant _ a' b') = do
-  (ia, ia', mctx) <- unifyIso mctx cs l a a'
-  let v = transportInv ia (VVar l)
-      v' = transportInv ia' (VVar l)
-  (ib, ib', mctx) <- unifyIso mctx cs l (b v) (b' v')
+unifyPi :: MetaCtx -> Ctx -> Quant -> Quant -> [(Iso, Iso, MetaCtx)]
+unifyPi mctx ctx (Quant _ a b) (Quant _ a' b') = do
+  (ia, ia', mctx) <- unifyIso mctx ctx a a'
+  let v = transportInv ia (VVar ctx.level)
+      v' = transportInv ia' (VVar ctx.level)
+  (ib, ib', mctx) <- unifyIso mctx (bind ctx) (b v) (b' v')
   let i = piCongL ia <> piCongL ib
       i' = piCongL ia' <> piCongL ib'
   pure (i, i', mctx)
 
-unifyPiIso :: MetaCtx -> Level -> Quant -> Quant -> [(Iso, Iso, MetaCtx)]
-unifyPiIso mctx l q q' = do
+unifyPiIso :: MetaCtx -> Ctx -> Quant -> Quant -> [(Iso, Iso, MetaCtx)]
+unifyPiIso mctx ctx q q' = do
   let (Quant _ a b, i) = curry mctx q
-  flip foldMapA (currySwap mctx l q') \(Quant _ a' b', i', mctx) -> do
-    (ia, ia', mctx) <- unifyIso mctx Full l a a'
-    let v = transportInv ia (VVar l)
-        v' = transportInv ia' (VVar l)
-    (ib, ib', mctx) <- unifyIso mctx Full (l + 1) (b v) (b' v')
+  flip foldMapA (currySwap mctx ctx q') \(Quant _ a' b', i', mctx) -> do
+    (ia, ia', mctx) <- unifyIso mctx ctx a a'
+    let v = transportInv ia (VVar ctx.level)
+        v' = transportInv ia' (VVar ctx.level)
+    (ib, ib', mctx) <- unifyIso mctx (bind ctx) (b v) (b' v')
     let j = i <> piCongL ia <> piCongR ib
         j' = i' <> piCongL ia' <> piCongR ib'
     pure (j, j', mctx)
 
-unifySigma :: MetaCtx -> ConvState -> Level -> Quant -> Quant -> [(Iso, Iso, MetaCtx)]
-unifySigma mctx cs l (Quant _ a b) (Quant _ a' b') = do
-  (ia, ia', mctx) <- unifyIso mctx cs l a a'
-  let v = transportInv ia (VVar l)
-      v' = transportInv ia' (VVar l)
-  (ib, ib', mctx) <- unifyIso mctx cs l (b v) (b' v')
+unifySigma :: MetaCtx -> Ctx -> Quant -> Quant -> [(Iso, Iso, MetaCtx)]
+unifySigma mctx ctx (Quant _ a b) (Quant _ a' b') = do
+  (ia, ia', mctx) <- unifyIso mctx ctx a a'
+  let v = transportInv ia (VVar ctx.level)
+      v' = transportInv ia' (VVar ctx.level)
+  (ib, ib', mctx) <- unifyIso mctx (bind ctx) (b v) (b' v')
   let i = sigmaCongL ia <> sigmaCongL ib
       i' = sigmaCongL ia' <> sigmaCongL ib'
   pure (i, i', mctx)
 
-unifySigmaIso :: MetaCtx -> Level -> Quant -> Quant -> [(Iso, Iso, MetaCtx)]
-unifySigmaIso mctx l q q' = do
+unifySigmaIso :: MetaCtx -> Ctx -> Quant -> Quant -> [(Iso, Iso, MetaCtx)]
+unifySigmaIso mctx ctx q q' = do
   let (Quant _ a b, i) = assoc mctx q
-  flip foldMapA (assocSwap mctx l q') \(Quant _ a' b', i', mctx) -> do
-    (ia, ia', mctx) <- unifyIso mctx Full l a a'
-    let v = transportInv ia (VVar l)
-        v' = transportInv ia' (VVar l)
-    (ib, ib', mctx) <- unifyIso mctx Full (l + 1) (b v) (b' v')
+  flip foldMapA (assocSwap mctx ctx q') \(Quant _ a' b', i', mctx) -> do
+    (ia, ia', mctx) <- unifyIso mctx ctx a a'
+    let v = transportInv ia (VVar ctx.level)
+        v' = transportInv ia' (VVar ctx.level)
+    (ib, ib', mctx) <- unifyIso mctx (bind ctx) (b v) (b' v')
     let j = i <> sigmaCongL ia <> sigmaCongR ib
         j' = i' <> sigmaCongL ia' <> sigmaCongR ib'
     pure (j, j', mctx)

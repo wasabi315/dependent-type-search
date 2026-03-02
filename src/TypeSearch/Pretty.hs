@@ -117,6 +117,7 @@ prettyTerm = go
         par p absP $
           showString "λ " . shows n . goAbs (n : ns) t
       App t u -> par p appP $ go ns appP t . showChar ' ' . go ns projP u
+      AppPruning t pr -> goPruning (go ns appP t) ns pr
       Sigma "_" a b ->
         par p sigmaP $ go ns appP a . showString " × " . go ("_" : ns) sigmaP b
       Sigma (freshen ns -> n) a b ->
@@ -142,6 +143,12 @@ prettyTerm = go
       Lam (freshen ns -> n) t ->
         showChar ' ' . shows n . goAbs (n : ns) t
       t -> showString ". " . go ns absP t
+
+    goPruning t = \cases
+      [] [] -> t
+      (n : ns) (True : pr) -> goPruning t ns pr . showChar ' ' . shows n
+      (_ : ns) (False : pr) -> goPruning t ns pr
+      _ _ -> error "impossible"
 
 prettyIso :: Int -> Iso -> ShowS
 prettyIso p = \case

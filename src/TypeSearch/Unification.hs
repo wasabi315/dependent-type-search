@@ -287,35 +287,30 @@ unify mctx cs l t t' = case (force mctx t, force mctx t') of
     | otherwise -> do
         guard $ cs /= Flex
         flexFlex mctx l m sp m' sp'
-  (t@(VTop x _ sp ft), t'@(VTop x' _ sp' ft')) -> case cs of
+  (VTop x _ sp Nothing, VTop x' _ sp' Nothing)
+    | x == x' -> unifySpine mctx cs l sp sp'
+  (VTop x _ sp (Just t), VTop x' _ sp' (Just t')) -> case cs of
     Rigid
       | x == x' ->
           unifySpine mctx Flex l sp sp'
-            <|> unify mctx Full l (unfold t) (unfold t')
-      | otherwise -> unify mctx Rigid l (unfold t) (unfold t')
+            <|> unify mctx Full l t t'
+      | otherwise -> unify mctx Rigid l t t'
     Flex
       | x == x' -> unifySpine mctx Flex l sp sp'
       | otherwise -> Nothing
-    Full
-      | x == x' && isNothing ft && isNothing ft' ->
-          unifySpine mctx Full l sp sp'
-      | otherwise -> unify mctx Full l (unfold t) (unfold t')
+    Full -> unify mctx Full l t t'
   (VFlex m sp, t') -> do
     guard $ cs /= Flex
     solve mctx l m sp t'
   (t, VFlex m' sp') -> do
     guard $ cs /= Flex
     solve mctx l m' sp' t
-  (VTop _ _ _ t, t') -> case cs of
+  (VTop _ _ _ (Just t), t') -> case cs of
     Flex -> Nothing
-    _
-      | Just t <- t -> unify mctx cs l t t'
-      | otherwise -> Nothing
-  (t, VTop _ _ _ t') -> case cs of
+    _ -> unify mctx cs l t t'
+  (t, VTop _ _ _ (Just t')) -> case cs of
     Flex -> Nothing
-    _
-      | Just t' <- t' -> unify mctx cs l t t'
-      | otherwise -> Nothing
+    _ -> unify mctx cs l t t'
   _ -> Nothing
 
 unifySpine :: MetaCtx -> ConvState -> Level -> Spine -> Spine -> Maybe MetaCtx
@@ -327,8 +322,3 @@ unifySpine mctx cs l = \cases
   (SFst sp) (SFst sp') -> unifySpine mctx cs l sp sp'
   (SSnd sp) (SSnd sp') -> unifySpine mctx cs l sp sp'
   _ _ -> Nothing
-
-unfold :: Value -> Value
-unfold = \case
-  VTop _ _ _ (Just t) -> t
-  t -> t
