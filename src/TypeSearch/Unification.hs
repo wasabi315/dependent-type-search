@@ -3,7 +3,6 @@ module TypeSearch.Unification where
 import Control.Applicative
 import Control.Monad
 import Control.Monad.State.Strict
-import Data.Coerce
 import Data.HashMap.Strict qualified as HM
 import Data.IntMap.Strict qualified as IM
 import Data.IntSet qualified as IS
@@ -58,8 +57,8 @@ invert mctx gamma sp = do
             True -> pure (dom + 1, IM.delete x ren, IS.insert x nlvars, Level x : fsp)
             False -> pure (dom + 1, IM.insert x dom ren, nlvars, Level x : fsp)
         SApp {} -> Nothing
-        SFst {} -> Nothing
-        SSnd {} -> Nothing
+        SProj1 {} -> Nothing
+        SProj2 {} -> Nothing
 
   (dom, ren, nlvars, fsp) <- go sp
 
@@ -194,8 +193,8 @@ renameSpine :: PartialRenaming -> Term -> Spine -> P Term
 renameSpine pren t = \case
   SNil -> pure t
   SApp sp u -> App <$> renameSpine pren t sp <*> renameP pren u
-  SFst sp -> Fst <$> renameSpine pren t sp
-  SSnd sp -> Snd <$> renameSpine pren t sp
+  SProj1 sp -> Proj1 <$> renameSpine pren t sp
+  SProj2 sp -> Proj2 <$> renameSpine pren t sp
 
 -- | Wrap a term in Level number of lambdas. We get the domain info from the Value
 --   argument.
@@ -236,8 +235,8 @@ spineLength :: Spine -> Int
 spineLength = \case
   SNil -> 0
   SApp sp _ -> 1 + spineLength sp
-  SFst sp -> spineLength sp
-  SSnd sp -> spineLength sp
+  SProj1 sp -> spineLength sp
+  SProj2 sp -> spineLength sp
 
 -- | Solve @Γ ⊢ m spine =? m' spine'@.
 flexFlex :: MetaCtx -> Level -> MetaVar -> Spine -> MetaVar -> Spine -> Maybe MetaCtx
@@ -290,11 +289,11 @@ unify mctx cs l t t' = case (forceCS mctx cs t, forceCS mctx cs t') of
     mctx <- unify mctx cs l t t'
     unify mctx cs l u u'
   (VPair t u, t') -> do
-    mctx <- unify mctx cs l t (vFst t')
-    unify mctx cs l u (vSnd t')
+    mctx <- unify mctx cs l t (vProj1 t')
+    unify mctx cs l u (vProj2 t')
   (t, VPair t' u') -> do
-    mctx <- unify mctx cs l (vFst t) t'
-    unify mctx cs l (vSnd t) u'
+    mctx <- unify mctx cs l (vProj1 t) t'
+    unify mctx cs l (vProj2 t) u'
   (VRigid x sp, VRigid x' sp')
     | x == x' -> unifySpine mctx cs l sp sp'
   (VFlex m sp, VFlex m' sp')
@@ -336,6 +335,6 @@ unifySpine mctx cs l = \cases
   (SApp sp t) (SApp sp' t') -> do
     mctx <- unifySpine mctx cs l sp sp'
     unify mctx cs l t t'
-  (SFst sp) (SFst sp') -> unifySpine mctx cs l sp sp'
-  (SSnd sp) (SSnd sp') -> unifySpine mctx cs l sp sp'
+  (SProj1 sp) (SProj1 sp') -> unifySpine mctx cs l sp sp'
+  (SProj2 sp) (SProj2 sp') -> unifySpine mctx cs l sp sp'
   _ _ -> Nothing

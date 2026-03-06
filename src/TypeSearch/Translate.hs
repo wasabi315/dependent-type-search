@@ -409,23 +409,23 @@ translateToPairs qname recDef conDef = do
         pure (buildPairChain id recFields)
   pure [DLet Nothing qname ctorTy ctorBody]
 
-translateToFstSnd :: QName -> Agda.Definition -> Agda.Definition -> M [Decl]
-translateToFstSnd qname recDef projDef = do
+translateToProj1Proj2 :: QName -> Agda.Definition -> Agda.Definition -> M [Decl]
+translateToProj1Proj2 qname recDef projDef = do
   let Agda.Record {..} = recDef.theDef
 
-  let buildFstSndChain snds = \cases
+  let buildProj1Proj2Chain snds = \cases
         [_] -> snds (RVar "r")
         (n : ns) ->
           if n.unDom == projDef.defName
-            then snds (RFst (RVar "r"))
-            else buildFstSndChain (snds . RSnd) ns
+            then snds (RProj1 (RVar "r"))
+            else buildProj1Proj2Chain (snds . RProj2) ns
         _ -> __IMPOSSIBLE__
 
   Agda.TelV parTel _ <- Agda.telViewUpTo recPars projDef.defType
   projTy <- translateType projDef.defType
   projBody <-
     translateTeleBindsToLam parTel $
-      pure (RLam "r" $ buildFstSndChain id recFields)
+      pure (RLam "r" $ buildProj1Proj2Chain id recFields)
   pure [DLet Nothing qname projTy projBody]
 
 --------------------------------------------------------------------------------
@@ -528,7 +528,7 @@ translateFunDef qname def = do
         Right (Agda.projProper -> Just r) -> do
           recDef <- Agda.getConstInfo r
           if isSigmaTranslatable recDef
-            then translateToFstSnd qname recDef def
+            then translateToProj1Proj2 qname recDef def
             else pure <$> translateToAxiom qname def.defType
         _ ->
           Agda.ifM

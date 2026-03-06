@@ -77,8 +77,8 @@ prettyRaw = go
       RSigma "_" a b -> par p piP $ go appP a . showString " × " . go sigmaP b
       RSigma n a b -> par p sigmaP $ piBind n a . showString " × " . go sigmaP b
       RPair a b -> par p pairP $ go absP a . showString " , " . go absP b
-      RFst a -> par p projP $ go projP a . showString ".1"
-      RSnd a -> par p projP $ go projP a . showString ".2"
+      RProj1 a -> par p projP $ go projP a . showString ".1"
+      RProj2 a -> par p projP $ go projP a . showString ".2"
       RPos t _ -> go p t
 
     piBind n a =
@@ -122,8 +122,8 @@ prettyTerm = go
         par p sigmaP $ go ns appP a . showString " × " . go ("_" : ns) sigmaP b
       Sigma (freshen ns -> n) a b ->
         par p sigmaP $ piBind n ns a . showString " × " . go (n : ns) sigmaP b
-      Fst t -> par p projP $ go ns projP t . showString ".1"
-      Snd t -> par p projP $ go ns projP t . showString ".2"
+      Proj1 t -> par p projP $ go ns projP t . showString ".1"
+      Proj2 t -> par p projP $ go ns projP t . showString ".2"
       Pair t u -> par p pairP $ go ns absP t . showString " , " . go ns pairP u
 
     piBind n ns a =

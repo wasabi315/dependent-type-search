@@ -18,6 +18,7 @@ module TypeSearch.Common
 
     -- * Position
     SourcePos (..),
+    module Data.Coerce,
   )
 where
 

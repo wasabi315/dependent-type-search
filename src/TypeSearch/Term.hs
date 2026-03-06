@@ -23,15 +23,17 @@ data Term
   | Meta MetaVar -- ?m
   | Top {-# UNPACK #-} QName (DontPrint (Maybe Value)) -- M.f, Nothing for axioms
   | U -- U
-  | Pi Name Term Term -- (x : A) → B
-  | Lam Name Term -- λ x → t
-  | App Term Term -- t1 t2
+  | Pi Name Type Type -- (x : A) → B or {x : A} → B
+  | Lam Name Term -- λ x → t or λ {x} → t
+  | App Term Term -- t1 t2 or t1 {t2}
   | AppPruning Term Pruning
-  | Sigma Name Term Term -- (x : A) × B
+  | Sigma Name Type Type -- (x : A) × B
   | Pair Term Term -- (t1, t2)
-  | Fst Term -- t.1
-  | Snd Term -- t.2
+  | Proj1 Term -- t.1
+  | Proj2 Term -- t.2
   deriving stock (Show)
+
+type Type = Term
 
 --------------------------------------------------------------------------------
 -- Values
@@ -46,16 +48,18 @@ data Value
   | VFlex MetaVar Spine
   | VTop {-# UNPACK #-} QName (Maybe Value) Spine (Maybe Value) -- Nothing for axioms
   | VU
-  | VPi Name Value (Value -> Value)
+  | VPi Name VType (Value -> VType)
   | VLam Name (Value -> Value)
-  | VSigma Name Value (Value -> Value)
+  | VSigma Name VType (Value -> VType)
   | VPair Value Value
+
+type VType = Value
 
 data Spine
   = SNil
   | SApp Spine Value
-  | SFst Spine
-  | SSnd Spine
+  | SProj1 Spine
+  | SProj2 Spine
 
 pattern VVar :: Level -> Value
 pattern VVar x = VRigid x SNil

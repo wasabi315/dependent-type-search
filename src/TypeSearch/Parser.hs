@@ -117,8 +117,8 @@ pAtom =
 goProj :: Raw -> Parser Raw
 goProj t =
   ( char '.'
-      *> ( ((char '₁' <|> char '1') *> goProj (RFst t))
-             <|> ((char '₂' <|> char '2') *> goProj (RSnd t))
+      *> ( ((char '₁' <|> char '1') *> goProj (RProj1 t))
+             <|> ((char '₂' <|> char '2') *> goProj (RProj2 t))
          )
   )
     <|> pure t

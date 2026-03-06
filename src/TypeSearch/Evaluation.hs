@@ -1,6 +1,5 @@
 module TypeSearch.Evaluation where
 
-import Data.Coerce
 import Data.Foldable
 import Data.HashMap.Strict qualified as HM
 import TypeSearch.Common
@@ -84,8 +83,8 @@ eval mctx env = \case
   App t u -> eval mctx env t $$ eval mctx env u
   Sigma x a b -> VSigma x (eval mctx env a) (evalBind mctx env b)
   Pair t u -> VPair (eval mctx env t) (eval mctx env u)
-  Fst t -> vFst (eval mctx env t)
-  Snd t -> vSnd (eval mctx env t)
+  Proj1 t -> vProj1 (eval mctx env t)
+  Proj2 t -> vProj2 (eval mctx env t)
   AppPruning t pr -> vAppPruning env (eval mctx env t) pr
 
 evalBind :: MetaCtx -> Env -> Term -> (Value -> Value)
@@ -114,28 +113,28 @@ t $$ u = case t of
   VTop x f sp t -> VTop x f (SApp sp u) (fmap ($$ u) t)
   _ -> impossible
 
-vFst :: Value -> Value
-vFst = \case
+vProj1 :: Value -> Value
+vProj1 = \case
   VPair t _ -> t
-  VRigid x sp -> VRigid x (SFst sp)
-  VFlex m sp -> VFlex m (SFst sp)
-  VTop x f sp t -> VTop x f (SFst sp) (vFst <$> t)
+  VRigid x sp -> VRigid x (SProj1 sp)
+  VFlex m sp -> VFlex m (SProj1 sp)
+  VTop x f sp t -> VTop x f (SProj1 sp) (vProj1 <$> t)
   _ -> impossible
 
-vSnd :: Value -> Value
-vSnd = \case
+vProj2 :: Value -> Value
+vProj2 = \case
   VPair _ t -> t
-  VRigid x sp -> VRigid x (SSnd sp)
-  VFlex m sp -> VFlex m (SSnd sp)
-  VTop x f sp t -> VTop x f (SSnd sp) (vSnd <$> t)
+  VRigid x sp -> VRigid x (SProj2 sp)
+  VFlex m sp -> VFlex m (SProj2 sp)
+  VTop x f sp t -> VTop x f (SProj2 sp) (vProj2 <$> t)
   _ -> impossible
 
 vAppSpine :: Value -> Spine -> Value
 vAppSpine t = \case
   SNil -> t
   SApp sp u -> vAppSpine t sp $$ u
-  SFst sp -> vFst $ vAppSpine t sp
-  SSnd sp -> vSnd $ vAppSpine t sp
+  SProj1 sp -> vProj1 $ vAppSpine t sp
+  SProj2 sp -> vProj2 $ vAppSpine t sp
 
 force :: MetaCtx -> Value -> Value
 force mctx = \case
@@ -174,8 +173,8 @@ quoteSpine :: MetaCtx -> Level -> Term -> Spine -> Term
 quoteSpine mctx l h = \case
   SNil -> h
   SApp sp u -> quoteSpine mctx l h sp `App` quote mctx l u
-  SFst sp -> Fst $ quoteSpine mctx l h sp
-  SSnd sp -> Snd $ quoteSpine mctx l h sp
+  SProj1 sp -> Proj1 $ quoteSpine mctx l h sp
+  SProj2 sp -> Proj2 $ quoteSpine mctx l h sp
 
 --------------------------------------------------------------------------------
 -- Transport
@@ -186,15 +185,15 @@ transport i v = case i of
   Refl -> v
   Sym i -> transportInv i v
   Trans i j -> transport j (transport i v)
-  Assoc -> vFst (vFst v) `VPair` (vSnd (vFst v) `VPair` vSnd v)
-  Comm -> vSnd v `VPair` vFst v
-  SigmaSwap -> vFst (vSnd v) `VPair` (vFst v `VPair` vSnd (vSnd v))
+  Assoc -> vProj1 (vProj1 v) `VPair` (vProj2 (vProj1 v) `VPair` vProj2 v)
+  Comm -> vProj2 v `VPair` vProj1 v
+  SigmaSwap -> vProj1 (vProj2 v) `VPair` (vProj1 v `VPair` vProj2 (vProj2 v))
   Curry -> VLam "x" \x -> VLam "y" \y -> v $$ VPair x y
   PiSwap -> VLam "y" \y -> VLam "x" \x -> v $$ x $$ y
   PiCongL i -> VLam "x" \x -> v $$ transportInv i x
   PiCongR i -> VLam "x" \x -> transport i (v $$ x)
-  SigmaCongL i -> transport i (vFst v) `VPair` vSnd v
-  SigmaCongR i -> vFst v `VPair` transport i (vSnd v)
+  SigmaCongL i -> transport i (vProj1 v) `VPair` vProj2 v
+  SigmaCongR i -> vProj1 v `VPair` transport i (vProj2 v)
 
 -- transport back
 transportInv :: Iso -> Value -> Value
@@ -202,12 +201,12 @@ transportInv i v = case i of
   Refl -> v
   Sym i -> transport i v
   Trans i j -> transportInv i (transportInv j v)
-  Assoc -> (vFst v `VPair` vFst (vSnd v)) `VPair` vSnd (vSnd v)
-  Comm -> vSnd v `VPair` vFst v
-  SigmaSwap -> vFst (vSnd v) `VPair` (vFst v `VPair` vSnd (vSnd v))
-  Curry -> VLam "p" \p -> v $$ vFst p $$ vSnd p
+  Assoc -> (vProj1 v `VPair` vProj1 (vProj2 v)) `VPair` vProj2 (vProj2 v)
+  Comm -> vProj2 v `VPair` vProj1 v
+  SigmaSwap -> vProj1 (vProj2 v) `VPair` (vProj1 v `VPair` vProj2 (vProj2 v))
+  Curry -> VLam "p" \p -> v $$ vProj1 p $$ vProj2 p
   PiSwap -> VLam "x" \x -> VLam "y" \y -> v $$ y $$ x
   PiCongL i -> VLam "x" \x -> v $$ transport i x
   PiCongR i -> VLam "x" \x -> transportInv i (v $$ x)
-  SigmaCongL i -> transportInv i (vFst v) `VPair` vSnd v
-  SigmaCongR i -> vFst v `VPair` transportInv i (vSnd v)
+  SigmaCongL i -> transportInv i (vProj1 v) `VPair` vProj2 v
+  SigmaCongR i -> vProj1 v `VPair` transportInv i (vProj2 v)
