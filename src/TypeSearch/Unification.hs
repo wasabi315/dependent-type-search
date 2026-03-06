@@ -105,10 +105,10 @@ pruneType (RevPruning pr) a =
     go pr pren a = do
       a <- forceP a
       case (pr, a) of
-        ([], a) -> rename pren a
+        ([], a) -> renameP pren a
         (True : pr, VPi x a b) ->
           Pi x
-            <$> rename pren a
+            <$> renameP pren a
             <*> go pr (liftPren pren) (b $ VVar pren.cod)
         (False : pr, VPi _ _ b) ->
           go pr (skipPren pren) (b $ VVar pren.cod)
@@ -149,7 +149,7 @@ pruneVFlex pren m sp = do
               t -> case status of
                 NeedsPruning -> empty
                 _ -> do
-                  t <- rename pren t
+                  t <- renameP pren t
                   pure (Just t : sp, OKNonRenaming)
           _ -> empty
     go sp
@@ -162,8 +162,11 @@ pruneVFlex pren m sp = do
   let t = foldr (\mu t -> maybe t (App t) mu) (Meta m') sp
   pure t
 
-rename :: PartialRenaming -> Value -> P Term
-rename pren t =
+rename :: MetaCtx -> PartialRenaming -> Value -> Maybe (Term, MetaCtx)
+rename mctx pren t = flip runStateT mctx $ renameP pren t
+
+renameP :: PartialRenaming -> Value -> P Term
+renameP pren t =
   forceP t >>= \case
     VFlex m' sp -> case pren.occ of
       Just m | m == m' -> empty -- occurs check
@@ -172,25 +175,25 @@ rename pren t =
       Nothing -> empty -- scope error ("escaping variable" error)
       Just x' -> renameSpine pren (Var $ levelToIndex pren.dom x') sp
     VTop x f sp Nothing -> renameSpine pren (Top x (coerce f)) sp
-    VTop _ _ _ (Just t) -> rename pren t
+    VTop _ _ _ (Just t) -> renameP pren t
     VU -> pure U
     VPi x a b ->
       Pi x
-        <$> rename pren a
-        <*> rename (liftPren pren) (b $ VVar pren.cod)
+        <$> renameP pren a
+        <*> renameP (liftPren pren) (b $ VVar pren.cod)
     VLam x t ->
-      Lam x <$> rename (liftPren pren) (t $ VVar pren.cod)
+      Lam x <$> renameP (liftPren pren) (t $ VVar pren.cod)
     VSigma x a b ->
       Sigma x
-        <$> rename pren a
-        <*> rename (liftPren pren) (b $ VVar pren.cod)
+        <$> renameP pren a
+        <*> renameP (liftPren pren) (b $ VVar pren.cod)
     VPair t u ->
-      Pair <$> rename pren t <*> rename pren u
+      Pair <$> renameP pren t <*> renameP pren u
 
 renameSpine :: PartialRenaming -> Term -> Spine -> P Term
 renameSpine pren t = \case
   SNil -> pure t
-  SApp sp u -> App <$> renameSpine pren t sp <*> rename pren u
+  SApp sp u -> App <$> renameSpine pren t sp <*> renameP pren u
   SFst sp -> Fst <$> renameSpine pren t sp
   SSnd sp -> Snd <$> renameSpine pren t sp
 
@@ -225,7 +228,7 @@ solveWithPren mctx m (pren, pruneNonLinear) rhs = flip execStateT mctx do
   case pruneNonLinear of
     Nothing -> pure ()
     Just pr -> void $ pruneType (revPruning pr) mty
-  rhs <- rename (pren {occ = Just m}) rhs
+  rhs <- renameP (pren {occ = Just m}) rhs
   solution <- evalP [] =<< lams pren.dom mty rhs
   writeMeta m solution mty
 

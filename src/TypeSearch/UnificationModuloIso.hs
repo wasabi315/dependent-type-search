@@ -1,7 +1,6 @@
 module TypeSearch.UnificationModuloIso where
 
 import Control.Applicative
-import Control.Monad.State.Strict
 import Data.Maybe
 import TypeSearch.Common
 import TypeSearch.Evaluation
@@ -46,16 +45,16 @@ assoc mctx cs = go Refl
         go (i <> Assoc) $ Quant y a1 \ ~u -> VPi x (a2 u) \ ~v -> b (VPair u v)
       a -> (Quant x a b, i)
 
--- | Pick a domain without breaking dependencies.
-pickDomain :: MetaCtx -> Ctx -> Quant -> [(Quant, Iso, MetaCtx)]
-pickDomain mctx (Ctx l env idl cs) q@(Quant x a b) = (q, Refl, mctx) : go l b
+-- | Pick up a domain without breaking dependencies.
+pickUpDomain :: MetaCtx -> Ctx -> Quant -> [(Quant, Iso, MetaCtx)]
+pickUpDomain mctx (Ctx l env idRen cs) (Quant x a b) = (Quant x a b, Refl, mctx) : go l b
   where
     go l' c = case forceCS mctx cs $ c (VVar l') of
       VPi y c1 c2 ->
-        ( maybeToList do
+        ( do
             let i = l' - l
             -- Strengthen c1. This may involve pruning.
-            (c1, mctx) <- flip runStateT mctx $ rename (skipPrenN (i + 1) idl) c1
+            (c1, mctx) <- maybeToList $ rename mctx (skipPrenN (i + 1) idRen) c1
             let c1' = eval mctx env c1
                 rest ~vc1 = VPi x a (instPiAt i vc1 . b)
                 s = swaps i
@@ -73,29 +72,29 @@ pickDomain mctx (Ctx l env idl cs) q@(Quant x a b) = (q, Refl, mctx) : go l b
       0 -> PiSwap
       n -> piCongR (swaps (n - 1)) <> PiSwap
 
--- | Pick a projection without breaking dependencies.
-pickProjection :: MetaCtx -> Ctx -> Quant -> [(Quant, Iso, MetaCtx)]
-pickProjection mctx (Ctx l env idl cs) q@(Quant x a b) = (q, Refl, mctx) : go l b
+-- | Pick up a projection without breaking dependencies.
+pickUpProjection :: MetaCtx -> Ctx -> Quant -> [(Quant, Iso, MetaCtx)]
+pickUpProjection mctx (Ctx l env idRen cs) (Quant x a b) = (Quant x a b, Refl, mctx) : go l b
   where
     go l' c = case forceCS mctx cs $ c (VVar l') of
       VSigma y c1 c2 ->
-        ( maybeToList do
+        ( do
             let i = l' - l
             -- Strengthen c1. This may involve pruning.
-            (c1, mctx) <- flip runStateT mctx $ rename (skipPrenN (i + 1) idl) c1
+            (c1, mctx) <- maybeToList $ rename mctx (skipPrenN (i + 1) idRen) c1
             let c1' = eval mctx env c1
                 rest ~vc1 = VSigma x a (instSigmaAt i vc1 . b)
                 s = swaps SigmaSwap i
             pure (Quant y c1' rest, s, mctx)
         )
           ++ go (l' + 1) c2
-      c -> maybeToList do
+      c -> do
         let i = l' - l
-        (c, mctx) <- flip runStateT mctx $ rename (skipPrenN (i + 1) idl) c
+        (c, mctx) <- maybeToList $ rename mctx (skipPrenN (i + 1) idRen) c
         let c' = eval mctx env c
-            rest ~_ = dropLastProj l' (VSigma x a b)
+            rest ~_ = dropLastProj (l + 1) (VSigma x a b)
             s = swaps Comm i
-        Just (Quant "_" c' rest, s, mctx)
+        pure (Quant "_" c' rest, s, mctx)
 
     instSigmaAt i ~v t = case (i, forceCS mctx cs t) of
       (0, VSigma _ _ b) -> b v
@@ -117,7 +116,7 @@ pickProjection mctx (Ctx l env idl cs) q@(Quant x a b) = (q, Refl, mctx) : go l 
 assocSwap :: MetaCtx -> Ctx -> Quant -> [(Quant, Iso, MetaCtx)]
 assocSwap mctx ctx q = do
   -- Pick one projection first.
-  (q, i, mctx) <- pickProjection mctx ctx q
+  (q, i, mctx) <- pickUpProjection mctx ctx q
   case q of
     -- When the selected projection is a sigma type, we invoke
     -- assocSwap recursively to make the first projection of the sigma non-sigma!
@@ -140,7 +139,7 @@ assocSwap mctx ctx q = do
 --          ]
 currySwap :: MetaCtx -> Ctx -> Quant -> [(Quant, Iso, MetaCtx)]
 currySwap mctx ctx q = do
-  (q, i, mctx) <- pickDomain mctx ctx q
+  (q, i, mctx) <- pickUpDomain mctx ctx q
   case q of
     Quant x (VSigma y a b) c -> do
       (Quant y a b, j, mctx) <- assocSwap mctx ctx (Quant y a b)
@@ -150,6 +149,7 @@ currySwap mctx ctx q = do
     q -> pure (q, i, mctx)
 
 --------------------------------------------------------------------------------
+-- Unification modulo type isomorphism
 
 unifyIso0 :: MetaCtx -> Term -> Term -> [(Iso, MetaCtx)]
 unifyIso0 mctx t t' = do

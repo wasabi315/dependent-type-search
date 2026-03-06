@@ -24,6 +24,7 @@ exMetaCtx =
       [ ("α", Unsolved VU),
         ("β", Unsolved VU),
         ("γ", Unsolved VU),
+        ("ε", Unsolved VU),
         ("δ", Unsolved ((vlist $$ vgamma) --> VU))
       ]
 
@@ -39,6 +40,9 @@ vgamma = VMeta "γ"
 vdelta :: Value
 vdelta = VMeta "δ"
 
+veps :: Value
+veps = VMeta "ε"
+
 vlist :: Value
 vlist = VTop (QName "Agda.Builtin.List" "List") Nothing SNil Nothing
 
@@ -50,7 +54,7 @@ tFoldr1 =
 tFoldr2 :: Term
 tFoldr2 =
   quote exMetaCtx 0 $
-    vbeta --> (valpha --> vbeta --> vbeta) --> (vlist $$ valpha) --> vbeta
+    (vlist $$ vgamma) --> (veps *** vgamma --> veps) --> veps --> veps
 
 tFoldr3 :: Term
 tFoldr3 =
