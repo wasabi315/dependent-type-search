@@ -21,11 +21,11 @@ instance Show QName where
 data Term
   = Var Index -- x
   | Meta MetaVar -- ?m
-  | Top {-# UNPACK #-} QName (DontPrint (Maybe Value)) -- M.f, Nothing for axioms
+  | Top {-# UNPACK #-} QName -- M.f
   | U -- U
-  | Pi Name Type Type -- (x : A) → B or {x : A} → B
-  | Lam Name Term -- λ x → t or λ {x} → t
-  | App Term Term -- t1 t2 or t1 {t2}
+  | Pi Name Type Type -- (x : A) → B
+  | Lam Name Term -- λ x → t
+  | App Term Term -- t1 t2
   | AppPruning Term Pruning
   | Sigma Name Type Type -- (x : A) × B
   | Pair Term Term -- (t1, t2)
@@ -34,59 +34,6 @@ data Term
   deriving stock (Show)
 
 type Type = Term
-
---------------------------------------------------------------------------------
--- Values
-
--- | De Bruijn levels
-newtype Level = Level Int
-  deriving newtype (Eq, Ord, Num, Show, Hashable)
-
--- | Values
-data Value
-  = VRigid Level Spine
-  | VFlex MetaVar Spine
-  | VTop {-# UNPACK #-} QName (Maybe Value) Spine (Maybe Value) -- Nothing for axioms
-  | VU
-  | VPi Name VType (Value -> VType)
-  | VLam Name (Value -> Value)
-  | VSigma Name VType (Value -> VType)
-  | VPair Value Value
-
-type VType = Value
-
-data Spine
-  = SNil
-  | SApp Spine Value
-  | SProj1 Spine
-  | SProj2 Spine
-
-pattern VVar :: Level -> Value
-pattern VVar x = VRigid x SNil
-
-pattern VMeta :: MetaVar -> Value
-pattern VMeta m = VFlex m SNil
-
-data Quant = Quant Name Value (Value -> Value)
-
--- | Environment keyed by De Bruijn indices
-type Env = [Value]
-
--- | Environment keyed by top-level names
-type TopEnv = HM.HashMap QName (Maybe Value)
-
--- | Meta-context
-data MetaCtx = MetaCtx
-  { nextMeta :: GenMetaVar,
-    metaCtx :: HM.HashMap MetaVar MetaEntry
-  }
-
-data MetaEntry
-  = Unsolved ~Value
-  | Solved Value ~Value
-
-emptyMetaCtx :: MetaCtx
-emptyMetaCtx = MetaCtx 0 mempty
 
 type Pruning = [Bool]
 

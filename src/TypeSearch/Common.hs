@@ -10,6 +10,7 @@ module TypeSearch.Common
 
     -- * Names
     Index (..),
+    Level (..),
     GenMetaVar (..),
     MetaVar (..),
     Name (..),
@@ -73,6 +74,10 @@ instance Show (DontPrint a) where
 -- | De Bruijn indices
 newtype Index = Index Int
   deriving newtype (Num, Eq, Ord, Show, Hashable, Enum)
+
+-- | De Bruijn levels
+newtype Level = Level Int
+  deriving newtype (Eq, Ord, Num, Show, Hashable)
 
 -- | Generated metavariables
 newtype GenMetaVar = GenMetaVar Int

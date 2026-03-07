@@ -84,8 +84,8 @@ newMetaP ~mty = state (`newMeta` mty)
 forceP :: Value -> P Value
 forceP t = gets (`force` t)
 
-evalP :: Env -> Term -> P Value
-evalP env t = gets \mctx -> eval mctx env t
+evalP :: TopEnv -> Env -> Term -> P Value
+evalP tenv env t = gets \mctx -> eval mctx tenv env t
 
 lookupUnsolved :: MetaVar -> P Value
 lookupUnsolved m = gets \mctx -> case mctx.metaCtx HM.! m of
@@ -97,29 +97,29 @@ writeMeta m t ~a = modify' \mctx ->
   mctx {metaCtx = HM.insert m (Solved t a) mctx.metaCtx}
 
 -- | Remove some arguments from a closed iterated Pi type.
-pruneType :: RevPruning -> Value -> P Term
-pruneType (RevPruning pr) a =
+pruneType :: TopEnv -> RevPruning -> Value -> P Term
+pruneType tenv (RevPruning pr) a =
   go pr (PRen Nothing 0 0 mempty) a
   where
     go pr pren a = do
       a <- forceP a
       case (pr, a) of
-        ([], a) -> renameP pren a
+        ([], a) -> renameP tenv pren a
         (True : pr, VPi x a b) ->
           Pi x
-            <$> renameP pren a
+            <$> renameP tenv pren a
             <*> go pr (liftPren pren) (b $ VVar pren.cod)
         (False : pr, VPi _ _ b) ->
           go pr (skipPren pren) (b $ VVar pren.cod)
         _ -> impossible
 
 -- | Prune arguments from a meta, return new meta + pruned type.
-pruneMeta :: Pruning -> MetaVar -> P MetaVar
-pruneMeta pr m = do
+pruneMeta :: TopEnv -> Pruning -> MetaVar -> P MetaVar
+pruneMeta tenv pr m = do
   mty <- lookupUnsolved m
-  prunedty <- evalP [] =<< pruneType (revPruning pr) mty
+  prunedty <- evalP tenv [] =<< pruneType tenv (revPruning pr) mty
   m' <- newMetaP prunedty
-  solution <- evalP [] =<< lams (Level $ length pr) mty (AppPruning (Meta m') pr)
+  solution <- evalP tenv [] =<< lams (Level $ length pr) mty (AppPruning (Meta m') pr)
   writeMeta m solution mty
   pure m'
 
@@ -133,8 +133,8 @@ data SpinePruneStatus
 
 -- | Prune illegal var occurrences from a meta + spine.
 --   Returns: renamed + pruned term.
-pruneVFlex :: PartialRenaming -> MetaVar -> Spine -> P Term
-pruneVFlex pren m sp = do
+pruneVFlex :: TopEnv -> PartialRenaming -> MetaVar -> Spine -> P Term
+pruneVFlex tenv pren m sp = do
   (sp :: [Maybe Term], status :: SpinePruneStatus) <- do
     let go = \case
           SNil -> pure ([], OKRenaming)
@@ -148,7 +148,7 @@ pruneVFlex pren m sp = do
               t -> case status of
                 NeedsPruning -> empty
                 _ -> do
-                  t <- renameP pren t
+                  t <- renameP tenv pren t
                   pure (Just t : sp, OKNonRenaming)
           _ -> empty
     go sp
@@ -156,45 +156,45 @@ pruneVFlex pren m sp = do
   m' <- case status of
     OKRenaming -> pure m
     OKNonRenaming -> pure m
-    NeedsPruning -> pruneMeta (isJust <$> sp) m
+    NeedsPruning -> pruneMeta tenv (isJust <$> sp) m
 
   let t = foldr (\mu t -> maybe t (App t) mu) (Meta m') sp
   pure t
 
-rename :: MetaCtx -> PartialRenaming -> Value -> Maybe (Term, MetaCtx)
-rename mctx pren t = flip runStateT mctx $ renameP pren t
+rename :: MetaCtx -> TopEnv -> PartialRenaming -> Value -> Maybe (Term, MetaCtx)
+rename mctx tenv pren t = flip runStateT mctx $ renameP tenv pren t
 
-renameP :: PartialRenaming -> Value -> P Term
-renameP pren t =
+renameP :: TopEnv -> PartialRenaming -> Value -> P Term
+renameP tenv pren t =
   forceP t >>= \case
     VFlex m' sp -> case pren.occ of
       Just m | m == m' -> empty -- occurs check
-      _ -> pruneVFlex pren m' sp
+      _ -> pruneVFlex tenv pren m' sp
     VRigid (Level x) sp -> case IM.lookup x pren.ren of
       Nothing -> empty -- scope error ("escaping variable" error)
-      Just x' -> renameSpine pren (Var $ levelToIndex pren.dom x') sp
-    VTop x f sp Nothing -> renameSpine pren (Top x (coerce f)) sp
-    VTop _ _ _ (Just t) -> renameP pren t
+      Just x' -> renameSpine tenv pren (Var $ levelToIndex pren.dom x') sp
+    VTop x sp Nothing -> renameSpine tenv pren (Top x) sp
+    VTop _ _ (Just t) -> renameP tenv pren t
     VU -> pure U
     VPi x a b ->
       Pi x
-        <$> renameP pren a
-        <*> renameP (liftPren pren) (b $ VVar pren.cod)
+        <$> renameP tenv pren a
+        <*> renameP tenv (liftPren pren) (b $ VVar pren.cod)
     VLam x t ->
-      Lam x <$> renameP (liftPren pren) (t $ VVar pren.cod)
+      Lam x <$> renameP tenv (liftPren pren) (t $ VVar pren.cod)
     VSigma x a b ->
       Sigma x
-        <$> renameP pren a
-        <*> renameP (liftPren pren) (b $ VVar pren.cod)
+        <$> renameP tenv pren a
+        <*> renameP tenv (liftPren pren) (b $ VVar pren.cod)
     VPair t u ->
-      Pair <$> renameP pren t <*> renameP pren u
+      Pair <$> renameP tenv pren t <*> renameP tenv pren u
 
-renameSpine :: PartialRenaming -> Term -> Spine -> P Term
-renameSpine pren t = \case
+renameSpine :: TopEnv -> PartialRenaming -> Term -> Spine -> P Term
+renameSpine tenv pren t = \case
   SNil -> pure t
-  SApp sp u -> App <$> renameSpine pren t sp <*> renameP pren u
-  SProj1 sp -> Proj1 <$> renameSpine pren t sp
-  SProj2 sp -> Proj2 <$> renameSpine pren t sp
+  SApp sp u -> App <$> renameSpine tenv pren t sp <*> renameP tenv pren u
+  SProj1 sp -> Proj1 <$> renameSpine tenv pren t sp
+  SProj2 sp -> Proj2 <$> renameSpine tenv pren t sp
 
 -- | Wrap a term in Level number of lambdas. We get the domain info from the Value
 --   argument.
@@ -211,24 +211,24 @@ lams l a t = gets \mctx -> do
   go a (0 :: Level)
 
 -- | Solve @Γ ⊢ m spine =? rhs@.
-solve :: MetaCtx -> Level -> MetaVar -> Spine -> Value -> Maybe MetaCtx
-solve mctx gamma m sp rhs = do
+solve :: MetaCtx -> TopEnv -> Level -> MetaVar -> Spine -> Value -> Maybe MetaCtx
+solve mctx tenv gamma m sp rhs = do
   pren <- invert mctx gamma sp
-  solveWithPren mctx m pren rhs
+  solveWithPren mctx tenv m pren rhs
 
 -- | Solve m given the result of inversion on a spine.
 solveWithPren ::
-  MetaCtx -> MetaVar -> (PartialRenaming, Maybe Pruning) -> Value -> Maybe MetaCtx
-solveWithPren mctx m (pren, pruneNonLinear) rhs = flip execStateT mctx do
+  MetaCtx -> TopEnv -> MetaVar -> (PartialRenaming, Maybe Pruning) -> Value -> Maybe MetaCtx
+solveWithPren mctx tenv m (pren, pruneNonLinear) rhs = flip execStateT mctx do
   mty <- lookupUnsolved m
   -- if the spine was non-linear, we check that the non-linear arguments
   -- can be pruned from the meta type (i.e. that the pruned solution will
   -- be well-typed)
   case pruneNonLinear of
     Nothing -> pure ()
-    Just pr -> void $ pruneType (revPruning pr) mty
-  rhs <- renameP (pren {occ = Just m}) rhs
-  solution <- evalP [] =<< lams pren.dom mty rhs
+    Just pr -> void $ pruneType tenv (revPruning pr) mty
+  rhs <- renameP tenv (pren {occ = Just m}) rhs
+  solution <- evalP tenv [] =<< lams pren.dom mty rhs
   writeMeta m solution mty
 
 spineLength :: Spine -> Int
@@ -239,12 +239,12 @@ spineLength = \case
   SProj2 sp -> spineLength sp
 
 -- | Solve @Γ ⊢ m spine =? m' spine'@.
-flexFlex :: MetaCtx -> Level -> MetaVar -> Spine -> MetaVar -> Spine -> Maybe MetaCtx
-flexFlex mctx gamma m sp m' sp' = do
+flexFlex :: MetaCtx -> TopEnv -> Level -> MetaVar -> Spine -> MetaVar -> Spine -> Maybe MetaCtx
+flexFlex mctx tenv gamma m sp m' sp' = do
   let -- It may be that only one of the two spines is invertible
       go m sp m' sp' = case invert mctx gamma sp of
-        Nothing -> solve mctx gamma m' sp' (VFlex m sp)
-        Just pren -> solveWithPren mctx m pren (VFlex m' sp')
+        Nothing -> solve mctx tenv gamma m' sp' (VFlex m sp)
+        Just pren -> solveWithPren mctx tenv m pren (VFlex m' sp')
   -- usually, a longer spine indicates that the meta is in an inner scope. If we solve
   -- inner metas with outer metas, that means that we have to do less pruning.
   if spineLength sp < spineLength sp'
@@ -264,77 +264,77 @@ forceCS mctx cs v = case cs of
   Full -> forceAll mctx v
   _ -> force mctx v
 
-unify0 :: MetaCtx -> Term -> Term -> Maybe MetaCtx
-unify0 mctx t t' = do
-  let v = eval mctx [] t
-      v' = eval mctx [] t'
-  unify mctx Rigid 0 v v'
+unify0 :: MetaCtx -> TopEnv -> Term -> Term -> Maybe MetaCtx
+unify0 mctx tenv t t' = do
+  let v = eval mctx tenv [] t
+      v' = eval mctx tenv [] t'
+  unify mctx tenv Rigid 0 v v'
 
-unify :: MetaCtx -> ConvState -> Level -> Value -> Value -> Maybe MetaCtx
-unify mctx cs l t t' = case (forceCS mctx cs t, forceCS mctx cs t') of
+unify :: MetaCtx -> TopEnv -> ConvState -> Level -> Value -> Value -> Maybe MetaCtx
+unify mctx tenv cs l t t' = case (forceCS mctx cs t, forceCS mctx cs t') of
   (VPi _ a b, VPi _ a' b') -> do
-    mctx <- unify mctx cs l a a'
-    unify mctx cs (l + 1) (b $ VVar l) (b' $ VVar l)
+    mctx <- unify mctx tenv cs l a a'
+    unify mctx tenv cs (l + 1) (b $ VVar l) (b' $ VVar l)
   (VU, VU) -> pure mctx
   (VLam _ t, VLam _ t') ->
-    unify mctx cs (l + 1) (t $ VVar l) (t' $ VVar l)
+    unify mctx tenv cs (l + 1) (t $ VVar l) (t' $ VVar l)
   (t, VLam _ t') ->
-    unify mctx cs (l + 1) (t $$ VVar l) (t' $ VVar l)
+    unify mctx tenv cs (l + 1) (t $$ VVar l) (t' $ VVar l)
   (VLam _ t, t') ->
-    unify mctx cs (l + 1) (t $ VVar l) (t' $$ VVar l)
+    unify mctx tenv cs (l + 1) (t $ VVar l) (t' $$ VVar l)
   (VSigma _ a b, VSigma _ a' b') -> do
-    mctx <- unify mctx cs l a a'
-    unify mctx cs (l + 1) (b $ VVar l) (b' $ VVar l)
+    mctx <- unify mctx tenv cs l a a'
+    unify mctx tenv cs (l + 1) (b $ VVar l) (b' $ VVar l)
   (VPair t u, VPair t' u') -> do
-    mctx <- unify mctx cs l t t'
-    unify mctx cs l u u'
+    mctx <- unify mctx tenv cs l t t'
+    unify mctx tenv cs l u u'
   (VPair t u, t') -> do
-    mctx <- unify mctx cs l t (vProj1 t')
-    unify mctx cs l u (vProj2 t')
+    mctx <- unify mctx tenv cs l t (vProj1 t')
+    unify mctx tenv cs l u (vProj2 t')
   (t, VPair t' u') -> do
-    mctx <- unify mctx cs l (vProj1 t) t'
-    unify mctx cs l (vProj2 t) u'
+    mctx <- unify mctx tenv cs l (vProj1 t) t'
+    unify mctx tenv cs l (vProj2 t) u'
   (VRigid x sp, VRigid x' sp')
-    | x == x' -> unifySpine mctx cs l sp sp'
+    | x == x' -> unifySpine mctx tenv cs l sp sp'
   (VFlex m sp, VFlex m' sp')
-    | m == m' -> unifySpine mctx cs l sp sp'
+    | m == m' -> unifySpine mctx tenv cs l sp sp'
     | otherwise -> do
         guard $ cs /= Flex
-        flexFlex mctx l m sp m' sp'
-  (VTop x _ sp Nothing, VTop x' _ sp' Nothing)
-    | x == x' -> unifySpine mctx cs l sp sp'
-  (VTop x _ sp (Just t), VTop x' _ sp' (Just t')) -> case cs of
+        flexFlex mctx tenv l m sp m' sp'
+  (VTop x sp Nothing, VTop x' sp' Nothing)
+    | x == x' -> unifySpine mctx tenv cs l sp sp'
+  (VTop x sp (Just t), VTop x' sp' (Just t')) -> case cs of
     Rigid
       | x == x' ->
-          unifySpine mctx Flex l sp sp'
-            <|> unify mctx Full l t t'
-      | otherwise -> unify mctx Rigid l t t'
+          unifySpine mctx tenv Flex l sp sp'
+            <|> unify mctx tenv Full l t t'
+      | otherwise -> unify mctx tenv Rigid l t t'
     Flex
-      | x == x' -> unifySpine mctx Flex l sp sp'
+      | x == x' -> unifySpine mctx tenv Flex l sp sp'
       | otherwise -> Nothing
     Full -> impossible
   (VFlex m sp, t') -> do
     guard $ cs /= Flex
-    solve mctx l m sp t'
+    solve mctx tenv l m sp t'
   (t, VFlex m' sp') -> do
     guard $ cs /= Flex
-    solve mctx l m' sp' t
-  (VTop _ _ _ (Just t), t') -> case cs of
-    Rigid -> unify mctx cs l t t'
+    solve mctx tenv l m' sp' t
+  (VTop _ _ (Just t), t') -> case cs of
+    Rigid -> unify mctx tenv cs l t t'
     Flex -> Nothing
     Full -> impossible
-  (t, VTop _ _ _ (Just t')) -> case cs of
-    Rigid -> unify mctx cs l t t'
+  (t, VTop _ _ (Just t')) -> case cs of
+    Rigid -> unify mctx tenv cs l t t'
     Flex -> Nothing
     Full -> impossible
   _ -> Nothing
 
-unifySpine :: MetaCtx -> ConvState -> Level -> Spine -> Spine -> Maybe MetaCtx
-unifySpine mctx cs l = \cases
+unifySpine :: MetaCtx -> TopEnv -> ConvState -> Level -> Spine -> Spine -> Maybe MetaCtx
+unifySpine mctx tenv cs l = \cases
   SNil SNil -> pure mctx
   (SApp sp t) (SApp sp' t') -> do
-    mctx <- unifySpine mctx cs l sp sp'
-    unify mctx cs l t t'
-  (SProj1 sp) (SProj1 sp') -> unifySpine mctx cs l sp sp'
-  (SProj2 sp) (SProj2 sp') -> unifySpine mctx cs l sp sp'
+    mctx <- unifySpine mctx tenv cs l sp sp'
+    unify mctx tenv cs l t t'
+  (SProj1 sp) (SProj1 sp') -> unifySpine mctx tenv cs l sp sp'
+  (SProj2 sp) (SProj2 sp') -> unifySpine mctx tenv cs l sp sp'
   _ _ -> Nothing

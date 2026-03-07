@@ -1,7 +1,7 @@
 module TypeSearch.Evaluation where
 
 import Data.Foldable
-import Data.HashMap.Strict qualified as HM
+import Data.HashMap.Lazy qualified as HML
 import TypeSearch.Common
 import TypeSearch.Pretty
 import TypeSearch.Term
@@ -9,6 +9,8 @@ import TypeSearch.Term
 infixr 6 -->
 
 infixr 7 ***
+
+--------------------------------------------------------------------------------
 
 (-->) :: Value -> Value -> Value
 a --> b = VPi "_" a \ ~_ -> b
@@ -19,7 +21,7 @@ a *** b = VSigma "_" a \ ~_ -> b
 exMetaCtx :: MetaCtx
 exMetaCtx =
   MetaCtx 0 $
-    HM.fromList
+    HML.fromList
       [ ("α", Unsolved VU),
         ("β", Unsolved VU),
         ("γ", Unsolved VU),
@@ -43,7 +45,7 @@ veps :: Value
 veps = VMeta "ε"
 
 vlist :: Value
-vlist = VTop (QName "Agda.Builtin.List" "List") Nothing SNil Nothing
+vlist = VTop (QName "Agda.Builtin.List" "List") SNil Nothing
 
 tFoldr1 :: Term
 tFoldr1 =
@@ -65,36 +67,85 @@ printResults res = for_ res \(i, mctx) -> do
   putStrLn "----------"
   putStrLn $ "iso: " ++ prettyIso 0 i ""
   putStrLn "subst: "
-  for_ (HM.toList mctx.metaCtx) \(v, t) -> case (v, t) of
+  for_ (HML.toList mctx.metaCtx) \(v, t) -> case (v, t) of
     (Src _, Solved sol ty) -> putStrLn $ "  " ++ show v ++ " : " ++ prettyTerm [] 0 (quote mctx 0 ty) "" ++ " = " ++ prettyTerm [] 0 (quote mctx 0 sol) ""
     _ -> pure ()
 
 --------------------------------------------------------------------------------
+-- Values
+
+-- | Values
+data Value
+  = VRigid Level Spine
+  | VFlex MetaVar Spine
+  | VTop {-# UNPACK #-} QName Spine (Maybe Value) -- Nothing for axioms
+  | VU
+  | VPi Name VType (Value -> VType)
+  | VLam Name (Value -> Value)
+  | VSigma Name VType (Value -> VType)
+  | VPair Value Value
+
+type VType = Value
+
+data Spine
+  = SNil
+  | SApp Spine Value
+  | SProj1 Spine
+  | SProj2 Spine
+
+pattern VVar :: Level -> Value
+pattern VVar x = VRigid x SNil
+
+pattern VMeta :: MetaVar -> Value
+pattern VMeta m = VFlex m SNil
+
+data Quant = Quant Name Value (Value -> Value)
+
+-- | Environment keyed by De Bruijn indices
+type Env = [Value]
+
+-- | Environment keyed by top-level names
+type TopEnv = HML.HashMap QName Value
+
+-- | Meta-context
+data MetaCtx = MetaCtx
+  { nextMeta :: GenMetaVar,
+    metaCtx :: HML.HashMap MetaVar MetaEntry
+  }
+
+data MetaEntry
+  = Unsolved ~Value
+  | Solved Value ~Value
+
+emptyMetaCtx :: MetaCtx
+emptyMetaCtx = MetaCtx 0 mempty
+
+--------------------------------------------------------------------------------
 -- Evaluation
 
-eval :: MetaCtx -> Env -> Term -> Value
-eval mctx env = \case
+eval :: MetaCtx -> TopEnv -> Env -> Term -> Value
+eval mctx tenv env = \case
   Var (Index x) -> env !! x
   Meta m -> vMeta mctx m
-  Top x v -> VTop x (coerce v) SNil (coerce v)
+  Top x -> VTop x SNil (HML.lookup x tenv)
   U -> VU
-  Pi x a b -> VPi x (eval mctx env a) (evalBind mctx env b)
-  Lam x t -> VLam x (evalBind' mctx env t)
-  App t u -> eval mctx env t $$ eval mctx env u
-  Sigma x a b -> VSigma x (eval mctx env a) (evalBind mctx env b)
-  Pair t u -> VPair (eval mctx env t) (eval mctx env u)
-  Proj1 t -> vProj1 (eval mctx env t)
-  Proj2 t -> vProj2 (eval mctx env t)
-  AppPruning t pr -> vAppPruning env (eval mctx env t) pr
+  Pi x a b -> VPi x (eval mctx tenv env a) (evalBind mctx tenv env b)
+  Lam x t -> VLam x (evalBind' mctx tenv env t)
+  App t u -> eval mctx tenv env t $$ eval mctx tenv env u
+  Sigma x a b -> VSigma x (eval mctx tenv env a) (evalBind mctx tenv env b)
+  Pair t u -> VPair (eval mctx tenv env t) (eval mctx tenv env u)
+  Proj1 t -> vProj1 (eval mctx tenv env t)
+  Proj2 t -> vProj2 (eval mctx tenv env t)
+  AppPruning t pr -> vAppPruning env (eval mctx tenv env t) pr
 
-evalBind :: MetaCtx -> Env -> Term -> (Value -> Value)
-evalBind mctx env t ~u = eval mctx (u : env) t
+evalBind :: MetaCtx -> TopEnv -> Env -> Term -> (Value -> Value)
+evalBind mctx tenv env t ~u = eval mctx tenv (u : env) t
 
-evalBind' :: MetaCtx -> Env -> Term -> (Value -> Value)
-evalBind' mctx env t u = eval mctx (u : env) t
+evalBind' :: MetaCtx -> TopEnv -> Env -> Term -> (Value -> Value)
+evalBind' mctx tenv env t u = eval mctx tenv (u : env) t
 
 vMeta :: MetaCtx -> MetaVar -> Value
-vMeta mctx x = case mctx.metaCtx HM.! x of
+vMeta mctx x = case mctx.metaCtx HML.! x of
   Unsolved {} -> VMeta x
   Solved v _ -> v
 
@@ -110,7 +161,7 @@ t $$ u = case t of
   VLam _ t -> t u
   VRigid x sp -> VRigid x (SApp sp u)
   VFlex m sp -> VFlex m (SApp sp u)
-  VTop x f sp t -> VTop x f (SApp sp u) (fmap ($$ u) t)
+  VTop x sp t -> VTop x (SApp sp u) (fmap ($$ u) t)
   _ -> impossible
 
 vProj1 :: Value -> Value
@@ -118,7 +169,7 @@ vProj1 = \case
   VPair t _ -> t
   VRigid x sp -> VRigid x (SProj1 sp)
   VFlex m sp -> VFlex m (SProj1 sp)
-  VTop x f sp t -> VTop x f (SProj1 sp) (vProj1 <$> t)
+  VTop x sp t -> VTop x (SProj1 sp) (vProj1 <$> t)
   _ -> impossible
 
 vProj2 :: Value -> Value
@@ -126,7 +177,7 @@ vProj2 = \case
   VPair _ t -> t
   VRigid x sp -> VRigid x (SProj2 sp)
   VFlex m sp -> VFlex m (SProj2 sp)
-  VTop x f sp t -> VTop x f (SProj2 sp) (vProj2 <$> t)
+  VTop x sp t -> VTop x (SProj2 sp) (vProj2 <$> t)
   _ -> impossible
 
 vAppSpine :: Value -> Spine -> Value
@@ -139,14 +190,14 @@ vAppSpine t = \case
 force :: MetaCtx -> Value -> Value
 force mctx = \case
   VFlex m sp
-    | Solved t _ <- mctx.metaCtx HM.! m -> force mctx (vAppSpine t sp)
+    | Solved t _ <- mctx.metaCtx HML.! m -> force mctx (vAppSpine t sp)
   t -> t
 
 forceAll :: MetaCtx -> Value -> Value
 forceAll mctx = \case
   VFlex m sp
-    | Solved t _ <- mctx.metaCtx HM.! m -> forceAll mctx (vAppSpine t sp)
-  VTop _ _ _ (Just t) -> forceAll mctx t
+    | Solved t _ <- mctx.metaCtx HML.! m -> forceAll mctx (vAppSpine t sp)
+  VTop _ _ (Just t) -> forceAll mctx t
   t -> t
 
 --------------------------------------------------------------------------------
@@ -159,7 +210,7 @@ quote :: MetaCtx -> Level -> Value -> Term
 quote mctx l t = case force mctx t of
   VRigid x sp -> quoteSpine mctx l (Var (levelToIndex l x)) sp
   VFlex m sp -> quoteSpine mctx l (Meta m) sp
-  VTop x f sp _ -> quoteSpine mctx l (Top x (coerce f)) sp
+  VTop x sp _ -> quoteSpine mctx l (Top x) sp
   VU -> U
   VPi x a b -> Pi x (quote mctx l a) (quoteBind mctx l b)
   VLam x t -> Lam x (quoteBind mctx l t)
