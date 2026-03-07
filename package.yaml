@@ -28,11 +28,14 @@ dependencies:
   - directory
   - filepath
   - filemanip
+  - flat
   - hashable
   - haskeline
   - megaparsec
   - mtl
   - optparse-applicative
+  - postgresql-migration
+  - postgresql-simple
   - text
   - unordered-containers
   - directory
