@@ -1,8 +1,11 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module TypeSearch.MainInteraction (mainLoop) where
 
 import Control.Monad.IO.Class
 import Data.Foldable
 import Database.PostgreSQL.Simple
+import Database.PostgreSQL.Simple.SqlQQ
 import System.Console.Haskeline
 import TypeSearch.Common
 import TypeSearch.Database.Common
@@ -59,7 +62,8 @@ mainLoop conn = runInputT defaultSettings go
 
 fuzzySearchByName :: Connection -> String -> InputT IO ()
 fuzzySearchByName conn name = do
-  items :: [Only DbQName :. Only DbTerm] <- liftIO $ query conn "SELECT name_qual, sig FROM library_items WHERE ? % name_unqual" (Only name)
-  for_ items \(Only (DbQName (QName m x)) :. Only (DbTerm a)) -> do
+  items :: [Only DbQName :. Only DbTerm :. Only Float] <-
+    liftIO $ query conn "SELECT name_qual, sig, similarity(?, name_unqual) AS sml FROM library_items WHERE similarity(?, name_unqual) > 0.9 ORDER BY sml DESC" (name, name)
+  for_ items \(Only (DbQName (QName m x)) :. Only (DbTerm a) :. _) -> do
     outputStrLn $ shows x $ showString " : " $ prettyTerm0 Unqualify a ""
     outputStrLn $ showString "  in " $ shows m "\n"

@@ -1,4 +1,4 @@
-CREATE EXTENSION pg_trgm;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 CREATE TABLE library_items (
     id                    bigserial PRIMARY KEY,
