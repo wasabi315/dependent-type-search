@@ -25,15 +25,17 @@ source-repository head
 
 library
   exposed-modules:
-      Backtrack
+      Stream
       TypeSearch
       TypeSearch.Common
+      TypeSearch.Database.Common
+      TypeSearch.Database.Index
       TypeSearch.Evaluation
+      TypeSearch.MainInteraction
       TypeSearch.Parser
       TypeSearch.Pretty
       TypeSearch.Raw
       TypeSearch.Term
-      TypeSearch.Translate
       TypeSearch.Unification
       TypeSearch.UnificationModuloIso
   other-modules:
@@ -93,11 +95,14 @@ library
     , directory
     , filemanip
     , filepath
+    , flat
     , hashable
     , haskeline
     , megaparsec
     , mtl
     , optparse-applicative
+    , postgresql-migration
+    , postgresql-simple
     , text
     , unordered-containers
     , witherable
@@ -163,11 +168,14 @@ executable dependent-type-search-exe
     , directory
     , filemanip
     , filepath
+    , flat
     , hashable
     , haskeline
     , megaparsec
     , mtl
     , optparse-applicative
+    , postgresql-migration
+    , postgresql-simple
     , text
     , unordered-containers
     , witherable
@@ -234,11 +242,14 @@ test-suite dependent-type-search-test
     , directory
     , filemanip
     , filepath
+    , flat
     , hashable
     , haskeline
     , megaparsec
     , mtl
     , optparse-applicative
+    , postgresql-migration
+    , postgresql-simple
     , text
     , unordered-containers
     , witherable

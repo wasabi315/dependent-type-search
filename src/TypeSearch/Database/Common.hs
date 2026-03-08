@@ -12,6 +12,7 @@ import TypeSearch.Term
 --------------------------------------------------------------------------------
 
 newtype DbName = DbName Name
+  deriving newtype (Show)
 
 instance ToField DbName where
   toField x = toField @T.Text (coerce x)
@@ -20,6 +21,7 @@ instance FromField DbName where
   fromField f dat = coerce <$> fromField @T.Text f dat
 
 newtype DbQName = DbQName QName
+  deriving newtype (Show)
 
 instance ToField DbQName where
   toField (DbQName x) = toField (T.pack $ show x)
