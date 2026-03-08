@@ -31,19 +31,19 @@ import Agda.Utils.FileName qualified as Agda
 import Agda.Utils.IO.Directory qualified as Agda
 import Agda.Utils.Impossible (__IMPOSSIBLE__)
 import Agda.Utils.Monad qualified as Agda
+import Control.Applicative
 import Control.Monad (forM)
 import Control.Monad.Except (catchError, throwError)
 import Control.Monad.Reader
 import Data.Foldable
 import Data.HashSet qualified as HS
-import Data.List (elemIndex, sort)
+import Data.List (sort)
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map.Strict qualified as Map
 import Data.Maybe
 import Data.String
 import Data.Text qualified as T
 import Database.PostgreSQL.Simple
-import Database.PostgreSQL.Simple.Types
 import System.Directory
 import System.FilePath.Find qualified as Find
 import System.IO (hPutStrLn, stderr)
@@ -74,12 +74,75 @@ type M = ReaderT IndexEnv Agda.TCM
 initEnv :: IndexConfig -> IndexEnv
 initEnv IndexConfig {..} = IndexEnv maxLetSize
 
+--------------------------------------------------------------------------------
+
 data Item = Item
   { name :: QName,
-    used_top_names :: HS.HashSet QName,
     signature :: Term,
-    body :: Maybe Term
+    body :: Maybe Term,
+    feature :: (ReturnSort, Polymorphic, Arity)
   }
+
+--------------------------------------------------------------------------------
+-- Compute features
+
+feature :: Internal.Type -> M (ReturnSort, Polymorphic, Arity)
+feature t = liftA3 (,,) (returnSort t) (isPolymorphic t) (arity t)
+
+-- | Check if a given type may return Sort.
+returnSort :: Internal.Type -> M ReturnSort
+returnSort t = do
+  Agda.TelV tel b <- Agda.telView t
+  Agda.addContext tel do
+    b <- Agda.reduce b
+    case b.unEl of
+      Internal.Sort {} -> pure YesReturnSort
+      Internal.Var i _ -> do
+        ty <- Agda.typeOfBV i
+        Agda.TelV _ b <- Agda.telView ty
+        pure $ case b.unEl of
+          Internal.Sort {} -> MayReturnSort
+          _ -> NoReturnSort
+      _ -> pure NoReturnSort
+
+-- | Check if a given type is polymorphic.
+
+-- FIXME: Look under records
+isPolymorphic :: Internal.Type -> M Polymorphic
+isPolymorphic t = Agda.ifNotPiType t (\_ -> pure NoPolymorphic) \a rest -> do
+  Agda.TelV _ b <- Agda.telView a.unDom
+  case b.unEl of
+    Internal.Sort {} -> pure YesPolymorphic
+    _ -> Agda.underAbstraction a rest isPolymorphic
+
+arity :: Internal.Type -> M Arity
+arity = go (0 :: Int)
+  where
+    go acc t =
+      Agda.ifPiType
+        t
+        ( \dom rest -> do
+            dom <- Agda.reduce dom
+            case dom.unDom.unEl of
+              Internal.Var i _ -> do
+                ty <- Agda.typeOfBV i
+                Agda.TelV _ b <- Agda.telView ty
+                case b.unEl of
+                  Internal.Sort {} -> pure InfArity
+                  _ -> Agda.underAbstraction dom rest (go (acc + 1))
+              _ -> Agda.underAbstraction dom rest (go (acc + 1))
+        )
+        ( \cod -> do
+            cod <- Agda.reduce cod
+            case cod.unEl of
+              Internal.Var i _ -> do
+                ty <- Agda.typeOfBV i
+                Agda.TelV _ b <- Agda.telView ty
+                case b.unEl of
+                  Internal.Sort {} -> pure InfArity
+                  _ -> pure (Arity acc)
+              _ -> pure (Arity acc)
+        )
 
 --------------------------------------------------------------------------------
 -- Entrypoint
@@ -128,18 +191,16 @@ translateLibrary config = do
 
 saveModule :: Connection -> [Item] -> IO ()
 saveModule conn items = do
-  let values = flip map items \(Item n ns a t) -> do
-        let n_qual = DbQName n
-            n_unqual = DbName n.name
-            ns_qual = PGArray $ map DbQName (HS.toList ns)
-            ns_unqual = PGArray $ map (\n -> DbName n.name) (HS.toList ns)
-            a' = DbTerm a
-            t' = DbTerm <$> t
-        (n_qual, n_unqual, ns_qual, ns_unqual, a', t')
+  let values = flip map items \(Item n a t (rs, pl, ar)) -> do
+        let nameQual = DbQName n
+            nameUnqual = DbName n.name
+            sig = DbTerm a
+            body = DbTerm <$> t
+        (nameQual, nameUnqual, sig, body, rs, pl, ar)
   _ <-
     executeMany
       conn
-      "INSERT INTO library_items(name_qual,name_unqual,used_top_names_qual,used_top_names_unqual,sig,body) VALUES (?,?,?,?,?,?)"
+      "INSERT INTO library_items(name_qual,name_unqual,sig,body,return_sort,polymorphic,arity) VALUES (?,?,?,?,?,?,?)"
       values
   pure ()
 
@@ -187,14 +248,32 @@ translateDefinition qname def =
 getDefNames :: (Agda.GetDefs a, Agda.Normalise a) => a -> M (HS.HashSet QName)
 getDefNames x = do
   x <- Agda.normalise x
-  pure $! Agda.getDefs' (const Nothing) (HS.singleton . translateQName) x
+  unwanted <-
+    traverse
+      (fmap Agda.prettyShow . Agda.getBuiltinName_)
+      [Agda.BuiltinLevel]
+  let ns =
+        Agda.getDefs'
+          (const Nothing)
+          ( \n ->
+              if Agda.prettyShow n `elem` unwanted
+                then mempty
+                else HS.singleton (translateQName n)
+          )
+          x
+  pure ns
+
+rawToTerm' :: Raw -> M Term
+rawToTerm' a = case rawToTerm a of
+  Nothing -> translateError "Hmm, I'm messing up context"
+  Just a -> pure a
 
 translateToAxiom :: QName -> Internal.Type -> M Item
 translateToAxiom x ty = do
-  ns <- getDefNames ty
+  feat <- feature ty
   ty <- translateType ty
-  ty <- rawToTerm0 ty
-  pure $! Item x ns ty Nothing
+  ty <- rawToTerm' ty
+  pure $! Item x ty Nothing feat
 
 translateRecordDef :: QName -> Agda.Definition -> M [Item]
 translateRecordDef qname def = do
@@ -231,27 +310,6 @@ translateFunDef qname def = do
 --------------------------------------------------------------------------------
 -- Internal term/type → Raw
 -- FIXME: Directly translate to Term
-
--- | Convert @Raw@ to @Term@ assuming well-typedness.
-rawToTerm0 :: Raw -> M Term
-rawToTerm0 = rawToTerm []
-
-rawToTerm :: [Name] -> Raw -> M Term
-rawToTerm ns = \case
-  RVar (Qual m x) -> pure $ Top (QName m x)
-  RVar (Unqual x) -> case x `elemIndex` ns of
-    Nothing -> translateError "Hmm, I'm messing up contexts"
-    Just i -> pure $ Var (Index i)
-  RMeta m -> pure $ Meta m
-  RU -> pure U
-  RPi x a b -> Pi x <$> rawToTerm ns a <*> rawToTerm (x : ns) b
-  RLam x t -> Lam x <$> rawToTerm (x : ns) t
-  RApp t u -> App <$> rawToTerm ns t <*> rawToTerm ns u
-  RSigma x a b -> Sigma x <$> rawToTerm ns a <*> rawToTerm (x : ns) b
-  RPair t u -> Pair <$> rawToTerm ns t <*> rawToTerm ns u
-  RProj1 t -> Proj1 <$> rawToTerm ns t
-  RProj2 t -> Proj2 <$> rawToTerm ns t
-  RPos t _ -> rawToTerm ns t
 
 translateType :: Internal.Type -> M Raw
 translateType ty = translateTerm (Agda.sort ty._getSort) ty.unEl
@@ -453,12 +511,12 @@ translateToSigma qname def = do
           Agda.underAbstraction a tel $ buildSigmaChain (sigmas . RSigma x a') ns
         _ _ -> __IMPOSSIBLE__
 
-  Agda.TelV tel _ <- Agda.telViewUpTo recPars def.defType
-  ns <- getDefNames tel
-  recTy <- rawToTerm0 =<< translateTeleBindsToPi tel (pure RU)
+  feat <- feature def.defType
+  recTy <- rawToTerm' =<< translateType def.defType
   let fieldTel = snd $ Agda.splitTelescopeAt recPars recTel
-  recBody <- rawToTerm0 =<< translateTeleBindsToLam tel (buildSigmaChain id recFields fieldTel)
-  pure [Item qname ns recTy (Just recBody)]
+  Agda.TelV tel _ <- Agda.telViewUpTo recPars def.defType
+  recBody <- rawToTerm' =<< translateTeleBindsToLam tel (buildSigmaChain id recFields fieldTel)
+  pure [Item qname recTy (Just recBody) feat]
 
 translateToPairs :: QName -> Agda.Definition -> Agda.Definition -> M [Item]
 translateToPairs qname recDef conDef = do
@@ -475,16 +533,16 @@ translateToPairs qname recDef conDef = do
 
   Agda.TelV parTel _ <- Agda.telViewUpTo recPars conDef.defType
   let fieldTel = snd $ Agda.splitTelescopeAt recPars recTel
-  ns <- getDefNames conDef.defType
-  ctorTy <- rawToTerm0 =<< translateType conDef.defType
+  feat <- feature conDef.defType
+  ctorTy <- rawToTerm' =<< translateType conDef.defType
   ctorBody <-
-    rawToTerm0
+    rawToTerm'
       =<< translateTeleBindsToLam
         parTel
         ( translateTeleBindsToLam fieldTel $
             pure (buildPairChain id recFields)
         )
-  pure [Item qname ns ctorTy (Just ctorBody)]
+  pure [Item qname ctorTy (Just ctorBody) feat]
 
 translateToProj1Proj2 :: QName -> Agda.Definition -> Agda.Definition -> M [Item]
 translateToProj1Proj2 qname recDef projDef = do
@@ -499,14 +557,14 @@ translateToProj1Proj2 qname recDef projDef = do
         _ -> __IMPOSSIBLE__
 
   Agda.TelV parTel _ <- Agda.telViewUpTo recPars projDef.defType
-  ns <- getDefNames projDef.defType
-  projTy <- rawToTerm0 =<< translateType projDef.defType
+  feat <- feature projDef.defType
+  projTy <- rawToTerm' =<< translateType projDef.defType
   projBody <-
-    rawToTerm0
+    rawToTerm'
       =<< translateTeleBindsToLam
         parTel
         (pure (RLam "r" $ buildProj1Proj2Chain id recFields))
-  pure [Item qname ns projTy (Just projBody)]
+  pure [Item qname projTy (Just projBody) feat]
 
 --------------------------------------------------------------------------------
 -- Translate type-alias-like into let
@@ -517,26 +575,10 @@ translateToProj1Proj2 qname recDef projDef = do
 isTypeAliasLike :: Agda.Definition -> M Bool
 isTypeAliasLike def =
   Agda.andM
-    [ canEndInSort def.defType,
+    [ (/= NoReturnSort) <$> returnSort def.defType,
       hasNoLocalDefs def,
       pure $ isNonPatternMatching def
     ]
-
--- | Check if a given type can be a function type into some Sort.
-canEndInSort :: Internal.Type -> M Bool
-canEndInSort t = do
-  Agda.TelV tel b <- Agda.telView t
-  Agda.addContext tel do
-    b <- Agda.reduce b
-    case b.unEl of
-      Internal.Sort {} -> pure True
-      Internal.Var i _ -> do
-        ty <- Agda.typeOfBV i
-        Agda.TelV _ b <- Agda.telView ty
-        pure $ case b.unEl of
-          Internal.Sort {} -> True
-          _ -> False
-      _ -> pure False
 
 hasNoLocalDefs :: Agda.Definition -> M Bool
 hasNoLocalDefs def = do
@@ -562,8 +604,8 @@ translateTypeAliasLike :: QName -> Agda.Definition -> M [Item]
 translateTypeAliasLike qname def = do
   let Agda.Function {..} = def.theDef
       [Internal.Clause {..}] = funClauses
-  ns <- getDefNames def.defType
-  funTy <- rawToTerm0 =<< translateType def.defType
+  feat <- feature def.defType
+  funTy <- rawToTerm' =<< translateType def.defType
   Agda.addContext (Agda.KeepNames clauseTel) do
     (bodyTy, argLams) <- translatePatternArgs def.defType namedClausePats
     clauseBody <- Agda.normalise (fromMaybe __IMPOSSIBLE__ clauseBody)
@@ -571,9 +613,9 @@ translateTypeAliasLike qname def = do
     maxSize <- asks \config -> config.maxLetSize
     if rawSize fun <= maxSize
       then do
-        fun' <- rawToTerm0 fun
-        pure [Item qname ns funTy (Just fun')]
-      else pure [Item qname ns funTy Nothing]
+        fun' <- rawToTerm' fun
+        pure [Item qname funTy (Just fun') feat]
+      else pure [Item qname funTy Nothing feat]
 
 translatePatternArgs :: Internal.Type -> Internal.NAPs -> M (Internal.Type, Raw -> Raw)
 translatePatternArgs ty naps = do

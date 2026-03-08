@@ -1,11 +1,8 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module TypeSearch.MainInteraction (mainLoop) where
 
 import Control.Monad.IO.Class
 import Data.Foldable
 import Database.PostgreSQL.Simple
-import Database.PostgreSQL.Simple.SqlQQ
 import System.Console.Haskeline
 import TypeSearch.Common
 import TypeSearch.Database.Common
@@ -59,6 +56,9 @@ mainLoop conn = runInputT defaultSettings go
         Right (SearchByName name) -> do
           fuzzySearchByName conn name
           go
+
+--------------------------------------------------------------------------------
+-- Search by name
 
 fuzzySearchByName :: Connection -> String -> InputT IO ()
 fuzzySearchByName conn name = do

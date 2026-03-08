@@ -1,15 +1,16 @@
 module TypeSearch.Database.Common where
 
+import Control.Applicative
 import Data.ByteString qualified as BS
 import Data.Text qualified as T
 import Database.PostgreSQL.Simple
 import Database.PostgreSQL.Simple.FromField hiding (Binary)
 import Database.PostgreSQL.Simple.ToField
-import Database.PostgreSQL.Simple.Types
 import TypeSearch.Common
 import TypeSearch.Term
 
 --------------------------------------------------------------------------------
+-- Wrapper types for DB
 
 newtype DbName = DbName Name
   deriving newtype (Show)
@@ -45,13 +46,56 @@ instance FromField DbTerm where
     let Right t = unflat x
     pure (DbTerm t)
 
-data DbItem = DbItem
-  { name_qual :: DbQName,
-    name_unqual :: DbName,
-    used_top_names_qual :: PGArray DbQName,
-    used_top_names_unqual :: PGArray DbName,
-    sig :: DbTerm,
-    body :: Maybe DbTerm
-  }
-  deriving stock (Generic)
-  deriving anyclass (ToRow, FromRow)
+--------------------------------------------------------------------------------
+-- Features
+
+data ReturnSort
+  = YesReturnSort
+  | NoReturnSort
+  | MayReturnSort
+  deriving stock (Eq)
+
+instance ToField ReturnSort where
+  toField x = toField tag
+    where
+      tag = case x of
+        YesReturnSort -> (0 :: Int)
+        NoReturnSort -> 1
+        MayReturnSort -> 2
+
+instance FromField ReturnSort where
+  fromField f dat =
+    fromField f dat >>= \case
+      (0 :: Int) -> pure YesReturnSort
+      1 -> pure NoReturnSort
+      2 -> pure MayReturnSort
+      _ -> empty
+
+data Polymorphic = YesPolymorphic | NoPolymorphic
+  deriving stock (Eq)
+
+instance ToField Polymorphic where
+  toField x = toField tag
+    where
+      tag = case x of
+        YesPolymorphic -> (0 :: Int)
+        NoPolymorphic -> 1
+
+instance FromField Polymorphic where
+  fromField f dat =
+    fromField f dat >>= \case
+      (0 :: Int) -> pure YesPolymorphic
+      1 -> pure NoPolymorphic
+      _ -> empty
+
+data Arity = InfArity | Arity Int
+  deriving stock (Eq)
+
+instance ToField Arity where
+  toField ar = toField case ar of
+    InfArity -> -1 :: Int
+    Arity ar -> ar
+
+instance FromField Arity where
+  fromField f dat =
+    fromField f dat >>= \ar -> pure if ar >= 0 then Arity ar else InfArity

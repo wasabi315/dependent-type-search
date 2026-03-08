@@ -1,7 +1,9 @@
 module TypeSearch.Term where
 
+import Data.List (elemIndex)
 import GHC.Generics
 import TypeSearch.Common
+import TypeSearch.Raw hiding (QName)
 
 --------------------------------------------------------------------------------
 
@@ -30,6 +32,27 @@ newtype RevPruning = RevPruning Pruning
 
 revPruning :: Pruning -> RevPruning
 revPruning = RevPruning . reverse
+
+--------------------------------------------------------------------------------
+
+rawToTerm :: Raw -> Maybe Term
+rawToTerm = go []
+  where
+    go ns = \case
+      RVar (Qual m x) -> pure $ Top (QName m x)
+      RVar (Unqual x) -> case x `elemIndex` ns of
+        Nothing -> Nothing
+        Just i -> pure $ Var (Index i)
+      RMeta m -> pure $ Meta m
+      RU -> pure U
+      RPi x a b -> Pi x <$> go ns a <*> go (x : ns) b
+      RLam x t -> Lam x <$> go (x : ns) t
+      RApp t u -> App <$> go ns t <*> go ns u
+      RSigma x a b -> Sigma x <$> go ns a <*> go (x : ns) b
+      RPair t u -> Pair <$> go ns t <*> go ns u
+      RProj1 t -> Proj1 <$> go ns t
+      RProj2 t -> Proj2 <$> go ns t
+      RPos t _ -> go ns t
 
 --------------------------------------------------------------------------------
 -- Isomorphisms
