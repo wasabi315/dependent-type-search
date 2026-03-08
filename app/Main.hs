@@ -40,5 +40,5 @@ main = do
             conn
             defaultOptions
             [MigrationInitialization, MigrationDirectory "migration"]
-        translateLibrary (IndexConfig 50 libDir conn)
+        translateLibrary (IndexConfig 80 libDir conn)
     Main.Search -> withConnect connInfo mainLoop

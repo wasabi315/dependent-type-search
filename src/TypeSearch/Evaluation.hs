@@ -68,7 +68,7 @@ printResults res = for_ res \(i, mctx) -> do
   putStrLn $ "iso: " ++ prettyIso 0 i ""
   putStrLn "subst: "
   for_ (HML.toList mctx.metaCtx) \(v, t) -> case (v, t) of
-    (Src _, Solved sol ty) -> putStrLn $ "  " ++ show v ++ " : " ++ prettyTerm [] 0 (quote mctx 0 ty) "" ++ " = " ++ prettyTerm [] 0 (quote mctx 0 sol) ""
+    (Src _, Solved sol ty) -> putStrLn $ "  " ++ show v ++ " : " ++ prettyTerm0 Unqualify (quote mctx 0 ty) "" ++ " = " ++ prettyTerm0 Unqualify (quote mctx 0 sol) ""
     _ -> pure ()
 
 --------------------------------------------------------------------------------

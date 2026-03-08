@@ -4,7 +4,9 @@ module TypeSearch.Pretty
     prettyDecl,
     prettyRaw,
     prettyTerm,
+    prettyTerm0,
     prettyIso,
+    QualifyMode (..),
   )
 where
 
@@ -101,13 +103,20 @@ prettyRaw = go
       RPos t _ -> goAbs t
       t -> showString " → " . go absP t
 
-prettyTerm :: [Name] -> Int -> Term -> ShowS
-prettyTerm = go
+data QualifyMode = Qualify | Unqualify
+
+prettyTerm0 :: QualifyMode -> Term -> ShowS
+prettyTerm0 qm t = prettyTerm qm [] 0 t
+
+prettyTerm :: QualifyMode -> [Name] -> Int -> Term -> ShowS
+prettyTerm qm = go
   where
     go ns p = \case
       Var (Index i) -> shows (ns !! i)
       Meta m -> shows m
-      Top n -> shows n
+      Top n -> case qm of
+        Qualify -> shows n
+        Unqualify -> shows n.name
       U -> showString "U"
       Pi "_" a b ->
         par p piP $ go ns sigmaP a . showString " → " . go ("_" : ns) piP b

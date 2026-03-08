@@ -4,6 +4,7 @@ import Control.Monad.IO.Class
 import Data.Foldable
 import Database.PostgreSQL.Simple
 import System.Console.Haskeline
+import TypeSearch.Common
 import TypeSearch.Database.Common
 import TypeSearch.Pretty
 
@@ -59,5 +60,6 @@ mainLoop conn = runInputT defaultSettings go
 fuzzySearchByName :: Connection -> String -> InputT IO ()
 fuzzySearchByName conn name = do
   items :: [Only DbQName :. Only DbTerm] <- liftIO $ query conn "SELECT name_qual, sig FROM library_items WHERE ? % name_unqual" (Only name)
-  for_ items \(Only (DbQName x) :. Only (DbTerm a)) -> do
-    outputStrLn $ shows x $ showString " : " $ prettyTerm [] 0 a "\n"
+  for_ items \(Only (DbQName (QName m x)) :. Only (DbTerm a)) -> do
+    outputStrLn $ shows x $ showString " : " $ prettyTerm0 Unqualify a ""
+    outputStrLn $ showString "  in " $ shows m "\n"
