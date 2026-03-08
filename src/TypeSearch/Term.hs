@@ -1,21 +1,9 @@
 module TypeSearch.Term where
 
-import Data.HashMap.Strict qualified as HM
-import Data.Hashable
 import GHC.Generics
 import TypeSearch.Common
 
 --------------------------------------------------------------------------------
-
-data QName = QName
-  { moduleName :: ModuleName,
-    name :: Name
-  }
-  deriving stock (Eq, Ord, Generic)
-  deriving anyclass (Hashable)
-
-instance Show QName where
-  showsPrec _ x = shows x.moduleName . showChar '.' . shows x.name
 
 -- | Terms
 data Term
@@ -31,7 +19,8 @@ data Term
   | Pair Term Term -- (t1, t2)
   | Proj1 Term -- t.1
   | Proj2 Term -- t.2
-  deriving stock (Show)
+  deriving stock (Show, Generic)
+  deriving anyclass (Flat)
 
 type Type = Term
 

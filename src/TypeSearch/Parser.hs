@@ -16,7 +16,7 @@ import Data.Void
 import Text.Megaparsec
 import Text.Megaparsec.Char qualified as C
 import Text.Megaparsec.Char.Lexer qualified as L
-import TypeSearch.Common
+import TypeSearch.Common hiding (QName)
 import TypeSearch.Raw
 
 --------------------------------------------------------------------------------

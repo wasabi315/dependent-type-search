@@ -15,11 +15,15 @@ module TypeSearch.Common
     MetaVar (..),
     Name (..),
     ModuleName (..),
+    QName (..),
     freshen,
 
     -- * Position
     SourcePos (..),
+
+    -- * Re-exports
     module Data.Coerce,
+    module Flat,
   )
 where
 
@@ -29,7 +33,7 @@ import Data.Hashable
 import Data.Monoid
 import Data.String
 import Data.Text qualified as T
-import GHC.Generics (Generic)
+import Flat
 import GHC.Stack
 import Text.Megaparsec
 
@@ -73,22 +77,22 @@ instance Show (DontPrint a) where
 
 -- | De Bruijn indices
 newtype Index = Index Int
-  deriving newtype (Num, Eq, Ord, Show, Hashable, Enum)
+  deriving newtype (Num, Eq, Ord, Show, Hashable, Enum, Flat)
 
 -- | De Bruijn levels
 newtype Level = Level Int
-  deriving newtype (Eq, Ord, Num, Show, Hashable)
+  deriving newtype (Eq, Ord, Num, Show, Hashable, Flat)
 
 -- | Generated metavariables
 newtype GenMetaVar = GenMetaVar Int
-  deriving newtype (Num, Eq, Ord, Show, Hashable, Enum)
+  deriving newtype (Num, Eq, Ord, Show, Hashable, Enum, Flat)
 
 -- | Metavariables
 data MetaVar
   = Src Name
   | Gen GenMetaVar -- generated during unification
   deriving stock (Eq, Ord, Generic)
-  deriving anyclass (Hashable)
+  deriving anyclass (Hashable, Flat)
 
 instance IsString MetaVar where
   fromString = Src . fromString
@@ -100,17 +104,28 @@ instance Show MetaVar where
 
 -- | Names
 newtype Name = Name T.Text
-  deriving newtype (Eq, Ord, Hashable, IsString)
+  deriving newtype (Eq, Ord, Hashable, IsString, Flat)
 
 instance Show Name where
   showsPrec _ (Name n) = showString (T.unpack n)
 
 -- | Module names
 newtype ModuleName = ModuleName T.Text
-  deriving newtype (Eq, Ord, Hashable, IsString)
+  deriving newtype (Eq, Ord, Hashable, IsString, Flat)
 
 instance Show ModuleName where
   showsPrec _ (ModuleName n) = showString (T.unpack n)
+
+-- | Qualified names
+data QName = QName
+  { moduleName :: ModuleName,
+    name :: Name
+  }
+  deriving stock (Eq, Ord, Generic)
+  deriving anyclass (Hashable, Flat)
+
+instance Show QName where
+  showsPrec _ x = shows x.moduleName . showChar '.' . shows x.name
 
 freshen :: [Name] -> Name -> Name
 freshen ns n

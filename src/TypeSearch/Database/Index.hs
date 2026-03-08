@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
-module TypeSearch.Translate (translateLibrary, TranslateConfig (..)) where
+module TypeSearch.Database.Index where
 
 import Agda.Compiler.Backend qualified as Agda
 import Agda.Compiler.Common qualified as Agda
@@ -12,6 +12,7 @@ import Agda.Syntax.Common qualified as Agda
 import Agda.Syntax.Common.Pretty qualified as Agda
 import Agda.Syntax.Concrete qualified as Concrete
 import Agda.Syntax.Internal qualified as Internal
+import Agda.Syntax.Internal.Defs qualified as Agda
 import Agda.Syntax.Internal.Pattern qualified as Internal
 import Agda.Syntax.Literal qualified as Agda
 import Agda.Syntax.Position qualified as Agda
@@ -30,55 +31,62 @@ import Agda.Utils.FileName qualified as Agda
 import Agda.Utils.IO.Directory qualified as Agda
 import Agda.Utils.Impossible (__IMPOSSIBLE__)
 import Agda.Utils.Monad qualified as Agda
-import Control.Monad (forM, forM_)
+import Control.Monad (forM)
 import Control.Monad.Except (catchError, throwError)
 import Control.Monad.Reader
-import Data.IORef
-import Data.List (sort)
+import Data.Foldable
+import Data.HashSet qualified as HS
+import Data.List (elemIndex, sort)
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map.Strict qualified as Map
 import Data.Maybe
 import Data.String
 import Data.Text qualified as T
-import System.Directory (createDirectoryIfMissing, getCurrentDirectory)
-import System.FilePath (addExtension, takeDirectory, (</>))
+import Database.PostgreSQL.Simple
+import Database.PostgreSQL.Simple.Types
+import System.Directory
 import System.FilePath.Find qualified as Find
 import System.IO (hPutStrLn, stderr)
 import TypeSearch.Common
-import TypeSearch.Pretty (prettyModule)
-import TypeSearch.Raw
+import TypeSearch.Database.Common
+import TypeSearch.Raw hiding (QName)
+import TypeSearch.Raw qualified as Raw (QName)
+import TypeSearch.Term
 
 --------------------------------------------------------------------------------
 -- Types
 
-data TranslateConfig = TranslateConfig
+data IndexConfig = IndexConfig
   { -- | Maximum Raw node count for a let-body; larger bodies fall back to DAxiom.
     maxLetSize :: Int,
-    outDir :: FilePath
+    -- | Path to Agda library.
+    libraryDirectory :: FilePath,
+    -- | Connection to database.
+    databaseConnection :: Connection
   }
 
-data TranslateEnv = TranslateEnv
-  { maxLetSize :: Int,
-    stats :: IORef Statistics
+newtype IndexEnv = IndexEnv
+  { maxLetSize :: Int
   }
 
-data Statistics = Statistics
+type M = ReaderT IndexEnv Agda.TCM
 
-type M = ReaderT TranslateEnv Agda.TCM
+initEnv :: IndexConfig -> IndexEnv
+initEnv IndexConfig {..} = IndexEnv maxLetSize
 
-initStatistics :: Statistics
-initStatistics = Statistics
-
-initEnv :: TranslateConfig -> IO TranslateEnv
-initEnv TranslateConfig {..} = do
-  stats <- newIORef initStatistics
-  pure TranslateEnv {..}
+data Item = Item
+  { name :: QName,
+    used_top_names :: HS.HashSet QName,
+    signature :: Term,
+    body :: Maybe Term
+  }
 
 --------------------------------------------------------------------------------
 -- Entrypoint
 
-translateLibrary :: TranslateConfig -> IO Statistics
+translateLibrary :: IndexConfig -> IO ()
 translateLibrary config = do
+  setCurrentDirectory config.libraryDirectory
   (Right (_, opts), _) <- pure $ Agda.runOptM $ Agda.parseBackendOptions [] [] Agda.defaultOptions
   Agda.runTCMTop' do
     opts <- Agda.addTrustedExecutables opts
@@ -98,7 +106,7 @@ translateLibrary config = do
       sort . map Find.infoPath . concat <$> forM paths \path ->
         liftIO $ Agda.findWithInfo (pure True) (Agda.hasAgdaExtension <$> Find.filePath) path
 
-    env <- liftIO $ initEnv config
+    let env = initEnv config
     forM_ files \inputFile ->
       ( do
           path <- liftIO (Agda.absolute inputFile)
@@ -113,52 +121,53 @@ translateLibrary config = do
                 Agda.setInterface mi.miInterface
                 mod' <- Agda.withScope_ mi.miInterface.iInsideScope do
                   runReaderT (translateInterface mi.miInterface) env
-                liftIO $ writeModule config.outDir mod'
+                liftIO $ saveModule config.databaseConnection mod'
       )
         `catchError` \err ->
           Agda.renderError err >>= liftIO . hPutStrLn stderr
 
-    liftIO $ readIORef env.stats
-
-writeModule :: FilePath -> Module -> IO ()
-writeModule outDir m = do
-  let outPath = moduleOutputPath outDir m.name
-  createDirectoryIfMissing True (takeDirectory outPath)
-  writeFile outPath (prettyModule m "")
-
-moduleOutputPath :: FilePath -> ModuleName -> FilePath
-moduleOutputPath outDir (ModuleName mn) =
-  addExtension (foldl (</>) outDir (map T.unpack (T.splitOn "." mn))) "types"
+saveModule :: Connection -> [Item] -> IO ()
+saveModule conn items = do
+  let values = flip map items \(Item n ns a t) -> do
+        let n_qual = DbQName n
+            n_unqual = DbName n.name
+            ns_qual = PGArray $ map DbQName (HS.toList ns)
+            ns_unqual = PGArray $ map (\n -> DbName n.name) (HS.toList ns)
+            a' = DbTerm a
+            t' = DbTerm <$> t
+        (n_qual, n_unqual, ns_qual, ns_unqual, a', t')
+  _ <-
+    executeMany
+      conn
+      "INSERT INTO library_items(name_qual,name_unqual,used_top_names_qual,used_top_names_unqual,sig,body) VALUES (?,?,?,?,?,?)"
+      values
+  pure ()
 
 --------------------------------------------------------------------------------
 -- Module translation
 
-translateInterface :: Agda.Interface -> M Module
+translateInterface :: Agda.Interface -> M [Item]
 translateInterface intf = do
   scope <- lift Agda.getCurrentScope
   let names = Agda.exportedNamesInScope scope :: Agda.NamesInScope
       xns = [(x, n.anameName) | (x, ns) <- Map.toList names, n <- NonEmpty.toList ns]
-  decls <-
-    concat <$> forM xns \(cname, origQName) ->
-      ( do
-          Agda.getConstInfo' origQName >>= \case
-            Left _ -> pure []
-            Right def -> do
-              let outMod = translateModuleName intf.iModuleName
-                  outName = Qual outMod (translateName cname)
-              translateDefinition outName def
-      )
-        `catchError` \err -> do
-          Agda.renderError err >>= liftIO . hPutStrLn stderr
-          pure []
-  let modName = translateModuleName intf.iModuleName
-      imports = map (translateTopLevelModuleName . fst) intf.iImportedModules
-  pure Module {name = modName, imports, decls}
+  concat <$> forM xns \(cname, origQName) ->
+    ( do
+        Agda.getConstInfo' origQName >>= \case
+          Left _ -> pure []
+          Right def -> do
+            let outMod = translateModuleName intf.iModuleName
+                outName = QName outMod (translateName cname)
+            translateDefinition outName def
+    )
+      `catchError` \err -> do
+        Agda.renderError err >>= liftIO . hPutStrLn stderr
+        pure []
 
 --------------------------------------------------------------------------------
 -- Definition translation
 
-translateDefinition :: QName -> Agda.Definition -> M [Decl]
+translateDefinition :: QName -> Agda.Definition -> M [Item]
 translateDefinition qname def =
   Agda.ifM
     (isErasable def.defType)
@@ -175,11 +184,74 @@ translateDefinition qname def =
       Agda.GeneralizableVar {} -> pure []
       Agda.PrimitiveSortDefn {} -> pure []
 
-translateToAxiom :: QName -> Internal.Type -> M Decl
-translateToAxiom x ty = DAxiom Nothing x <$> translateType ty
+getDefNames :: (Agda.GetDefs a, Agda.Normalise a) => a -> M (HS.HashSet QName)
+getDefNames x = do
+  x <- Agda.normalise x
+  pure $! Agda.getDefs' (const Nothing) (HS.singleton . translateQName) x
+
+translateToAxiom :: QName -> Internal.Type -> M Item
+translateToAxiom x ty = do
+  ns <- getDefNames ty
+  ty <- translateType ty
+  ty <- rawToTerm0 ty
+  pure $! Item x ns ty Nothing
+
+translateRecordDef :: QName -> Agda.Definition -> M [Item]
+translateRecordDef qname def = do
+  if isSigmaTranslatable def
+    then translateToSigma qname def
+    else pure <$> translateToAxiom qname def.defType
+
+translateConDef :: QName -> Agda.Definition -> M [Item]
+translateConDef qname def = do
+  let Agda.Constructor {..} = def.theDef
+  recDef <- Agda.getConstInfo conData
+  if isSigmaTranslatable recDef
+    then translateToPairs qname recDef def
+    else pure <$> translateToAxiom qname def.defType
+
+translateFunDef :: QName -> Agda.Definition -> M [Item]
+translateFunDef qname def = do
+  let Agda.Function {..} = def.theDef
+
+  Agda.inTopContext $
+    Agda.withCurrentModule def.defName.qnameModule $
+      case funProjection of
+        Right (Agda.projProper -> Just r) -> do
+          recDef <- Agda.getConstInfo r
+          if isSigmaTranslatable recDef
+            then translateToProj1Proj2 qname recDef def
+            else pure <$> translateToAxiom qname def.defType
+        _ ->
+          Agda.ifM
+            (isTypeAliasLike def)
+            do translateTypeAliasLike qname def
+            do pure <$> translateToAxiom qname def.defType
 
 --------------------------------------------------------------------------------
 -- Internal term/type → Raw
+-- FIXME: Directly translate to Term
+
+-- | Convert @Raw@ to @Term@ assuming well-typedness.
+rawToTerm0 :: Raw -> M Term
+rawToTerm0 = rawToTerm []
+
+rawToTerm :: [Name] -> Raw -> M Term
+rawToTerm ns = \case
+  RVar (Qual m x) -> pure $ Top (QName m x)
+  RVar (Unqual x) -> case x `elemIndex` ns of
+    Nothing -> translateError "Hmm, I'm messing up contexts"
+    Just i -> pure $ Var (Index i)
+  RMeta m -> pure $ Meta m
+  RU -> pure U
+  RPi x a b -> Pi x <$> rawToTerm ns a <*> rawToTerm (x : ns) b
+  RLam x t -> Lam x <$> rawToTerm (x : ns) t
+  RApp t u -> App <$> rawToTerm ns t <*> rawToTerm ns u
+  RSigma x a b -> Sigma x <$> rawToTerm ns a <*> rawToTerm (x : ns) b
+  RPair t u -> Pair <$> rawToTerm ns t <*> rawToTerm ns u
+  RProj1 t -> Proj1 <$> rawToTerm ns t
+  RProj2 t -> Proj2 <$> rawToTerm ns t
+  RPos t _ -> rawToTerm ns t
 
 translateType :: Internal.Type -> M Raw
 translateType ty = translateTerm (Agda.sort ty._getSort) ty.unEl
@@ -221,7 +293,7 @@ translateVar i ty args = do
 
 translateDef :: Internal.QName -> Internal.Type -> [Internal.Term] -> M Raw
 translateDef f ty args = do
-  let name = translateQName f
+  let name = translateQNameToRaw f
   translateApp (RVar name) ty args
 
 translateCon :: Internal.ConHead -> Internal.ConInfo -> Internal.Type -> Internal.Args -> [Internal.Term] -> M Raw
@@ -232,7 +304,7 @@ translateCon ch i ty pars args = do
   if Agda.defCopy conDef
     then translateCon conSrcCon i ty pars args
     else do
-      let name = translateQName c
+      let name = translateQNameToRaw c
       dataDef <- Agda.getConstInfo conData
       -- For making parameters explicit
       -- e.g) Agda.Builtin.List._∷_ x xs -> Agda.Builtin.List._∷_ A x xs
@@ -264,7 +336,7 @@ translateProj ::
   [Internal.Term] ->
   M Raw
 translateProj q tty t ty args = do
-  let name = translateQName q
+  let name = translateQNameToRaw q
   arg <- translateTerm tty t
   translateApp (RVar name `RApp` arg) ty args
 
@@ -348,8 +420,8 @@ translateTeleBindsToLam tel body = go id tel
 translateLit :: Agda.Literal -> M Raw
 translateLit = \case
   Agda.LitNat n -> do
-    zero <- translateQName <$> Agda.getBuiltinName_ Agda.BuiltinZero
-    suc <- translateQName <$> Agda.getBuiltinName_ Agda.BuiltinSuc
+    zero <- translateQNameToRaw <$> Agda.getBuiltinName_ Agda.BuiltinZero
+    suc <- translateQNameToRaw <$> Agda.getBuiltinName_ Agda.BuiltinSuc
     pure $ applyN (fromInteger n) (RVar suc `RApp`) (RVar zero)
   _ -> translateError "unsupported literal"
 
@@ -368,7 +440,7 @@ isSigmaTranslatable def = case def.theDef of
     Agda.theEtaEquality recEtaEquality' == Agda.YesEta && not (null recFields)
   _ -> False
 
-translateToSigma :: QName -> Agda.Definition -> M [Decl]
+translateToSigma :: QName -> Agda.Definition -> M [Item]
 translateToSigma qname def = do
   let Agda.Record {..} = def.theDef
 
@@ -382,12 +454,13 @@ translateToSigma qname def = do
         _ _ -> __IMPOSSIBLE__
 
   Agda.TelV tel _ <- Agda.telViewUpTo recPars def.defType
-  recTy <- translateTeleBindsToPi tel (pure RU)
+  ns <- getDefNames tel
+  recTy <- rawToTerm0 =<< translateTeleBindsToPi tel (pure RU)
   let fieldTel = snd $ Agda.splitTelescopeAt recPars recTel
-  recBody <- translateTeleBindsToLam tel $ buildSigmaChain id recFields fieldTel
-  pure [DLet Nothing qname recTy recBody]
+  recBody <- rawToTerm0 =<< translateTeleBindsToLam tel (buildSigmaChain id recFields fieldTel)
+  pure [Item qname ns recTy (Just recBody)]
 
-translateToPairs :: QName -> Agda.Definition -> Agda.Definition -> M [Decl]
+translateToPairs :: QName -> Agda.Definition -> Agda.Definition -> M [Item]
 translateToPairs qname recDef conDef = do
   let Agda.Record {..} = recDef.theDef
 
@@ -402,14 +475,18 @@ translateToPairs qname recDef conDef = do
 
   Agda.TelV parTel _ <- Agda.telViewUpTo recPars conDef.defType
   let fieldTel = snd $ Agda.splitTelescopeAt recPars recTel
-  ctorTy <- translateType conDef.defType
+  ns <- getDefNames conDef.defType
+  ctorTy <- rawToTerm0 =<< translateType conDef.defType
   ctorBody <-
-    translateTeleBindsToLam parTel $
-      translateTeleBindsToLam fieldTel $
-        pure (buildPairChain id recFields)
-  pure [DLet Nothing qname ctorTy ctorBody]
+    rawToTerm0
+      =<< translateTeleBindsToLam
+        parTel
+        ( translateTeleBindsToLam fieldTel $
+            pure (buildPairChain id recFields)
+        )
+  pure [Item qname ns ctorTy (Just ctorBody)]
 
-translateToProj1Proj2 :: QName -> Agda.Definition -> Agda.Definition -> M [Decl]
+translateToProj1Proj2 :: QName -> Agda.Definition -> Agda.Definition -> M [Item]
 translateToProj1Proj2 qname recDef projDef = do
   let Agda.Record {..} = recDef.theDef
 
@@ -422,11 +499,14 @@ translateToProj1Proj2 qname recDef projDef = do
         _ -> __IMPOSSIBLE__
 
   Agda.TelV parTel _ <- Agda.telViewUpTo recPars projDef.defType
-  projTy <- translateType projDef.defType
+  ns <- getDefNames projDef.defType
+  projTy <- rawToTerm0 =<< translateType projDef.defType
   projBody <-
-    translateTeleBindsToLam parTel $
-      pure (RLam "r" $ buildProj1Proj2Chain id recFields)
-  pure [DLet Nothing qname projTy projBody]
+    rawToTerm0
+      =<< translateTeleBindsToLam
+        parTel
+        (pure (RLam "r" $ buildProj1Proj2Chain id recFields))
+  pure [Item qname ns projTy (Just projBody)]
 
 --------------------------------------------------------------------------------
 -- Translate type-alias-like into let
@@ -442,6 +522,7 @@ isTypeAliasLike def =
       pure $ isNonPatternMatching def
     ]
 
+-- | Check if a given type can be a function type into some Sort.
 canEndInSort :: Internal.Type -> M Bool
 canEndInSort t = do
   Agda.TelV tel b <- Agda.telView t
@@ -449,7 +530,12 @@ canEndInSort t = do
     b <- Agda.reduce b
     case b.unEl of
       Internal.Sort {} -> pure True
-      Internal.Var {} -> pure True
+      Internal.Var i _ -> do
+        ty <- Agda.typeOfBV i
+        Agda.TelV _ b <- Agda.telView ty
+        pure $ case b.unEl of
+          Internal.Sort {} -> True
+          _ -> False
       _ -> pure False
 
 hasNoLocalDefs :: Agda.Definition -> M Bool
@@ -472,11 +558,12 @@ isNonPatternMatching def = do
         _ -> False
     _ -> False
 
-translateTypeAliasLike :: QName -> Agda.Definition -> M [Decl]
+translateTypeAliasLike :: QName -> Agda.Definition -> M [Item]
 translateTypeAliasLike qname def = do
   let Agda.Function {..} = def.theDef
       [Internal.Clause {..}] = funClauses
-  funTy <- translateType def.defType
+  ns <- getDefNames def.defType
+  funTy <- rawToTerm0 =<< translateType def.defType
   Agda.addContext (Agda.KeepNames clauseTel) do
     (bodyTy, argLams) <- translatePatternArgs def.defType namedClausePats
     clauseBody <- Agda.normalise (fromMaybe __IMPOSSIBLE__ clauseBody)
@@ -484,8 +571,9 @@ translateTypeAliasLike qname def = do
     maxSize <- asks \config -> config.maxLetSize
     if rawSize fun <= maxSize
       then do
-        pure [DLet Nothing qname funTy fun]
-      else pure [DAxiom Nothing qname funTy]
+        fun' <- rawToTerm0 fun
+        pure [Item qname ns funTy (Just fun')]
+      else pure [Item qname ns funTy Nothing]
 
 translatePatternArgs :: Internal.Type -> Internal.NAPs -> M (Internal.Type, Raw -> Raw)
 translatePatternArgs ty naps = do
@@ -501,40 +589,6 @@ translatePatternArgs ty naps = do
         _ -> __IMPOSSIBLE__
 
   pure (ty, foldr ((.) . varToLam) id args)
-
---------------------------------------------------------------------------------
-
-translateRecordDef :: QName -> Agda.Definition -> M [Decl]
-translateRecordDef qname def = do
-  if isSigmaTranslatable def
-    then translateToSigma qname def
-    else pure <$> translateToAxiom qname def.defType
-
-translateConDef :: QName -> Agda.Definition -> M [Decl]
-translateConDef qname def = do
-  let Agda.Constructor {..} = def.theDef
-  recDef <- Agda.getConstInfo conData
-  if isSigmaTranslatable recDef
-    then translateToPairs qname recDef def
-    else pure <$> translateToAxiom qname def.defType
-
-translateFunDef :: QName -> Agda.Definition -> M [Decl]
-translateFunDef qname def = do
-  let Agda.Function {..} = def.theDef
-
-  Agda.inTopContext $
-    Agda.withCurrentModule def.defName.qnameModule $
-      case funProjection of
-        Right (Agda.projProper -> Just r) -> do
-          recDef <- Agda.getConstInfo r
-          if isSigmaTranslatable recDef
-            then translateToProj1Proj2 qname recDef def
-            else pure <$> translateToAxiom qname def.defType
-        _ ->
-          Agda.ifM
-            (isTypeAliasLike def)
-            do translateTypeAliasLike qname def
-            do pure <$> translateToAxiom qname def.defType
 
 --------------------------------------------------------------------------------
 -- Name translation helpers
@@ -556,6 +610,12 @@ translateTopLevelModuleName =
 
 translateQName :: Internal.QName -> QName
 translateQName f = do
+  let x = translateName $ Agda.nameConcrete $ Agda.qnameName f
+      m = translateModuleName $ Agda.qnameModule f
+  QName m x
+
+translateQNameToRaw :: Internal.QName -> Raw.QName
+translateQNameToRaw f = do
   let x = translateName $ Agda.nameConcrete $ Agda.qnameName f
       m = translateModuleName $ Agda.qnameModule f
   Qual m x

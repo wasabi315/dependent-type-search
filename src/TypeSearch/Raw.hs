@@ -14,7 +14,7 @@ module TypeSearch.Raw
 where
 
 import Data.String
-import TypeSearch.Common
+import TypeSearch.Common hiding (QName)
 
 --------------------------------------------------------------------------------
 

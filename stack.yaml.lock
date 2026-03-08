@@ -11,6 +11,20 @@ packages:
       size: 43914
   original:
     hackage: Agda-2.8.0
+- completed:
+    hackage: postgresql-migration-0.2.1.8@sha256:6d395f6529a2d3a811af7209607e9b26350142574ab757a04c67e61f6fe737b2,4502
+    pantry-tree:
+      sha256: 84938c25482440af01693d0a9502f0507387f08079caf4f23069553d2c305435
+      size: 1146
+  original:
+    hackage: postgresql-migration-0.2.1.8
+- completed:
+    hackage: postgresql-simple-0.7.0.1@sha256:b2dffe014fa8b211feda3661921f2a6aabd63b055a0a00fe415ec2a823f9aaea,4753
+    pantry-tree:
+      sha256: 74c4df162431ca84c7bff3179a05e13251a2034ce896a63a6ad94d9d96e6b76e
+      size: 4255
+  original:
+    hackage: postgresql-simple-0.7.0.1
 snapshots:
 - completed:
     sha256: 02a90de20d42662e0b8b95d81735b0e69bae60cdd819c9e0673e6b523e2aa689

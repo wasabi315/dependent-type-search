@@ -7,3 +7,5 @@ packages:
 
 extra-deps:
   - Agda-2.8.0
+  - postgresql-migration-0.2.1.8
+  - postgresql-simple-0.7.0.1
