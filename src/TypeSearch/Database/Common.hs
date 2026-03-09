@@ -59,15 +59,15 @@ instance ToField ReturnSort where
   toField x = toField tag
     where
       tag = case x of
-        YesReturnSort -> (0 :: Int)
-        NoReturnSort -> 1
+        NoReturnSort -> (0 :: Int)
+        YesReturnSort -> 1
         MayReturnSort -> 2
 
 instance FromField ReturnSort where
   fromField f dat =
     fromField f dat >>= \case
-      (0 :: Int) -> pure YesReturnSort
-      1 -> pure NoReturnSort
+      (0 :: Int) -> pure NoReturnSort
+      1 -> pure YesReturnSort
       2 -> pure MayReturnSort
       _ -> empty
 
@@ -78,14 +78,14 @@ instance ToField Polymorphic where
   toField x = toField tag
     where
       tag = case x of
-        YesPolymorphic -> (0 :: Int)
-        NoPolymorphic -> 1
+        YesPolymorphic -> (1 :: Int)
+        NoPolymorphic -> 0
 
 instance FromField Polymorphic where
   fromField f dat =
     fromField f dat >>= \case
-      (0 :: Int) -> pure YesPolymorphic
-      1 -> pure NoPolymorphic
+      (1 :: Int) -> pure YesPolymorphic
+      0 -> pure NoPolymorphic
       _ -> empty
 
 data Arity = InfArity | Arity Int
