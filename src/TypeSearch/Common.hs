@@ -11,11 +11,11 @@ module TypeSearch.Common
     -- * Names
     Index (..),
     Level (..),
-    GenMetaVar (..),
     MetaVar (..),
     Name (..),
     ModuleName (..),
     QName (..),
+    PQName (..),
     freshen,
 
     -- * Position
@@ -83,24 +83,12 @@ newtype Index = Index Int
 newtype Level = Level Int
   deriving newtype (Eq, Ord, Num, Show, Hashable, Flat)
 
--- | Generated metavariables
-newtype GenMetaVar = GenMetaVar Int
-  deriving newtype (Num, Eq, Ord, Show, Hashable, Enum, Flat)
-
 -- | Metavariables
-data MetaVar
-  = Src Name
-  | Gen GenMetaVar -- generated during unification
-  deriving stock (Eq, Ord, Generic)
-  deriving anyclass (Hashable, Flat)
-
-instance IsString MetaVar where
-  fromString = Src . fromString
+newtype MetaVar = GenMetaVar Int
+  deriving newtype (Num, Eq, Ord, Hashable, Enum, Flat)
 
 instance Show MetaVar where
-  showsPrec _ = \case
-    Src n -> shows n
-    Gen (GenMetaVar u) -> showString "?G$" . shows u
+  showsPrec _ (GenMetaVar m) = showString "?G%" . shows m
 
 -- | Names
 newtype Name = Name T.Text
@@ -126,6 +114,20 @@ data QName = QName
 
 instance Show QName where
   showsPrec _ x = shows x.moduleName . showChar '.' . shows x.name
+
+-- | Possibly qualified names
+data PQName
+  = Unqual Name
+  | Qual ModuleName Name
+  deriving stock (Eq)
+
+instance IsString PQName where
+  fromString = Unqual . Name . fromString
+
+instance Show PQName where
+  showsPrec _ = \case
+    Unqual n -> shows n
+    Qual m n -> shows m . showChar '.' . shows n
 
 freshen :: [Name] -> Name -> Name
 freshen ns n

@@ -49,8 +49,7 @@ import System.FilePath.Find qualified as Find
 import System.IO (hPutStrLn, stderr)
 import TypeSearch.Common
 import TypeSearch.Database.Common
-import TypeSearch.Raw hiding (QName)
-import TypeSearch.Raw qualified as Raw (QName)
+import TypeSearch.Raw
 import TypeSearch.Term
 
 --------------------------------------------------------------------------------
@@ -191,18 +190,13 @@ translateLibrary config = do
 
 saveModule :: Connection -> [Item] -> IO ()
 saveModule conn items = do
-  let values = flip map items \(Item n a t (rs, pl, ar)) -> do
-        let nameQual = DbQName n
-            nameUnqual = DbName n.name
+  let values = flip map items \(Item n a t (return_sort, polymorphic, arity)) -> do
+        let name_qual = DbQName n
+            name_unqual = DbName n.name
             sig = DbTerm a
             body = DbTerm <$> t
-        (nameQual, nameUnqual, sig, body, rs, pl, ar)
-  _ <-
-    executeMany
-      conn
-      "INSERT INTO library_items(name_qual,name_unqual,sig,body,return_sort,polymorphic,arity) VALUES (?,?,?,?,?,?,?)"
-      values
-  pure ()
+        DbItem {..}
+  saveManyItems conn values
 
 --------------------------------------------------------------------------------
 -- Module translation
@@ -656,7 +650,7 @@ translateQName f = do
       m = translateModuleName $ Agda.qnameModule f
   QName m x
 
-translateQNameToRaw :: Internal.QName -> Raw.QName
+translateQNameToRaw :: Internal.QName -> PQName
 translateQNameToRaw f = do
   let x = translateName $ Agda.nameConcrete $ Agda.qnameName f
       m = translateModuleName $ Agda.qnameModule f

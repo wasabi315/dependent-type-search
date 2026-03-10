@@ -20,29 +20,29 @@ a *** b = VSigma "_" a \ ~_ -> b
 
 exMetaCtx :: MetaCtx
 exMetaCtx =
-  MetaCtx 0 $
+  MetaCtx 5 $
     HML.fromList
-      [ ("α", Unsolved VU),
-        ("β", Unsolved VU),
-        ("γ", Unsolved VU),
-        ("ε", Unsolved VU),
-        ("δ", Unsolved ((vlist $$ vgamma) --> VU))
+      [ (0, Unsolved VU),
+        (1, Unsolved VU),
+        (2, Unsolved VU),
+        (3, Unsolved VU),
+        (4, Unsolved ((vlist $$ vgamma) --> VU))
       ]
 
 valpha :: Value
-valpha = VMeta "α"
+valpha = VMeta 0
 
 vbeta :: Value
-vbeta = VMeta "β"
+vbeta = VMeta 1
 
 vgamma :: Value
-vgamma = VMeta "γ"
-
-vdelta :: Value
-vdelta = VMeta "δ"
+vgamma = VMeta 2
 
 veps :: Value
-veps = VMeta "ε"
+veps = VMeta 3
+
+vdelta :: Value
+vdelta = VMeta 4
 
 vlist :: Value
 vlist = VTop (QName "Agda.Builtin.List" "List") SNil Nothing
@@ -62,14 +62,14 @@ tFoldr3 =
   quote exMetaCtx 0 $
     VPi "xs" (vlist $$ vgamma) \xs -> ((vdelta $$ xs) *** (vdelta $$ xs) --> (vdelta $$ xs)) *** (vdelta $$ xs) --> (vdelta $$ xs)
 
-printResults :: (Foldable t) => t (Iso, MetaCtx) -> IO ()
-printResults res = for_ res \(i, mctx) -> do
-  putStrLn "----------"
-  putStrLn $ "iso: " ++ prettyIso 0 i ""
-  putStrLn "subst: "
-  for_ (HML.toList mctx.metaCtx) \(v, t) -> case (v, t) of
-    (Src _, Solved sol ty) -> putStrLn $ "  " ++ show v ++ " : " ++ prettyTerm0 Unqualify (quote mctx 0 ty) "" ++ " = " ++ prettyTerm0 Unqualify (quote mctx 0 sol) ""
-    _ -> pure ()
+-- printResults :: (Foldable t) => t (Iso, MetaCtx) -> IO ()
+-- printResults res = for_ res \(i, mctx) -> do
+--   putStrLn "----------"
+--   putStrLn $ "iso: " ++ prettyIso 0 i ""
+--   putStrLn "subst: "
+--   for_ (HML.toList mctx.metaCtx) \(v, t) -> case (v, t) of
+--     (Src _, Solved sol ty) -> putStrLn $ "  " ++ show v ++ " : " ++ prettyTerm0 Unqualify (quote mctx 0 ty) "" ++ " = " ++ prettyTerm0 Unqualify (quote mctx 0 sol) ""
+--     _ -> pure ()
 
 --------------------------------------------------------------------------------
 -- Values
@@ -109,7 +109,7 @@ type TopEnv = HML.HashMap QName Value
 
 -- | Meta-context
 data MetaCtx = MetaCtx
-  { nextMeta :: GenMetaVar,
+  { nextMeta :: MetaVar,
     metaCtx :: HML.HashMap MetaVar MetaEntry
   }
 

@@ -1,6 +1,6 @@
 module TypeSearch.Raw
   ( -- * Possibly qualified names
-    QName (..),
+    PQName (..),
 
     -- * Modules
     Module (..),
@@ -13,24 +13,9 @@ module TypeSearch.Raw
   )
 where
 
-import Data.String
-import TypeSearch.Common hiding (QName)
+import TypeSearch.Common
 
 --------------------------------------------------------------------------------
-
--- | Qualified names
-data QName
-  = Unqual Name
-  | Qual ModuleName Name
-  deriving stock (Eq)
-
-instance IsString QName where
-  fromString = Unqual . Name . fromString
-
-instance Show QName where
-  showsPrec _ = \case
-    Unqual n -> shows n
-    Qual m n -> shows m . showChar '.' . shows n
 
 data Module = Module
   { name :: ModuleName,
@@ -40,14 +25,13 @@ data Module = Module
   deriving stock (Show)
 
 data Decl
-  = DLet (Maybe SourcePos) QName Raw Raw
-  | DAxiom (Maybe SourcePos) QName Raw
+  = DLet (Maybe SourcePos) PQName Raw Raw
+  | DAxiom (Maybe SourcePos) PQName Raw
   deriving stock (Show)
 
 -- | Raw terms
 data Raw
-  = RVar QName
-  | RMeta MetaVar
+  = RVar PQName
   | RU
   | RPi Name Raw Raw
   | RLam Name Raw
@@ -67,7 +51,6 @@ unRPos = \case
 rawSize :: Raw -> Int
 rawSize = \case
   RVar _ -> 1
-  RMeta _ -> 1
   RU -> 1
   RPi _ a b -> 1 + rawSize a + rawSize b
   RLam _ b -> 1 + rawSize b

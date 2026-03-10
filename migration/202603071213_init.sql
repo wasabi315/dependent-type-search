@@ -14,3 +14,5 @@ CREATE TABLE library_items (
 );
 
 CREATE INDEX library_items_name_unqual_trgm    ON library_items USING GIST (name_unqual gist_trgm_ops);
+CREATE INDEX library_items_feat_idx
+  ON library_items (polymorphic, return_sort, arity);

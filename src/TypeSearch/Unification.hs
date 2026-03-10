@@ -70,7 +70,7 @@ type P = StateT MetaCtx Maybe
 
 newMeta :: MetaCtx -> Value -> (MetaVar, MetaCtx)
 newMeta mctx ~mty = do
-  let m' = Gen mctx.nextMeta
+  let m' = mctx.nextMeta
       mctx' =
         mctx
           { nextMeta = mctx.nextMeta + 1,

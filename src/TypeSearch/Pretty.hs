@@ -70,7 +70,6 @@ prettyRaw = go
   where
     go p = \case
       RVar n -> shows n
-      RMeta m -> shows m
       RU -> showString "U"
       RPi "_" a b -> par p piP $ go sigmaP a . showString " → " . go piP b
       RPi n a b -> par p piP $ piBind n a . goPi b

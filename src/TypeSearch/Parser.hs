@@ -86,8 +86,8 @@ pModuleName = ModuleName <$> pIdent
 pName :: Parser Name
 pName = Name <$> pIdent
 
-pQName :: Parser QName
-pQName = do
+pPQName :: Parser PQName
+pPQName = do
   x <- pIdent
   y <- optional (try (char '.' *> pIdent))
   pure $ case y of
@@ -108,8 +108,7 @@ pKeyword kw = do
 pAtom :: Parser Raw
 pAtom =
   withPos
-    ( (RVar <$> pQName)
-        <|> (RMeta . Src <$> pMeta)
+    ( (RVar <$> pPQName)
         <|> (RU <$ pKeyword "U")
     )
     <|> parens pRaw
@@ -186,7 +185,7 @@ pLet :: Parser Decl
 pLet = do
   pos <- getSourcePos
   pKeyword "let"
-  x <- pQName
+  x <- pPQName
   _ <- char ':'
   ann <- pRaw
   _ <- char '='
@@ -197,7 +196,7 @@ pAxiom :: Parser Decl
 pAxiom = do
   pos <- getSourcePos
   pKeyword "postulate"
-  x <- pQName
+  x <- pPQName
   _ <- char ':'
   ann <- pRaw
   pure $ DAxiom (Just pos) x ann

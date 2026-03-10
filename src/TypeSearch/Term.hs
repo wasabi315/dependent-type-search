@@ -3,7 +3,7 @@ module TypeSearch.Term where
 import Data.List (elemIndex)
 import GHC.Generics
 import TypeSearch.Common
-import TypeSearch.Raw hiding (QName)
+import TypeSearch.Raw
 
 --------------------------------------------------------------------------------
 
@@ -43,7 +43,6 @@ rawToTerm = go []
       RVar (Unqual x) -> case x `elemIndex` ns of
         Nothing -> Nothing
         Just i -> pure $ Var (Index i)
-      RMeta m -> pure $ Meta m
       RU -> pure U
       RPi x a b -> Pi x <$> go ns a <*> go (x : ns) b
       RLam x t -> Lam x <$> go (x : ns) t
