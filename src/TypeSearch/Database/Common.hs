@@ -3,6 +3,8 @@ module TypeSearch.Database.Common where
 import Control.Applicative
 import Control.Monad
 import Data.ByteString qualified as BS
+import Data.Either (partitionEithers)
+import Data.Set qualified as S
 import Data.Text qualified as T
 import Database.PostgreSQL.Simple
 import Database.PostgreSQL.Simple.FromField hiding (Binary)
@@ -63,6 +65,11 @@ instance FromField DbTerm where
 --     may
 --    /   \
 --  yes   no
+
+-- In agda-stdlib
+--   yes : 2860
+--   no  : 17067
+--   may : 864
 data ReturnSort
   = YesReturnSort
   | NoReturnSort
@@ -95,6 +102,10 @@ instance FromField ReturnSort where
 --     yes
 --      |
 --      no
+
+-- In agda-stdlib
+--   yes : 11140
+--   no  : 9651
 data Polymorphic = YesPolymorphic | NoPolymorphic
   deriving stock (Eq, Show)
 
@@ -121,6 +132,46 @@ infArity = 127
 --     approxArity(query) <= arity(item)
 
 --   0 < 1 < 2 < ... < ∞
+
+-- In agda-stdlib
+--   0 : 1514
+--   1 : 1342
+--   2 : 1943
+--   3 : 2084
+--   4 : 1736
+--   5 : 1775
+--   6 : 1728
+--   7 : 1350
+--   8 : 1103
+--   9 : 850
+--  10 : 522
+--  11 : 430
+--  12 : 255
+--  13 : 215
+--  14 : 188
+--  15 : 123
+--  16 : 74
+--  17 : 49
+--  18 : 60
+--  19 : 18
+--  20 : 22
+--  21 : 4
+--  22 : 9
+--  23 : 13
+--  24 : 0
+--  25 : 22
+--  26 : 1
+--  27 : 1
+--  28 : 2
+--  29 : 0
+--  30 : 0
+--  31 : 0
+--  32 : 1
+--  33 : 0
+--  34 : 0
+--  35 : 0
+--  36 : 2
+--  ∞  : 3374
 data Arity = InfArity | Arity Int
   deriving stock (Eq, Show)
 
@@ -256,6 +307,22 @@ arityAtLeast = go [] 0
         RApp {} -> impossible
         RPos {} -> impossible
 
+freeVars :: Raw -> S.Set PQName
+freeVars = go []
+  where
+    go ctx = \case
+      RVar (Unqual x) | x `elem` ctx -> S.empty
+      RVar x -> S.singleton x
+      RU -> S.empty
+      RPi x a b -> go ctx a <> go (x : ctx) b
+      RLam x t -> go (x : ctx) t
+      RApp t u -> go ctx t <> go ctx u
+      RSigma x a b -> go ctx a <> go (x : ctx) b
+      RPair t u -> go ctx t <> go ctx u
+      RProj1 t -> go ctx t
+      RProj2 t -> go ctx t
+      RPos t _ -> go ctx t
+
 filterByFeatures :: Connection -> Raw -> IO (Maybe [DbItem])
 filterByFeatures conn a = do
   case features of
@@ -283,3 +350,12 @@ filterByFeatures conn a = do
             NoPolymorphic -> [YesPolymorphic, NoPolymorphic],
           rar
         )
+
+fetchEnv :: Connection -> Raw -> IO [DbItem]
+fetchEnv conn a = do
+  query
+    conn
+    "SELECT name_qual, name_unqual, sig, body, return_sort, polymorphic, arity FROM library_items WHERE name_qual in ? UNION SELECT name_qual, name_unqual, sig, body, return_sort, polymorphic, arity FROM library_items WHERE name_unqual in ?"
+    (In quals, In unquals)
+  where
+    (quals, unquals) = partitionEithers $ map (\case Unqual x -> Right (DbName x); Qual m x -> Left (DbQName (QName m x))) $ S.toList (freeVars a)
