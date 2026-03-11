@@ -101,6 +101,7 @@ library
     , megaparsec
     , mtl
     , optparse-applicative
+    , parser-combinators
     , postgresql-migration
     , postgresql-simple
     , text
@@ -174,6 +175,7 @@ executable dependent-type-search-exe
     , megaparsec
     , mtl
     , optparse-applicative
+    , parser-combinators
     , postgresql-migration
     , postgresql-simple
     , text
@@ -248,6 +250,7 @@ test-suite dependent-type-search-test
     , megaparsec
     , mtl
     , optparse-applicative
+    , parser-combinators
     , postgresql-migration
     , postgresql-simple
     , text

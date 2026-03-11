@@ -4,12 +4,17 @@ import Control.Applicative
 import Control.Monad
 import Data.ByteString qualified as BS
 import Data.Either (partitionEithers)
+import Data.HashMap.Lazy qualified as HML
+import Data.Map.Strict qualified as M
 import Data.Set qualified as S
 import Data.Text qualified as T
 import Database.PostgreSQL.Simple
 import Database.PostgreSQL.Simple.FromField hiding (Binary)
+import Database.PostgreSQL.Simple.Newtypes
 import Database.PostgreSQL.Simple.ToField
+import Database.PostgreSQL.Simple.Types
 import TypeSearch.Common
+import TypeSearch.Evaluation
 import TypeSearch.Raw
 import TypeSearch.Term
 
@@ -17,12 +22,21 @@ import TypeSearch.Term
 -- Wrapper types for DB
 
 newtype DbName = DbName Name
-  deriving newtype (Show)
+  deriving newtype (Show, Eq, Ord)
 
 instance ToField DbName where
   toField x = toField @T.Text (coerce x)
 
 instance FromField DbName where
+  fromField f dat = coerce <$> fromField @T.Text f dat
+
+newtype DbModuleName = DbModuleName ModuleName
+  deriving newtype (Show, Eq, Ord)
+
+instance ToField DbModuleName where
+  toField x = toField @T.Text (coerce x)
+
+instance FromField DbModuleName where
   fromField f dat = coerce <$> fromField @T.Text f dat
 
 newtype DbQName = DbQName QName
@@ -52,6 +66,15 @@ instance FromField DbTerm where
 
 --------------------------------------------------------------------------------
 -- Features
+
+data ReturnTypeHead
+  = RHSort
+  | RHVar
+  | RHFormer Name
+  | RHOther
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON)
+  deriving (ToField, FromField) via Aeson ReturnTypeHead
 
 -- | Return-sort feature.
 
@@ -189,11 +212,18 @@ instance FromField Arity where
 data DbItem = DbItem
   { name_qual :: DbQName,
     name_unqual :: DbName,
+    modul :: DbModuleName,
     sig :: DbTerm,
     body :: Maybe DbTerm,
-    return_sort :: ReturnSort,
+    occurrence :: Maybe (PGArray Bool),
+    noncanonish :: PGArray DbName,
+    canonish :: PGArray DbName,
+    return_type_head :: ReturnTypeHead,
+    return_type_canonish :: PGArray DbName,
     polymorphic :: Polymorphic,
-    arity :: Arity
+    arity :: Arity,
+    return_sort_body :: Maybe ReturnSort,
+    body_canonish :: Maybe (PGArray DbName)
   }
   deriving stock (Generic)
   deriving anyclass (ToRow, FromRow)
@@ -203,7 +233,7 @@ saveManyItems conn items =
   void $
     executeMany
       conn
-      "INSERT INTO library_items(name_qual,name_unqual,sig,body,return_sort,polymorphic,arity) VALUES (?,?,?,?,?,?,?)"
+      "INSERT INTO library_items(name_qual,name_unqual,module,sig,body,occurrence,noncanonish,canonish,return_type_head,return_type_canonish,polymorphic,arity,return_sort_body,body_canonish) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
       items
 
 fuzzySearchByName :: Connection -> String -> IO [(DbQName, DbTerm)]
@@ -213,14 +243,79 @@ fuzzySearchByName conn name = do
 
 --------------------------------------------------------------------------------
 
+freeVars :: Raw -> S.Set PQName
+freeVars = \case
+  RVar x -> S.singleton x
+  RU -> S.empty
+  RPi x a b -> S.delete (Unqual x) $ freeVars a <> freeVars b
+  RLam x t -> S.delete (Unqual x) $ freeVars t
+  RApp t u -> freeVars t <> freeVars u
+  RSigma x a b -> S.delete (Unqual x) $ freeVars a <> freeVars b
+  RPair t u -> freeVars t <> freeVars u
+  RProj1 t -> freeVars t
+  RProj2 t -> freeVars t
+  RPos t _ -> freeVars t
+
+returnTypeFreeVars :: Raw -> S.Set DbName
+returnTypeFreeVars = \case
+  RPi x _ b -> S.delete (coerce x) $ returnTypeFreeVars b
+  RPos t _ -> returnTypeFreeVars t
+  t -> S.map (\case (Unqual x) -> coerce x; (Qual _ x) -> coerce x) $ freeVars t
+
+data BodyCanonish
+  = BCMixed
+  | BCCanonish
+  | BCNames (S.Set DbName)
+  deriving stock (Show)
+
+instance Semigroup BodyCanonish where
+  BCCanonish <> BCCanonish = BCCanonish
+  BCNames ns <> BCNames ns' = BCNames (S.intersection ns ns')
+  _ <> _ = BCMixed
+
+fetchBodyCanonish :: Connection -> Raw -> IO (M.Map DbName BodyCanonish)
+fetchBodyCanonish conn a = do
+  res :: [(DbName, Maybe (PGArray DbQName))] <-
+    query
+      conn
+      "SELECT DISTINCT name_unqual, body_canonish FROM library_items WHERE name_qual in ? UNION SELECT DISTINCT name_unqual, body_canonish FROM library_items WHERE name_unqual in ?"
+      (In quals, In unquals)
+  pure $!
+    M.fromListWith (<>) $
+      map
+        (fmap $ maybe BCCanonish $ BCNames . S.fromList . map (\(DbQName (QName _ x)) -> DbName x) . fromPGArray)
+        res
+  where
+    (quals, unquals) = partitionEithers $ map (\case Unqual x -> Right (DbName x); Qual m x -> Left (DbQName (QName m x))) $ S.toList (freeVars a)
+
+type ReturnSortBodyMap = M.Map DbName (Maybe ReturnSort, Maybe [Bool])
+
+fetchReturnSortBody :: Connection -> Raw -> IO ReturnSortBodyMap
+fetchReturnSortBody conn a = do
+  res :: [(DbName, Maybe ReturnSort, Maybe (PGArray Bool))] <-
+    query
+      conn
+      "SELECT DISTINCT name_unqual, return_sort_body, occurrence FROM library_items WHERE name_qual in ? UNION SELECT DISTINCT name_unqual, return_sort_body, occurrence FROM library_items WHERE name_unqual in ?"
+      (In quals, In unquals)
+  pure $! flip M.fromListWith (map (\(x, y, z) -> (x, (y, fromPGArray <$> z))) res) \(rs1, occ1) (rs2, occ2) ->
+    ( case (rs1, rs2) of
+        (Just rs1, Just rs2) | rs1 == rs2 -> Just rs1
+        _ -> Nothing,
+      case (occ1, occ2) of
+        (Just occ1, Just occ2) | occ1 == occ2 -> Just occ1
+        _ -> Nothing
+    )
+  where
+    (quals, unquals) = partitionEithers $ map (\case Unqual x -> Right (DbName x); Qual m x -> Left (DbQName (QName m x))) $ S.toList (freeVars a)
+
 rawHead :: Raw -> Raw
 rawHead = \case
   RApp t _ -> rawHead t
   RPos t _ -> rawHead t
   t -> t
 
-endsInSort :: Raw -> Maybe Bool
-endsInSort = go []
+endsInSort :: ReturnSortBodyMap -> Raw -> Maybe Bool
+endsInSort rsbm = go []
   where
     go :: [Name] -> Raw -> Maybe Bool
     go ctx = \case
@@ -228,16 +323,60 @@ endsInSort = go []
       RPi x _ b -> go (x : ctx) b
       RU -> Just True
       RSigma {} -> Just False
-      RVar {} -> Just False
-      RApp {} -> Just False
       RProj1 {} -> Just False
       RProj2 {} -> Just False
       -- ill-typed
       RLam {} -> Nothing
       RPair {} -> Nothing
+      t -> case rawHead t of
+        RVar (Unqual x) | x `elem` ctx -> Just False
+        RVar (Unqual x) | Just (Just rs, _) <- M.lookup (coerce x) rsbm ->
+          case rs of
+            YesReturnSort -> Just True
+            _ -> Just False
+        RVar (Qual _ x) | Just (Just rs, _) <- M.lookup (coerce x) rsbm ->
+          case rs of
+            YesReturnSort -> Just True
+            _ -> Just False
+        _ -> Nothing
 
-approxReturnSort :: Raw -> Maybe (Maybe ReturnSort)
-approxReturnSort = go []
+data ApproxReturnTypeHead
+  = ARHVar
+  | ARHSort
+  | ARHFormer PQName
+  | ARHUnknown
+
+approxReturnTypeHead :: M.Map DbName BodyCanonish -> ReturnSortBodyMap -> Raw -> Maybe ApproxReturnTypeHead
+approxReturnTypeHead bcs rsbm = go []
+  where
+    go ctx = \case
+      RPos t _ -> go ctx t
+      RPi x a b -> go ((x, a) : ctx) b
+      RU -> Just ARHSort
+      RSigma {} -> Just (ARHFormer (Qual "Agda.Builtin.Sigma" "Σ"))
+      RLam {} -> Nothing
+      RPair {} -> Nothing
+      RProj1 {} -> Just ARHUnknown
+      RProj2 {} -> Just ARHUnknown
+      t -> case rawHead t of
+        RVar (Unqual (flip lookup ctx -> Just t)) ->
+          endsInSort rsbm t >>= \case
+            True -> Just ARHVar
+            False -> Just ARHUnknown
+        RVar (Unqual x) -> case M.lookup (coerce x) bcs of
+          Nothing -> Nothing
+          Just BCMixed -> Just ARHUnknown
+          Just BCCanonish -> Just (ARHFormer (Unqual x))
+          Just (BCNames _) -> Just ARHUnknown
+        RVar (Qual m x) -> case M.lookup (coerce x) bcs of
+          Nothing -> Nothing
+          Just BCMixed -> Just ARHUnknown
+          Just BCCanonish -> Just (ARHFormer (Qual m x))
+          Just (BCNames _) -> Just ARHUnknown
+        _ -> Just ARHUnknown
+
+approxReturnSort :: ReturnSortBodyMap -> Raw -> Maybe (Maybe ReturnSort)
+approxReturnSort rsbm = go []
   where
     go :: [(Name, Raw)] -> Raw -> Maybe (Maybe ReturnSort)
     go ctx = \case
@@ -251,10 +390,21 @@ approxReturnSort = go []
       RProj2 {} -> Just Nothing
       t -> case rawHead t of
         RVar (Unqual (flip lookup ctx -> Just t)) ->
-          endsInSort t >>= \case
+          endsInSort rsbm t >>= \case
             True -> Just (Just MayReturnSort)
             False -> Just Nothing
-        RVar {} -> Just Nothing
+        RVar (Unqual x) -> case M.lookup (coerce x) rsbm of
+          Nothing -> Nothing
+          Just (Nothing, _) -> Just Nothing
+          Just (Just MayReturnSort, _) -> Just Nothing
+          Just (Just YesReturnSort, _) -> Just (Just YesReturnSort)
+          Just (Just NoReturnSort, _) -> Just (Just NoReturnSort)
+        RVar (Qual _ x) -> case M.lookup (coerce x) rsbm of
+          Nothing -> Nothing
+          Just (Nothing, _) -> Just Nothing
+          Just (Just MayReturnSort, _) -> Just Nothing
+          Just (Just YesReturnSort, _) -> Just (Just YesReturnSort)
+          Just (Just NoReturnSort, _) -> Just (Just NoReturnSort)
         RLam {} -> Just Nothing
         RProj1 {} -> Just Nothing
         RProj2 {} -> Just Nothing
@@ -265,23 +415,23 @@ approxReturnSort = go []
         RApp {} -> impossible
         RPos {} -> impossible
 
-approxPolymorphic :: Raw -> Maybe Polymorphic
-approxPolymorphic = \case
-  RPos t _ -> approxPolymorphic t
+approxPolymorphic :: ReturnSortBodyMap -> Raw -> Maybe Polymorphic
+approxPolymorphic rsbm = \case
+  RPos t _ -> approxPolymorphic rsbm t
   RPi _ a b ->
-    endsInSort a >>= \case
+    endsInSort rsbm a >>= \case
       True -> Just YesPolymorphic
-      False -> approxPolymorphic b
+      False -> approxPolymorphic rsbm b
   _ -> Just NoPolymorphic
 
-arityAtLeast :: Raw -> Maybe Arity
-arityAtLeast = go [] 0
+arityAtLeast :: ReturnSortBodyMap -> Raw -> Maybe Arity
+arityAtLeast rsbm = go [] 0
   where
     go :: [(Name, Raw)] -> Int -> Raw -> Maybe Arity
     go ctx acc = \case
       RPos t _ -> go ctx acc t
       RPi x a@(rawHead -> RVar (Unqual (flip lookup ctx -> Just t))) b ->
-        endsInSort t >>= \case
+        endsInSort rsbm t >>= \case
           False -> go ((x, a) : ctx) (acc + 1) b
           True -> Just InfArity
       RPi x a b -> go ((x, a) : ctx) (acc + 1) b
@@ -293,7 +443,7 @@ arityAtLeast = go [] 0
       RProj2 {} -> Just (Arity acc)
       t -> case rawHead t of
         RVar (Unqual (flip lookup ctx -> Just t)) ->
-          endsInSort t >>= \case
+          endsInSort rsbm t >>= \case
             True -> Just InfArity
             False -> Just (Arity acc)
         RVar {} -> Just (Arity acc)
@@ -307,55 +457,56 @@ arityAtLeast = go [] 0
         RApp {} -> impossible
         RPos {} -> impossible
 
-freeVars :: Raw -> S.Set PQName
-freeVars = go []
-  where
-    go ctx = \case
-      RVar (Unqual x) | x `elem` ctx -> S.empty
-      RVar x -> S.singleton x
-      RU -> S.empty
-      RPi x a b -> go ctx a <> go (x : ctx) b
-      RLam x t -> go (x : ctx) t
-      RApp t u -> go ctx t <> go ctx u
-      RSigma x a b -> go ctx a <> go (x : ctx) b
-      RPair t u -> go ctx t <> go ctx u
-      RProj1 t -> go ctx t
-      RProj2 t -> go ctx t
-      RPos t _ -> go ctx t
-
-filterByFeatures :: Connection -> Raw -> IO (Maybe [DbItem])
-filterByFeatures conn a = do
+filterByFeatures :: Connection -> M.Map DbName BodyCanonish -> ReturnSortBodyMap -> Raw -> IO (Maybe [DbItem])
+filterByFeatures conn bcs rsbm a = do
   case features of
     Nothing -> pure Nothing
-    Just feat -> do
-      print feat
-      Just
-        <$> query
-          conn
-          "SELECT name_qual, name_unqual, sig, body, return_sort, polymorphic, arity FROM library_items WHERE (return_sort in ?) AND (polymorphic in ?) AND (arity >= ?)"
-          feat
+    Just (rrh, rpl, rar) -> do
+      print (rrh, rpl, rar)
+      case rrh of
+        Just rrh ->
+          Just
+            <$> query
+              conn
+              "SELECT name_qual, name_unqual, module, sig, body, occurrence, noncanonish, canonish, return_type_head, return_type_canonish, polymorphic, arity, return_sort_body, body_canonish FROM library_items WHERE (return_type_head in ?) AND (polymorphic in ?) AND (arity >= ?) AND (polymorphic = ? OR canonish @> ?) AND (polymorphic = ? OR return_type_canonish @> ?)"
+              (rrh, rpl, rar, YesPolymorphic, PGArray (S.toList cs), YesPolymorphic, PGArray (S.toList rcs))
+        Nothing ->
+          Just
+            <$> query
+              conn
+              "SELECT name_qual, name_unqual, module, sig, body, occurrence, noncanonish, canonish, return_type_head, return_type_canonish, polymorphic, arity, return_sort_body, body_canonish FROM library_items WHERE (polymorphic in ?) AND (arity >= ?) AND (polymorphic = ? OR canonish @> ?) AND (polymorphic = ? OR return_type_canonish @> ?)"
+              (rpl, rar, YesPolymorphic, PGArray (S.toList cs), YesPolymorphic, PGArray (S.toList rcs))
   where
+    cs = flip M.foldMapWithKey bcs \cases
+      _ BCMixed -> S.empty
+      x BCCanonish -> S.singleton x
+      _ (BCNames xs) -> xs
+    rcs = flip M.foldMapWithKey (M.restrictKeys bcs (coerce $ returnTypeFreeVars a)) \cases
+      _ BCMixed -> S.empty
+      x BCCanonish -> S.singleton x
+      _ (BCNames xs) -> xs
     features = do
-      rrs <- approxReturnSort a
-      rpl <- approxPolymorphic a
-      rar <- arityAtLeast a
+      rrh <- approxReturnTypeHead bcs rsbm a
+      rpl <- approxPolymorphic rsbm a
+      rar <- arityAtLeast rsbm a
       pure
-        ( In case rrs of
-            Nothing -> [YesReturnSort, NoReturnSort, MayReturnSort]
-            Just YesReturnSort -> [YesReturnSort, MayReturnSort]
-            Just NoReturnSort -> [NoReturnSort, MayReturnSort]
-            Just MayReturnSort -> [MayReturnSort],
+        ( case rrh of
+            ARHSort -> Just $ In [RHSort, RHVar]
+            ARHVar -> Just $ In [RHVar]
+            ARHFormer (Unqual x) -> Just $ In [RHFormer x, RHVar]
+            ARHFormer (Qual _ x) -> Just $ In [RHFormer x, RHVar]
+            ARHUnknown -> Nothing,
           In case rpl of
             YesPolymorphic -> [YesPolymorphic]
             NoPolymorphic -> [YesPolymorphic, NoPolymorphic],
           rar
         )
 
-fetchEnv :: Connection -> Raw -> IO [DbItem]
-fetchEnv conn a = do
-  query
+fetchTopEnv :: Connection -> [DbQName] -> IO TopEnv
+fetchTopEnv conn candNames = do
+  fold
     conn
-    "SELECT name_qual, name_unqual, sig, body, return_sort, polymorphic, arity FROM library_items WHERE name_qual in ? UNION SELECT name_qual, name_unqual, sig, body, return_sort, polymorphic, arity FROM library_items WHERE name_unqual in ?"
-    (In quals, In unquals)
-  where
-    (quals, unquals) = partitionEithers $ map (\case Unqual x -> Right (DbName x); Qual m x -> Left (DbQName (QName m x))) $ S.toList (freeVars a)
+    "SELECT name_qual, body FROM library_items WHERE body IS NOT NULL AND name_unqual in (SELECT DISTINCT unnest(noncanonish) FROM library_items WHERE name_qual in ?)"
+    (Only (In candNames))
+    HML.empty
+    (\tenv (DbQName x, DbTerm t) -> pure $! HML.insert x (eval emptyMetaCtx mempty [] t) tenv)

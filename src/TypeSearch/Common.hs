@@ -23,11 +23,17 @@ module TypeSearch.Common
 
     -- * Re-exports
     module Data.Coerce,
-    module Flat,
+    flat,
+    unflat,
+    Flat,
+    Generic,
+    ToJSON,
+    FromJSON,
   )
 where
 
 import Control.Applicative
+import Data.Aeson
 import Data.Coerce
 import Data.Hashable
 import Data.Monoid
@@ -92,14 +98,14 @@ instance Show MetaVar where
 
 -- | Names
 newtype Name = Name T.Text
-  deriving newtype (Eq, Ord, Hashable, IsString, Flat)
+  deriving newtype (Eq, Ord, Hashable, IsString, Flat, ToJSON, FromJSON)
 
 instance Show Name where
   showsPrec _ (Name n) = showString (T.unpack n)
 
 -- | Module names
 newtype ModuleName = ModuleName T.Text
-  deriving newtype (Eq, Ord, Hashable, IsString, Flat)
+  deriving newtype (Eq, Ord, Hashable, IsString, Flat, ToJSON, FromJSON)
 
 instance Show ModuleName where
   showsPrec _ (ModuleName n) = showString (T.unpack n)
@@ -110,7 +116,7 @@ data QName = QName
     name :: Name
   }
   deriving stock (Eq, Ord, Generic)
-  deriving anyclass (Hashable, Flat)
+  deriving anyclass (Hashable, Flat, ToJSON, FromJSON)
 
 instance Show QName where
   showsPrec _ x = shows x.moduleName . showChar '.' . shows x.name
@@ -119,7 +125,8 @@ instance Show QName where
 data PQName
   = Unqual Name
   | Qual ModuleName Name
-  deriving stock (Eq)
+  deriving stock (Eq, Ord, Generic)
+  deriving anyclass (ToJSON, FromJSON)
 
 instance IsString PQName where
   fromString = Unqual . Name . fromString

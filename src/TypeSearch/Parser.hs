@@ -9,6 +9,7 @@ where
 
 import Control.Applicative hiding (many, some)
 import Control.Monad
+import Control.Monad.Combinators.Expr
 import Data.Char
 import Data.Foldable
 import Data.Text qualified as T
@@ -91,7 +92,10 @@ pPQName = do
   x <- pIdent
   y <- optional (try (char '.' *> pIdent))
   pure $ case y of
-    Nothing -> Unqual (Name x)
+    Nothing -> Unqual $ Name case x of
+      "Nat" -> "ℕ"
+      "Eq" -> "_≡_"
+      _ -> x
     Just z -> Qual (ModuleName x) (Name z)
 
 pMeta :: Parser Name
@@ -131,11 +135,21 @@ pApp = do
   args <- many pProjExp
   pure $ foldl' RApp h args
 
+pMathExpr :: Parser Raw
+pMathExpr =
+  makeExprParser
+    pApp
+    [ [binary "+" (\l r -> RVar "_+_" `RApp` l `RApp` r)],
+      [binary "*" (\l r -> RVar "_*_" `RApp` l `RApp` r)]
+    ]
+  where
+    binary name f = InfixL (f <$ symbol name)
+
 pSigmaExp :: Parser Raw
 pSigmaExp = do
   optional (try (char '(' *> pName <* char ':')) >>= \case
     Nothing -> do
-      t <- pApp
+      t <- pMathExpr
       (RSigma "_" t <$> (pProd *> pSigmaExp)) <|> pure t
     Just x -> do
       a <- pRaw

@@ -3,13 +3,16 @@ module TypeSearch.MainInteraction (mainLoop) where
 import Control.Exception (displayException)
 import Control.Monad.IO.Class
 import Data.Foldable
+import Data.HashMap.Lazy qualified as HML
 import Data.Text qualified as T
 import Database.PostgreSQL.Simple
 import System.Console.Haskeline
 import TypeSearch.Common
 import TypeSearch.Database.Common
+import TypeSearch.Evaluation
 import TypeSearch.Parser
 import TypeSearch.Pretty
+import TypeSearch.UnificationModuloIso
 
 --------------------------------------------------------------------------------
 
@@ -65,12 +68,21 @@ mainLoop conn = runInputT defaultSettings go
         Right (SearchByType typ) -> case parseRaw "interactive" (T.pack typ) of
           Left err -> outputStrLn (displayException err) >> go
           Right typ -> do
-            cands <- liftIO $ filterByFeatures conn typ
+            -- liftIO $ putStrLn $ prettyRaw 0 typ ""
+            bcs <- liftIO $ fetchBodyCanonish conn typ
+            -- liftIO $ print bcs
+            rsbm <- liftIO $ fetchReturnSortBody conn typ
+            -- liftIO $ print rsbm
+            cands <- liftIO $ filterByFeatures conn bcs rsbm typ
             case cands of
-              Nothing -> outputStrLn "ill-formed type" >> go
+              Nothing -> outputStrLn "Ill-formed type" >> go
               Just cands -> do
-                outputStrLn $ "Number of candidates: " ++ show (length cands)
+                -- outputStrLn $ "Number of candidates: " ++ show (length cands)
+                _topEnv <- liftIO $ fetchTopEnv conn $ map (\item -> item.name_qual) cands
+                -- outputStrLn $ "Size of top env: " ++ show (HML.size topEnv)
                 go
+
+-- typeSearch :: R
 
 --------------------------------------------------------------------------------
 -- Search by name
