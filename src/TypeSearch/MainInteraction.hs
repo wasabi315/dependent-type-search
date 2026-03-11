@@ -138,8 +138,8 @@ check h (ctx, locs) query item =
       (item, inst, mctx) <- possibleInstantiation emptyMetaCtx (ctx, locs) item (VTop h SNil Nothing)
       (i, i', mctx) <- maybeToStream $ listToMaybe $ unifyIso mctx ctx query item
       let j = i <> sym i'
-          ~inst' = closeTm locs $ quote mctx ctx.level $ transport j inst
-      pure (j, inst')
+          ~sol = closeTm locs $ quote mctx ctx.level $ transportInv j inst
+      pure (j, sol)
   )
     <|> Later case forceAll emptyMetaCtx query of
       VPi "_" _ _ -> empty
@@ -165,17 +165,17 @@ possibleInstantiation mctx (ctx, locs) a ~inst =
       _ -> empty
 
 displayTypeSearchResult :: [TypeSearchResult] -> InputT IO ()
-displayTypeSearchResult = traverse_ \(TypeSearchResult (QName m x) a i inst) -> do
+displayTypeSearchResult = traverse_ \(TypeSearchResult (QName m x) a i sol) -> do
   outputStrLn $
     unlines $
       concat
         [ [ showString "- " $ shows x $ showString " : " $ prettyTerm0 Unqualify a "",
-            showString "  - module        : " $ shows m ""
+            showString "  - module       : " $ shows m ""
           ],
           case i of
             Refl -> []
-            i -> [showString "  - isomorphism   : " $ prettyIso 0 i ""],
-          [ showString "  - instantiation : " $ prettyTerm0 Unqualify inst ""
+            i -> [showString "  - isomorphism  : " $ prettyIso 0 i ""],
+          [ showString "  - solution     : " $ prettyTerm0 Unqualify sol ""
           ]
         ]
 
