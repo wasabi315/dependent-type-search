@@ -2,6 +2,7 @@ module TypeSearch.UnificationModuloIso where
 
 import Control.Applicative
 import Data.Maybe
+import Debug.Trace
 import TypeSearch.Common
 import TypeSearch.Evaluation
 import TypeSearch.Term
@@ -19,7 +20,7 @@ data Ctx = Ctx
   }
 
 initCtx :: TopEnv -> Ctx
-initCtx tenv = Ctx tenv 0 [] emptyPRen Rigid
+initCtx tenv = Ctx tenv 0 empty emptyPRen Rigid
 
 bind :: Ctx -> Ctx
 bind (Ctx tenv l env idRen cs) =
@@ -162,6 +163,8 @@ unifyIso0 mctx tenv t t' = do
 
 unifyIso :: MetaCtx -> Ctx -> Value -> Value -> [(Iso, Iso, MetaCtx)]
 unifyIso mctx ctx t u = case (forceCS mctx ctx.convState t, forceCS mctx ctx.convState u) of
+  (VBrave {}, _) -> []
+  (_, VBrave {}) -> []
   (VPi x a b, VPi x' a' b') -> case ctx.convState of
     Rigid ->
       unifyPi mctx (ctx {convState = Flex}) (Quant x a b) (Quant x' a' b')

@@ -93,7 +93,7 @@ pPQName = do
   y <- optional (try (char '.' *> pIdent))
   pure $ case y of
     Nothing -> Unqual $ Name case x of
-      "Nat" -> "ℕ"
+      -- "Nat" -> "ℕ"
       "Eq" -> "_≡_"
       _ -> x
     Just z -> Qual (ModuleName x) (Name z)
@@ -139,8 +139,8 @@ pMathExpr :: Parser Raw
 pMathExpr =
   makeExprParser
     pApp
-    [ [binary "+" (\l r -> RVar "_+_" `RApp` l `RApp` r)],
-      [binary "*" (\l r -> RVar "_*_" `RApp` l `RApp` r)]
+    [ [binary "+" (\l r -> RVar "_+_" `RApp` l `RApp` r)]
+    -- [binary "*" (\l r -> RVar "_*_" `RApp` l `RApp` r)]
     ]
   where
     binary name f = InfixL (f <$ symbol name)

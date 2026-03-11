@@ -273,18 +273,24 @@ instance Semigroup BodyCanonish where
   BCNames ns <> BCNames ns' = BCNames (S.intersection ns ns')
   _ <> _ = BCMixed
 
-fetchBodyCanonish :: Connection -> Raw -> IO (M.Map DbName BodyCanonish)
+fetchBodyCanonish :: Connection -> Raw -> IO (M.Map DbName BodyCanonish, M.Map Name [QName])
 fetchBodyCanonish conn a = do
-  res :: [(DbName, Maybe (PGArray DbQName))] <-
+  res :: [(DbQName, DbName, Maybe (PGArray DbQName))] <-
     query
       conn
-      "SELECT DISTINCT name_unqual, body_canonish FROM library_items WHERE name_qual in ? UNION SELECT DISTINCT name_unqual, body_canonish FROM library_items WHERE name_unqual in ?"
+      "SELECT DISTINCT name_qual, name_unqual, body_canonish FROM library_items WHERE name_qual in ? UNION SELECT DISTINCT name_qual, name_unqual, body_canonish FROM library_items WHERE name_unqual in ?"
       (In quals, In unquals)
-  pure $!
-    M.fromListWith (<>) $
-      map
-        (fmap $ maybe BCCanonish $ BCNames . S.fromList . map (\(DbQName (QName _ x)) -> DbName x) . fromPGArray)
-        res
+  let bcs =
+        M.fromListWith (<>) $
+          map
+            (\(_, n, bc) -> maybe (n, BCCanonish) ((n,) . BCNames . S.fromList . map (\(DbQName (QName _ x)) -> DbName x) . fromPGArray) bc)
+            res
+      resol =
+        M.fromListWith (++) $
+          map
+            (\(DbQName x, DbName y, _) -> (y, [x]))
+            res
+  pure (bcs, resol)
   where
     (quals, unquals) = partitionEithers $ map (\case Unqual x -> Right (DbName x); Qual m x -> Left (DbQName (QName m x))) $ S.toList (freeVars a)
 
@@ -457,12 +463,19 @@ arityAtLeast rsbm = go [] 0
         RApp {} -> impossible
         RPos {} -> impossible
 
+fetchAllItems :: Connection -> IO [DbItem]
+fetchAllItems conn = do
+  query
+    conn
+    "SELECT name_qual, name_unqual, module, sig, body, occurrence, noncanonish, canonish, return_type_head, return_type_canonish, polymorphic, arity, return_sort_body, body_canonish FROM library_items WHERE name_unqual = ?"
+    (Only "foldr" :: Only String)
+
 filterByFeatures :: Connection -> M.Map DbName BodyCanonish -> ReturnSortBodyMap -> Raw -> IO (Maybe [DbItem])
 filterByFeatures conn bcs rsbm a = do
   case features of
     Nothing -> pure Nothing
     Just (rrh, rpl, rar) -> do
-      print (rrh, rpl, rar)
+      -- print (rrh, rpl, rar)
       case rrh of
         Just rrh ->
           Just
@@ -502,11 +515,15 @@ filterByFeatures conn bcs rsbm a = do
           rar
         )
 
-fetchTopEnv :: Connection -> [DbQName] -> IO TopEnv
+fetchTopEnv :: Connection -> [DbQName] -> IO (TopEnv, M.Map Name [QName])
 fetchTopEnv conn candNames = do
   fold
     conn
     "SELECT name_qual, body FROM library_items WHERE body IS NOT NULL AND name_unqual in (SELECT DISTINCT unnest(noncanonish) FROM library_items WHERE name_qual in ?)"
     (Only (In candNames))
-    HML.empty
-    (\tenv (DbQName x, DbTerm t) -> pure $! HML.insert x (eval emptyMetaCtx mempty [] t) tenv)
+    (HML.empty, mempty)
+    ( \(tenv, resol) (DbQName x, DbTerm t) -> do
+        let tenv' = HML.insert x (eval emptyMetaCtx mempty [] t) tenv
+            resol' = M.insertWith (++) x.name [x] resol
+        pure (tenv', resol')
+    )

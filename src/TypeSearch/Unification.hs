@@ -188,6 +188,7 @@ renameP tenv pren t =
         <*> renameP tenv (liftPren pren) (b $ VVar pren.cod)
     VPair t u ->
       Pair <$> renameP tenv pren t <*> renameP tenv pren u
+    VBrave {} -> empty
 
 renameSpine :: TopEnv -> PartialRenaming -> Term -> Spine -> P Term
 renameSpine tenv pren t = \case
@@ -272,6 +273,8 @@ unify0 mctx tenv t t' = do
 
 unify :: MetaCtx -> TopEnv -> ConvState -> Level -> Value -> Value -> Maybe MetaCtx
 unify mctx tenv cs l t t' = case (forceCS mctx cs t, forceCS mctx cs t') of
+  (VBrave {}, _) -> Nothing
+  (_, VBrave {}) -> Nothing
   (VPi _ a b, VPi _ a' b') -> do
     mctx <- unify mctx tenv cs l a a'
     unify mctx tenv cs (l + 1) (b $ VVar l) (b' $ VVar l)

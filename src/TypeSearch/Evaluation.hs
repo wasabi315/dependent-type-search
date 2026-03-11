@@ -47,6 +47,12 @@ vdelta = VMeta 4
 vlist :: Value
 vlist = VTop (QName "Agda.Builtin.List" "List") SNil Nothing
 
+tFoldr0 :: Term
+tFoldr0 =
+  quote exMetaCtx 0 $
+    VPi "A" VU \a -> VPi "B" VU \b ->
+      (a --> b --> b) --> b --> (vlist $$ a) --> b
+
 tFoldr1 :: Term
 tFoldr1 =
   quote exMetaCtx 0 $
@@ -84,6 +90,7 @@ data Value
   | VLam Name (Value -> Value)
   | VSigma Name VType (Value -> VType)
   | VPair Value Value
+  | VBrave Value Spine
 
 type VType = Value
 
@@ -162,7 +169,8 @@ t $$ u = case t of
   VRigid x sp -> VRigid x (SApp sp u)
   VFlex m sp -> VFlex m (SApp sp u)
   VTop x sp t -> VTop x (SApp sp u) (fmap ($$ u) t)
-  _ -> impossible
+  VBrave b sp -> VBrave b (SApp sp u)
+  t -> VBrave t (SApp SNil u)
 
 vProj1 :: Value -> Value
 vProj1 = \case
@@ -170,7 +178,8 @@ vProj1 = \case
   VRigid x sp -> VRigid x (SProj1 sp)
   VFlex m sp -> VFlex m (SProj1 sp)
   VTop x sp t -> VTop x (SProj1 sp) (vProj1 <$> t)
-  _ -> impossible
+  VBrave b sp -> VBrave b (SProj1 sp)
+  t -> VBrave t (SProj1 SNil)
 
 vProj2 :: Value -> Value
 vProj2 = \case
@@ -178,7 +187,8 @@ vProj2 = \case
   VRigid x sp -> VRigid x (SProj2 sp)
   VFlex m sp -> VFlex m (SProj2 sp)
   VTop x sp t -> VTop x (SProj2 sp) (vProj2 <$> t)
-  _ -> impossible
+  VBrave b sp -> VBrave b (SProj2 sp)
+  t -> VBrave t (SProj2 SNil)
 
 vAppSpine :: Value -> Spine -> Value
 vAppSpine t = \case
@@ -216,6 +226,7 @@ quote mctx l t = case force mctx t of
   VLam x t -> Lam x (quoteBind mctx l t)
   VSigma x a b -> Sigma x (quote mctx l a) (quoteBind mctx l b)
   VPair t u -> Pair (quote mctx l t) (quote mctx l u)
+  VBrave t sp -> quoteSpine mctx l (quote mctx l t) sp
 
 quoteBind :: MetaCtx -> Level -> (Value -> Value) -> Term
 quoteBind mctx l b = quote mctx (l + 1) (b $ VVar l)

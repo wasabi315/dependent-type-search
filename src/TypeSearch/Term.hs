@@ -1,6 +1,9 @@
 module TypeSearch.Term where
 
+import Control.Monad.State.Strict
 import Data.List (elemIndex)
+import Data.Map.Strict qualified as M
+import Data.Maybe
 import GHC.Generics
 import TypeSearch.Common
 import TypeSearch.Raw
@@ -43,6 +46,40 @@ rawToTerm = go []
       RVar (Unqual x) -> case x `elemIndex` ns of
         Nothing -> Nothing
         Just i -> pure $ Var (Index i)
+      RU -> pure U
+      RPi x a b -> Pi x <$> go ns a <*> go (x : ns) b
+      RLam x t -> Lam x <$> go (x : ns) t
+      RApp t u -> App <$> go ns t <*> go ns u
+      RSigma x a b -> Sigma x <$> go ns a <*> go (x : ns) b
+      RPair t u -> Pair <$> go ns t <*> go ns u
+      RProj1 t -> Proj1 <$> go ns t
+      RProj2 t -> Proj2 <$> go ns t
+      RPos t _ -> go ns t
+
+possibleResolutions :: M.Map Name [QName] -> Raw -> [Term]
+possibleResolutions tbl = flip evalStateT mempty . go []
+  where
+    fixName qn = StateT \fixed -> do
+      fixed <-
+        M.alterF
+          ( maybe
+              (pure $ Just qn)
+              \qn' -> if qn == qn' then pure (Just qn) else []
+          )
+          qn.name
+          fixed
+      pure ((), fixed)
+
+    go ns = \case
+      RVar (Unqual x)
+        | Just i <- x `elemIndex` ns -> pure $ Var (Index i)
+      RVar (Unqual x) -> do
+        qn <- lift $ fromMaybe [] (tbl M.!? x)
+        fixName qn
+        pure $ Top qn
+      RVar (Qual m x) -> do
+        fixName (QName m x)
+        pure $ Top (QName m x)
       RU -> pure U
       RPi x a b -> Pi x <$> go ns a <*> go (x : ns) b
       RLam x t -> Lam x <$> go (x : ns) t

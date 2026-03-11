@@ -8,6 +8,7 @@ import Agda.Interaction.FindFile qualified as Agda
 import Agda.Interaction.Imports qualified as Agda
 import Agda.Interaction.Library qualified as Agda
 import Agda.Interaction.Options qualified as Agda
+import Agda.Interaction.Options.Lenses qualified as Lenses
 import Agda.Syntax.Common qualified as Agda
 import Agda.Syntax.Common.Pretty qualified as Agda
 import Agda.Syntax.Concrete qualified as Concrete
@@ -21,6 +22,8 @@ import Agda.Syntax.Scope.Monad qualified as Agda (getCurrentScope)
 import Agda.TypeChecking.Datatypes qualified as Agda
 import Agda.TypeChecking.Errors qualified as Agda
 import Agda.TypeChecking.Level qualified as Agda
+import Agda.TypeChecking.Monad.Base.Types qualified as Agda
+import Agda.TypeChecking.Monad.Env qualified as Agda
 import Agda.TypeChecking.Positivity.Occurrence qualified as Agda
 import Agda.TypeChecking.ProjectionLike qualified as Agda
 import Agda.TypeChecking.Records qualified as Agda
@@ -31,8 +34,10 @@ import Agda.Utils.CallStack (HasCallStack)
 import Agda.Utils.FileName qualified as Agda
 import Agda.Utils.IO.Directory qualified as Agda
 import Agda.Utils.Impossible (__IMPOSSIBLE__)
+import Agda.Utils.Maybe.Strict qualified as Strict
 import Agda.Utils.Monad qualified as Agda
-import Control.Monad (forM)
+import Agda.Utils.Trie qualified as Trie
+import Control.Monad (forM, forM_, when)
 import Control.Monad.Except (catchError, throwError)
 import Control.Monad.Reader
 import Data.Foldable
@@ -41,11 +46,13 @@ import Data.List (sort)
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map.Strict qualified as Map
 import Data.Maybe
+import Data.Set qualified as S
 import Data.String
 import Data.Text qualified as T
 import Database.PostgreSQL.Simple
 import Database.PostgreSQL.Simple.Types
 import System.Directory
+import System.FilePath
 import System.FilePath.Find qualified as Find
 import System.IO (hPutStrLn, stderr)
 import TypeSearch.Common
@@ -176,6 +183,10 @@ arity = go (0 :: Int)
 --------------------------------------------------------------------------------
 -- Entrypoint
 
+checkModuleName' :: Agda.TopLevelModuleName' Agda.Range -> Agda.SourceFile -> Agda.TCM ()
+checkModuleName' m f =
+  Agda.setCurrentRange m $ Agda.checkModuleName m f Nothing
+
 translateLibrary :: IndexConfig -> IO ()
 translateLibrary config = do
   setCurrentDirectory config.libraryDirectory
@@ -194,11 +205,12 @@ translateLibrary config = do
       _ -> __IMPOSSIBLE__
     Agda.checkAndSetOptionsFromPragma libOpts
     Agda.importPrimitiveModules
+    let env = initEnv config
+    libDirPrim <- Agda.useTC Agda.stPrimitiveLibDir
     files <-
-      sort . map Find.infoPath . concat <$> forM paths \path ->
+      sort . map Find.infoPath . concat <$> forM (Agda.filePath libDirPrim : paths) \path ->
         liftIO $ Agda.findWithInfo (pure True) (Agda.hasAgdaExtension <$> Find.filePath) path
 
-    let env = initEnv config
     forM_ files \inputFile ->
       ( do
           path <- liftIO (Agda.absolute inputFile)
@@ -259,7 +271,7 @@ translateInterface intf = do
 -- Definition translation
 
 translateDefinition :: QName -> Agda.Definition -> M [Item]
-translateDefinition qname def =
+translateDefinition qname def = do
   Agda.ifM
     (isErasable def.defType)
     do pure []
@@ -359,8 +371,11 @@ translateTerm ty v = do
       ty <- Agda.typeOfBV i
       translateSpined (translateVar i ty) (Internal.Var i) ty es
     Internal.Def f es -> maybeUnfoldCopy f es (translateTerm ty) \f es -> do
-      ty <- Agda.defType <$> Agda.getConstInfo f
-      translateSpined (translateDef f ty) (Internal.Def f) ty es
+      -- ty <- Agda.defType <$> Agda.getConstInfo f
+      def <- Agda.getConstInfo f
+      let ty = def.defType
+          f' = def.defName
+      translateSpined (translateDef f' ty) (Internal.Def f') ty es
     Internal.Con ch ci es -> do
       Just ((_, _, pars), ty) <- Agda.getConType ch ty
       translateSpined (translateCon ch ci ty pars) (Internal.Con ch ci) ty es
@@ -393,7 +408,7 @@ translateCon ch i ty pars args = do
   if Agda.defCopy conDef
     then translateCon conSrcCon i ty pars args
     else do
-      let name = translateQNameToRaw c
+      let name = translateQNameToRaw conSrcCon.conName
       dataDef <- Agda.getConstInfo conData
       -- For making parameters explicit
       -- e.g) Agda.Builtin.List._∷_ x xs -> Agda.Builtin.List._∷_ A x xs
