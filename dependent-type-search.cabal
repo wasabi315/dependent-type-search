@@ -104,6 +104,7 @@ library
     , parser-combinators
     , postgresql-migration
     , postgresql-simple
+    , streamly
     , text
     , unordered-containers
     , witherable
@@ -158,7 +159,7 @@ executable dependent-type-search-exe
       UnboxedTuples
       UnboxedSums
       ViewPatterns
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -O2 -funbox-strict-fields
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -O2 -funbox-strict-fields -threaded -rtsopts -with-rtsopts= "-A64M -s -N4"
   build-depends:
       Agda
     , aeson
@@ -178,6 +179,7 @@ executable dependent-type-search-exe
     , parser-combinators
     , postgresql-migration
     , postgresql-simple
+    , streamly
     , text
     , unordered-containers
     , witherable
@@ -253,6 +255,7 @@ test-suite dependent-type-search-test
     , parser-combinators
     , postgresql-migration
     , postgresql-simple
+    , streamly
     , text
     , unordered-containers
     , witherable

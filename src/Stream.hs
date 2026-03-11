@@ -25,7 +25,7 @@ xs `union` ~ys = case xs of
   Cons x xs -> Cons x (xs `union` ys)
   xs@(Later xs') -> case ys of
     Nil -> xs
-    Cons y ys -> Cons y (ys `union` xs)
+    Cons y ys -> Cons y (xs `union` ys)
     Later ys -> Later (xs' `union` ys)
 
 instance Semigroup (Stream a) where

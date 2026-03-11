@@ -47,11 +47,17 @@ vdelta = VMeta 4
 vlist :: Value
 vlist = VTop (QName "Agda.Builtin.List" "List") SNil Nothing
 
-tFoldr0 :: Term
-tFoldr0 =
+tFoldr :: Term
+tFoldr =
   quote exMetaCtx 0 $
     VPi "A" VU \a -> VPi "B" VU \b ->
       (a --> b --> b) --> b --> (vlist $$ a) --> b
+
+tFoldl :: Term
+tFoldl =
+  quote exMetaCtx 0 $
+    VPi "A" VU \a -> VPi "B" VU \b ->
+      (b --> a --> b) --> b --> (vlist $$ a) --> b
 
 tFoldr1 :: Term
 tFoldr1 =
@@ -209,6 +215,28 @@ forceAll mctx = \case
     | Solved t _ <- mctx.metaCtx HML.! m -> forceAll mctx (vAppSpine t sp)
   VTop _ _ (Just t) -> forceAll mctx t
   t -> t
+
+--------------------------------------------------------------------------------
+
+hasFreeVar :: MetaCtx -> Level -> Value -> Bool
+hasFreeVar mctx l = go l
+  where
+    go l' t = case force mctx t of
+      VRigid x sp -> x >= l || goSpine mctx l' sp
+      VFlex _ sp -> goSpine mctx l' sp
+      VTop _ sp _ -> goSpine mctx l' sp
+      VU -> False
+      VPi _ a b -> hasFreeVar mctx l' a || hasFreeVar mctx (l' + 1) (b $ VVar l')
+      VLam _ t -> hasFreeVar mctx (l' + 1) (t $ VVar l')
+      VSigma _ a b -> hasFreeVar mctx l' a || hasFreeVar mctx (l' + 1) (b $ VVar l')
+      VPair t u -> hasFreeVar mctx l' t || hasFreeVar mctx l' u
+      VBrave t sp -> hasFreeVar mctx l' t || goSpine mctx l' sp
+
+    goSpine mctx l' = \case
+      SNil -> False
+      SApp sp u -> goSpine mctx l' sp || hasFreeVar mctx l' u
+      SProj1 sp -> goSpine mctx l' sp
+      SProj2 sp -> goSpine mctx l' sp
 
 --------------------------------------------------------------------------------
 -- Quotation

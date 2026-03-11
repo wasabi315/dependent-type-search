@@ -156,7 +156,7 @@ prettyTerm qm = go
       [] [] -> t
       (n : ns) (True : pr) -> goPruning t ns pr . showChar ' ' . shows n
       (_ : ns) (False : pr) -> goPruning t ns pr
-      _ _ -> error "impossible"
+      _ _ -> impossible
 
 prettyIso :: Int -> Iso -> ShowS
 prettyIso p = \case

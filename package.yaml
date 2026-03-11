@@ -37,6 +37,7 @@ dependencies:
   - parser-combinators
   - postgresql-migration
   - postgresql-simple
+  - streamly
   - text
   - unordered-containers
   - directory
@@ -110,6 +111,10 @@ executables:
     source-dirs: app
     dependencies:
       - dependent-type-search
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts= "-A64M -s -N4"
 
 tests:
   dependent-type-search-test:

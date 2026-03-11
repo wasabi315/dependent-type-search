@@ -109,11 +109,17 @@ pKeyword kw = do
   _ <- C.string kw
   (takeWhileP Nothing (\c -> isAlphaNum c || c == '\'') *> empty) <|> ws
 
+pNatLit :: Parser Raw
+pNatLit = do
+  n <- decimal
+  pure $ applyN n (RVar (Qual "Agda.Builtin.Nat" "suc") `RApp`) (RVar (Qual "Agda.Builtin.Nat" "zero"))
+
 pAtom :: Parser Raw
 pAtom =
   withPos
     ( (RVar <$> pPQName)
         <|> (RU <$ pKeyword "U")
+        <|> pNatLit
     )
     <|> parens pRaw
 
@@ -139,8 +145,8 @@ pMathExpr :: Parser Raw
 pMathExpr =
   makeExprParser
     pApp
-    [ [binary "+" (\l r -> RVar "_+_" `RApp` l `RApp` r)]
-    -- [binary "*" (\l r -> RVar "_*_" `RApp` l `RApp` r)]
+    [ [binary "+" (\l r -> RVar "_+_" `RApp` l `RApp` r)],
+      [binary "**" (\l r -> RVar "_*_" `RApp` l `RApp` r)]
     ]
   where
     binary name f = InfixL (f <$ symbol name)

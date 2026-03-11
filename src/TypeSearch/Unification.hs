@@ -90,7 +90,7 @@ evalP tenv env t = gets \mctx -> eval mctx tenv env t
 lookupUnsolved :: MetaVar -> P Value
 lookupUnsolved m = gets \mctx -> case mctx.metaCtx HM.! m of
   Unsolved a -> a
-  Solved {} -> impossible
+  Solved {} -> error "lookupUnsolved"
 
 writeMeta :: MetaVar -> Value -> Value -> P ()
 writeMeta m t ~a = modify' \mctx ->
@@ -111,7 +111,7 @@ pruneType tenv (RevPruning pr) a =
             <*> go pr (liftPren pren) (b $ VVar pren.cod)
         (False : pr, VPi _ _ b) ->
           go pr (skipPren pren) (b $ VVar pren.cod)
-        _ -> impossible
+        _ -> empty
 
 -- | Prune arguments from a meta, return new meta + pruned type.
 pruneMeta :: TopEnv -> Pruning -> MetaVar -> P MetaVar
@@ -200,15 +200,15 @@ renameSpine tenv pren t = \case
 -- | Wrap a term in Level number of lambdas. We get the domain info from the Value
 --   argument.
 lams :: Level -> Value -> Term -> P Term
-lams l a t = gets \mctx -> do
-  let go _ (l' :: Level) | l' == l = t
+lams l a t = join $ gets \mctx -> do
+  let go _ (l' :: Level) | l' == l = pure t
       go a l' = case force mctx a of
         VPi "_" _ b ->
-          Lam (fromString $ "x" ++ show l') $
-            go (b $ VVar l') (l' + 1)
+          Lam (fromString $ "x" ++ show l')
+            <$> go (b $ VVar l') (l' + 1)
         VPi x _ b ->
-          Lam x $ go (b $ VVar l') (l' + 1)
-        _ -> impossible
+          Lam x <$> go (b $ VVar l') (l' + 1)
+        _ -> empty
   go a (0 :: Level)
 
 -- | Solve @Γ ⊢ m spine =? rhs@.

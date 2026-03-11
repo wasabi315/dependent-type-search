@@ -8,7 +8,6 @@ import Agda.Interaction.FindFile qualified as Agda
 import Agda.Interaction.Imports qualified as Agda
 import Agda.Interaction.Library qualified as Agda
 import Agda.Interaction.Options qualified as Agda
-import Agda.Interaction.Options.Lenses qualified as Lenses
 import Agda.Syntax.Common qualified as Agda
 import Agda.Syntax.Common.Pretty qualified as Agda
 import Agda.Syntax.Concrete qualified as Concrete
@@ -21,9 +20,8 @@ import Agda.Syntax.Scope.Base qualified as Agda
 import Agda.Syntax.Scope.Monad qualified as Agda (getCurrentScope)
 import Agda.TypeChecking.Datatypes qualified as Agda
 import Agda.TypeChecking.Errors qualified as Agda
+import Agda.TypeChecking.Free qualified as Agda
 import Agda.TypeChecking.Level qualified as Agda
-import Agda.TypeChecking.Monad.Base.Types qualified as Agda
-import Agda.TypeChecking.Monad.Env qualified as Agda
 import Agda.TypeChecking.Positivity.Occurrence qualified as Agda
 import Agda.TypeChecking.ProjectionLike qualified as Agda
 import Agda.TypeChecking.Records qualified as Agda
@@ -366,7 +364,7 @@ translateTerm ty v = do
       let compileB = Agda.underAbstraction a b translateType
       translateDomType b.absName a >>= \case
         Nothing -> compileB
-        Just (x, a) -> RPi x a <$> compileB
+        Just (x, a) -> RPi (if Agda.isBinderUsed b then x else "_") a <$> compileB
     Internal.Var i es -> do
       ty <- Agda.typeOfBV i
       translateSpined (translateVar i ty) (Internal.Var i) ty es
