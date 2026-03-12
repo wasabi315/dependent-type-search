@@ -39,8 +39,8 @@ dependencies:
   - postgresql-simple
   - streamly
   - text
+  - time
   - unordered-containers
-  - directory
   - witherable
 
 language: GHC2021

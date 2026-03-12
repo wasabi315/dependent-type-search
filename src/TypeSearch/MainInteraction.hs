@@ -11,6 +11,7 @@ import Data.Map.Strict qualified as M
 import Data.Maybe
 import Data.Set qualified as S
 import Data.Text qualified as T
+import Data.Time.Clock
 import Database.PostgreSQL.Simple
 import Debug.Trace
 import Stream
@@ -93,16 +94,23 @@ mainLoop conn = runInputT defaultSettings go
                 -- outputStrLn $ "Number of candidates: " ++ show (length cands)
                 (tenv, resol2) <- liftIO $ fetchTopEnv conn $ map (\item -> item.name_qual) cands
                 -- outputStrLn $ "Size of top env: " ++ show (HML.size topEnv)
-                result <- liftIO $ typeSearch tenv (M.unionWith (++) resol1 resol2) typ cands
-                displayTypeSearchResult result
+                (result, time) <- liftIO $ timed $ typeSearch tenv (M.unionWith (++) resol1 resol2) typ cands
+                displayTypeSearchResults cands result time
                 go
+
+timed :: IO a -> IO (a, NominalDiffTime)
+timed a = do
+  t1 <- getCurrentTime
+  res <- a
+  t2 <- getCurrentTime
+  let diff = diffUTCTime t2 t1
+  pure (res, diff)
 
 data TypeSearchResult = TypeSearchResult QName Term Iso Term
 
 typeSearch :: TopEnv -> M.Map Name [QName] -> Raw -> [DbItem] -> IO [TypeSearchResult]
 typeSearch tenv resol query items = do
   let queries = possibleResolutions resol query
-  -- queries' = trace (unlines $ map (\q -> prettyTerm0 Qualify q "") queries) queries
   Streamly.toList
     $ Streamly.parConcatMap
       id
@@ -164,20 +172,23 @@ possibleInstantiation mctx (ctx, locs) a ~inst =
         possibleInstantiation mctx (ctx, locs) (b mv) (inst $$ mv)
       _ -> empty
 
-displayTypeSearchResult :: [TypeSearchResult] -> InputT IO ()
-displayTypeSearchResult = traverse_ \(TypeSearchResult (QName m x) a i sol) -> do
-  outputStrLn $
-    unlines $
-      concat
-        [ [ showString "- " $ shows x $ showString " : " $ prettyTerm0 Unqualify a "",
-            showString "  - module       : " $ shows m ""
-          ],
-          case i of
-            Refl -> []
-            i -> [showString "  - isomorphism  : " $ prettyIso 0 i ""],
-          [ showString "  - solution     : " $ prettyTerm0 Unqualify sol ""
+displayTypeSearchResults :: [DbItem] -> [TypeSearchResult] -> NominalDiffTime -> InputT IO ()
+displayTypeSearchResults cands matches time = do
+  outputStrLn $ shows (length matches) $ showString " item(s) matched in " $ shows (length cands) " candidate(s)"
+  outputStrLn $ showString "Took " $ shows time "\n"
+  for_ matches \(TypeSearchResult (QName m x) a i sol) -> do
+    outputStrLn $
+      unlines $
+        concat
+          [ [ showString "- " $ shows x $ showString " : " $ prettyTerm0 Unqualify a "",
+              showString "  - module       : " $ shows m ""
+            ],
+            case i of
+              Refl -> []
+              i -> [showString "  - isomorphism  : " $ prettyIso 0 i ""],
+            [ showString "  - solution     : " $ prettyTerm0 Unqualify sol ""
+            ]
           ]
-        ]
 
 --------------------------------------------------------------------------------
 -- Search by name
