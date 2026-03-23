@@ -6,6 +6,7 @@ import Database.PostgreSQL.Simple.Migration
 import Options.Applicative
 import System.Environment (getEnv, lookupEnv)
 import TypeSearch.Database.Index
+import TypeSearch.Database.Index.Common
 import TypeSearch.MainInteraction
 
 getConnectInfo :: IO ConnectInfo

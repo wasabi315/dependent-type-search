@@ -1,6 +1,7 @@
 module TypeSearch.Database.Common where
 
 import Control.Applicative
+import Control.Exception
 import Control.Monad
 import Data.ByteString qualified as BS
 import Data.Either (partitionEithers)
@@ -61,8 +62,11 @@ instance ToField DbTerm where
 instance FromField DbTerm where
   fromField f dat = do
     Binary (x :: BS.ByteString) <- fromField f dat
-    let Right t = unflat x
-    pure (DbTerm t)
+    case unflat x of
+      Right t -> pure (DbTerm t)
+      Left e ->
+        returnError ConversionFailed f $
+          "Flat deserialisation error: " ++ displayException e
 
 --------------------------------------------------------------------------------
 -- Features

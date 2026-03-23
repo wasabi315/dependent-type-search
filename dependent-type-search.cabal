@@ -30,6 +30,9 @@ library
       TypeSearch.Common
       TypeSearch.Database.Common
       TypeSearch.Database.Index
+      TypeSearch.Database.Index.Common
+      TypeSearch.Database.Index.Name
+      TypeSearch.Database.Index.Term
       TypeSearch.Evaluation
       TypeSearch.MainInteraction
       TypeSearch.Parser

@@ -10,26 +10,17 @@ import Agda.Interaction.Library
 import Agda.Interaction.Options
 import Agda.Syntax.Common
 import Agda.Syntax.Common.Pretty (prettyShow)
-import Agda.Syntax.Concrete qualified as Concrete
 import Agda.Syntax.Internal hiding (arity, termSize)
 import Agda.Syntax.Internal.Defs
-import Agda.Syntax.Literal
 import Agda.Syntax.Position
 import Agda.Syntax.Scope.Base
 import Agda.Syntax.Scope.Monad (getCurrentScope)
-import Agda.TypeChecking.Datatypes
-import Agda.TypeChecking.Free
-import Agda.TypeChecking.Level
 import Agda.TypeChecking.Positivity.Occurrence
-import Agda.TypeChecking.Pretty
-import Agda.TypeChecking.ProjectionLike
-import Agda.TypeChecking.Records
 import Agda.TypeChecking.Reduce
+import Agda.TypeChecking.Sort (ifIsSort)
 import Agda.TypeChecking.Substitute as Agda
 import Agda.TypeChecking.Telescope
-import Agda.Utils.CallStack (HasCallStack)
 import Agda.Utils.FileName
-import Agda.Utils.Function
 import Agda.Utils.IO.Directory
 import Agda.Utils.Impossible (__IMPOSSIBLE__)
 import Agda.Utils.Monad
@@ -37,75 +28,21 @@ import Control.Monad.Except (throwError)
 import Control.Monad.Reader
 import Data.Coerce
 import Data.HashSet qualified as HS
-import Data.IntMap qualified as IM
 import Data.List (sort)
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map.Strict qualified as Map
 import Data.Maybe
 import Data.String
-import Data.Text qualified as T
 import Database.PostgreSQL.Simple
 import Database.PostgreSQL.Simple.Types
 import System.Directory
 import System.FilePath.Find qualified as Find
 import TypeSearch.Common qualified as TS
 import TypeSearch.Database.Common qualified as TS
+import TypeSearch.Database.Index.Common
+import TypeSearch.Database.Index.Name
+import TypeSearch.Database.Index.Term
 import TypeSearch.Term qualified as TS
-
---------------------------------------------------------------------------------
--- Types
-
-data IndexConfig = IndexConfig
-  { -- | Maximum Raw node count for a let-body; larger bodies fall back to DAxiom.
-    maxLetSize :: Int,
-    -- | Path to Agda library.
-    libraryDirectory :: FilePath,
-    -- | Connection to database.
-    databaseConnection :: Connection
-  }
-
-data IndexEnv = IndexEnv
-  { maxLetSize :: Int,
-    -- | Context size after erasure
-    contextSizeAfterErasure :: Int,
-    -- | De Bruijn level to De Bruijn level after erasure
-    renaming :: IM.IntMap Int
-  }
-
-type M = ReaderT IndexEnv TCM
-
-initEnv :: IndexConfig -> IndexEnv
-initEnv IndexConfig {..} = IndexEnv maxLetSize 0 mempty
-
-addContextAndRenaming :: (AddContext (name, Dom Type)) => (name, Dom Type) -> M a -> M a
-addContextAndRenaming ctxElt m = do
-  ctxSize <- getContextSize
-  local
-    ( \env ->
-        env
-          { contextSizeAfterErasure = env.contextSizeAfterErasure + 1,
-            renaming = IM.insert ctxSize env.contextSizeAfterErasure env.renaming
-          }
-    )
-    $ addContext ctxElt m
-
-realName :: ArgName -> String
-realName s = if isNoName s then "x" else argNameToString s
-
-translateError :: (HasCallStack, MonadTCError m) => m Doc -> m a
-translateError msg = typeError . CustomBackendError "dependent-type-search" =<< msg
-
---------------------------------------------------------------------------------
-
-data Item = Item
-  { name :: TS.QName,
-    signature :: TS.Term,
-    body :: Maybe TS.Term,
-    occurrence :: Maybe [Bool],
-    feature :: (HS.HashSet TS.Name, HS.HashSet TS.Name, TS.ReturnTypeHead, HS.HashSet TS.Name, TS.Polymorphic, TS.Arity),
-    returnSortBody :: Maybe TS.ReturnSort,
-    canonishBody :: Maybe (HS.HashSet TS.Name)
-  }
 
 --------------------------------------------------------------------------------
 -- Compute features
@@ -161,9 +98,7 @@ returnSortBody = \case
 isPolymorphic :: Type -> M TS.Polymorphic
 isPolymorphic t = ifNotPiType t (\_ -> pure TS.NoPolymorphic) \a rest -> do
   TelV _ b <- telView a.unDom
-  case b.unEl of
-    Sort {} -> pure TS.YesPolymorphic
-    _ -> underAbstraction a rest isPolymorphic
+  ifIsSort b (\_ -> pure TS.YesPolymorphic) (underAbstraction a rest isPolymorphic)
 
 arity :: Type -> M TS.Arity
 arity = go (0 :: Int)
@@ -196,10 +131,6 @@ arity = go (0 :: Int)
 
 --------------------------------------------------------------------------------
 -- Entrypoint
-
-checkModuleName' :: TopLevelModuleName' Range -> SourceFile -> TCM ()
-checkModuleName' m f =
-  setCurrentRange m $ checkModuleName m f Nothing
 
 translateLibrary :: IndexConfig -> IO ()
 translateLibrary config = do
@@ -275,9 +206,6 @@ translateInterface intf = do
 --------------------------------------------------------------------------------
 -- Definition translation
 
-setCurrentRangeQ :: QName -> M a -> M a
-setCurrentRangeQ = setCurrentRange . nameBindingSite . qnameName
-
 translateDefinition :: TS.QName -> Definition -> M [Item]
 translateDefinition qname def = setCurrentRangeQ def.defName do
   ifM
@@ -324,172 +252,6 @@ translateFunDef qname def = do
     (isTypeAliasLike def)
     do translateTypeAliasLike qname def
     do pure <$> translateToAxiom qname def.defType (Just TS.NoReturnSort)
-
---------------------------------------------------------------------------------
--- Internal term/type → Term
-
-translateType :: Type -> M TS.Term
-translateType ty = translateTerm (Agda.sort ty._getSort) ty.unEl
-
-translateTerm :: Type -> Term -> M TS.Term
-translateTerm ty v = do
-  v <- instantiate v
-
-  let bad s t =
-        translateError $
-          vcat
-            [ "cannot compile" <+> text (s ++ ":"),
-              nest 2 $ prettyTCM t
-            ]
-
-  reduceProjectionLike v >>= \case
-    Sort _ -> pure TS.U
-    Pi a b -> do
-      translateDomType a >>= \case
-        Nothing -> underAbstraction a b translateType
-        Just a' -> do
-          let name = if isBinderUsed b then realName b.absName else "_"
-          addContextAndRenaming (KeepNames name, a) $
-            TS.Pi (fromString name) a' <$> translateType (absBody b)
-    Var i es -> do
-      ty <- typeOfBV i
-      translateSpined (translateVar i ty) (Var i) ty es
-    Def f es -> maybeUnfoldCopy f es (translateTerm ty) \f es -> do
-      def <- getConstInfo f
-      let ty = def.defType
-          f' = def.defName
-      translateSpined (translateDef f' ty) (Def f') ty es
-    Con ch ci es -> do
-      Just ((_, _, pars), ty) <- getConType ch ty
-      translateSpined (translateCon ch ci ty pars) (Con ch ci) ty es
-    Lam v b -> translateLam ty v b
-    Lit x -> translateLit x
-    v@MetaV {} -> bad "unsolved metavariable" v
-    v@DontCare {} -> bad "irrelevant term" v
-    v@Dummy {} -> bad "dummy term" v
-    Level {} -> __IMPOSSIBLE__
-
-translateVar :: Int -> Type -> [Term] -> M TS.Term
-translateVar i ty args = do
-  i <- translateDBVar i
-  translateApp (TS.Var i) ty args
-
-translateDef :: QName -> Type -> [Term] -> M TS.Term
-translateDef f ty args = do
-  let name = translateQName f
-  translateApp (TS.Top name) ty args
-
-translateCon :: ConHead -> ConInfo -> Type -> Args -> [Term] -> M TS.Term
-translateCon ch i ty pars args = do
-  let c = ch.conName
-  conDef <- getConstInfo c
-  let Constructor {..} = conDef.theDef
-  if defCopy conDef
-    then translateCon conSrcCon i ty pars args
-    else do
-      let name = translateQName conSrcCon.conName
-      dataDef <- getConstInfo conData
-      -- For making parameters explicit
-      -- e.g) Builtin.List._∷_ x xs -> Builtin.List._∷_ A x xs
-      t <- translateApp (TS.Top name) dataDef.defType $ map unArg pars
-      translateApp t ty args
-
-translateSpined ::
-  ([Term] -> M TS.Term) ->
-  (Elims -> Term) ->
-  Type ->
-  Elims ->
-  M TS.Term
-translateSpined c tm ty = \case
-  [] -> c []
-  e@(Proj o q) : es -> do
-    let t = tm []
-    ty' <- shouldBeProjectible t ty o q
-    translateSpined (translateProj q ty t ty') (tm . (e :)) ty' es
-  e@(Apply (unArg -> x)) : es -> do
-    (_, b) <- mustBePi ty
-    translateSpined (c . (x :)) (tm . (e :)) (absApp b x) es
-  e@IApply {} : _ ->
-    translateError $
-      vcat ["cannot compile IApply:", nest 2 $ prettyTCM e]
-
-translateProj ::
-  QName ->
-  Type ->
-  Term ->
-  Type ->
-  [Term] ->
-  M TS.Term
-translateProj q tty t ty args = do
-  let name = translateQName q
-  arg <- translateTerm tty t
-  translateApp (TS.Top name `TS.App` arg) ty args
-
-translateApp :: TS.Term -> Type -> [Term] -> M TS.Term
-translateApp f ty args = do
-  args <- translateArgs ty args
-  pure $! foldl' TS.App f args
-
-translateArgs :: Type -> [Term] -> M [TS.Term]
-translateArgs ty args = snd <$> translateArgs' ty args
-
-translateArgs' :: Type -> [Term] -> M (Type, [TS.Term])
-translateArgs' ty = \case
-  [] -> pure (ty, [])
-  (x : xs) -> do
-    (a, b) <- mustBePi ty
-    let rest = translateArgs' (absApp b x) xs
-    ifM
-      (isErasable a.unDom)
-      do rest
-      do
-        x <- translateTerm a.unDom x
-        (ty, xs) <- rest
-        pure (ty, x : xs)
-
-translateLam :: Type -> ArgInfo -> Abs Term -> M TS.Term
-translateLam ty _argi abs = do
-  (dom, cod) <- mustBePi ty
-  let name = realName abs.absName
-      ctxElt = (KeepNames name, dom)
-  ifM
-    (isErasable dom.unDom)
-    do addContext ctxElt $ translateTerm (absBody cod) (absBody abs)
-    do
-      addContextAndRenaming ctxElt $
-        TS.Lam (fromString name) <$> translateTerm (absBody cod) (absBody abs)
-
-translateDomType :: Dom Type -> M (Maybe TS.Term)
-translateDomType a =
-  ifM
-    (isErasable a.unDom)
-    do pure Nothing
-    do
-      a <- translateType a.unDom
-      pure $ Just a
-
-isErasable :: Type -> M Bool
-isErasable a = do
-  TelV tel b <- telView a
-  addContext tel $
-    orM
-      [ isLevelType b,
-        isJust <$> isSizeType b
-      ]
-
-translateLit :: Literal -> M TS.Term
-translateLit = \case
-  LitNat n -> do
-    zero <- translateQName <$> getBuiltinName_ BuiltinZero
-    suc <- translateQName <$> getBuiltinName_ BuiltinSuc
-    pure $ iterate' n (TS.Top suc `TS.App`) (TS.Top zero)
-  _ -> translateError "unsupported literal"
-
-maybeUnfoldCopy :: QName -> Elims -> (Term -> M a) -> (QName -> Elims -> M a) -> M a
-maybeUnfoldCopy f es onTerm onDef =
-  reduceDefCopy f es >>= \case
-    NoReduction () -> onDef f es
-    YesReduction _ t -> onTerm t
 
 --------------------------------------------------------------------------------
 -- Translate type-alias-like into let
@@ -596,38 +358,3 @@ translatePatternArgs = \cases
         addContextAndRenaming ctxElt $
           TS.Lam (fromString varName) <$> translatePatternArgs (absBody cod) ps k
   _ _ _ -> __IMPOSSIBLE__
-
---------------------------------------------------------------------------------
--- Name translation helpers
-
-translateModuleName :: ModuleName -> TS.ModuleName
-translateModuleName m =
-  TS.ModuleName $
-    T.intercalate "." $
-      map (T.pack . Concrete.nameToRawName . nameConcrete) $
-        filter (not . isNoName) $
-          mnameToList m
-
-translateTopLevelModuleName :: TopLevelModuleName -> TS.ModuleName
-translateTopLevelModuleName =
-  TS.ModuleName
-    . T.intercalate "."
-    . NonEmpty.toList
-    . moduleNameParts
-
-translateQName :: QName -> TS.QName
-translateQName f = do
-  let x = translateName $ nameConcrete $ qnameName f
-      m = translateModuleName $ qnameModule f
-  TS.QName m x
-
-translateName :: Concrete.Name -> TS.Name
-translateName = TS.Name . T.pack . Concrete.nameToRawName
-
-translateDBVar :: Nat -> M TS.Index
-translateDBVar agdaIx = do
-  ctxSize <- getContextSize
-  let lvl = ctxSize - agdaIx - 1
-  join $ asks \env -> case IM.lookup lvl env.renaming of
-    Nothing -> __IMPOSSIBLE__
-    Just lvl' -> pure $! TS.Index (env.contextSizeAfterErasure - lvl' - 1)
