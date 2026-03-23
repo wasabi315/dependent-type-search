@@ -77,14 +77,14 @@ addContextAndRenaming ctxElt m = do
     $ addContext ctxElt m
 
 -- | Translate a de Bruijn index from Agda into ours according to the current renaming.
-translateDBIndex :: Nat -> M Int
-translateDBIndex ix = do
+translateDBVar :: Nat -> M TS.Index
+translateDBVar ix = do
   ctxSize <- getContextSize
   let lvl = ctxSize - ix - 1
   asks \env -> do
     let lvl' = IM.findWithDefault __IMPOSSIBLE__ lvl env.renaming
         ix' = env.contextSizeAfterErasure - lvl' - 1
-    ix'
+    TS.Index ix'
 
 -- | Determine whether it is ok to erase arguments of this type.
 isErasable :: Type -> M Bool

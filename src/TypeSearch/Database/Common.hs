@@ -1,9 +1,9 @@
 module TypeSearch.Database.Common where
 
-import Control.Applicative
 import Control.Exception
 import Control.Monad
 import Data.ByteString qualified as BS
+import Data.Data (Typeable)
 import Data.Either (partitionEithers)
 import Data.HashMap.Lazy qualified as HML
 import Data.Map.Strict qualified as M
@@ -22,23 +22,46 @@ import TypeSearch.Term
 --------------------------------------------------------------------------------
 -- Wrapper types for DB
 
-newtype DbName = DbName Name
+newtype a `As` b = As a
   deriving newtype (Show, Eq, Ord)
 
-instance ToField DbName where
-  toField x = toField @T.Text (coerce x)
+instance (Coercible a b, ToField b) => ToField (a `As` b) where
+  toField x = toField @b (coerce x)
 
-instance FromField DbName where
-  fromField f dat = coerce <$> fromField @T.Text f dat
+instance (Coercible a b, FromField b) => FromField (a `As` b) where
+  fromField f dat = coerce (fromField @b f dat)
 
-newtype DbModuleName = DbModuleName ModuleName
+-- | Store @Enum@ instance in @int@.
+newtype ViaEnum a = ViaEnum a
   deriving newtype (Show, Eq, Ord)
 
-instance ToField DbModuleName where
-  toField x = toField @T.Text (coerce x)
+instance (Enum a) => ToField (ViaEnum a) where
+  toField (ViaEnum x) = toField (fromEnum x)
 
-instance FromField DbModuleName where
-  fromField f dat = coerce <$> fromField @T.Text f dat
+instance (Enum a) => FromField (ViaEnum a) where
+  fromField f dat = coerce (toEnum @a <$!> fromField f dat)
+
+-- | Store @Flat@ instance in @bytea@.
+newtype ViaFlat a = ViaFlat a
+  deriving newtype (Show, Eq, Ord)
+
+instance (Flat a) => ToField (ViaFlat a) where
+  toField (ViaFlat x) = toField (Binary $ flat x)
+
+instance (Flat a, Typeable a) => FromField (ViaFlat a) where
+  fromField f dat = coerce do
+    Binary (x :: BS.ByteString) <- fromField f dat
+    case unflat @a x of
+      Right t -> pure t
+      Left e ->
+        returnError ConversionFailed f $
+          "Flat deserialisation error: " ++ displayException e
+
+type DbName = Name `As` T.Text
+
+type DbModuleName = ModuleName `As` T.Text
+
+type DbTerm = ViaFlat Term
 
 newtype DbQName = DbQName QName
   deriving newtype (Show)
@@ -54,20 +77,6 @@ instance FromField DbQName where
         f = coerce $ last xs
     pure $ DbQName (QName m f)
 
-newtype DbTerm = DbTerm Term
-
-instance ToField DbTerm where
-  toField (DbTerm t) = toField (Binary $ flat t)
-
-instance FromField DbTerm where
-  fromField f dat = do
-    Binary (x :: BS.ByteString) <- fromField f dat
-    case unflat x of
-      Right t -> pure (DbTerm t)
-      Left e ->
-        returnError ConversionFailed f $
-          "Flat deserialisation error: " ++ displayException e
-
 --------------------------------------------------------------------------------
 -- Features
 
@@ -81,126 +90,24 @@ data ReturnTypeHead
   deriving (ToField, FromField) via Aeson ReturnTypeHead
 
 -- | Return-sort feature.
-
---   Compatibility:
---     approxReturnSort(query) = Yes -> returnSort(item) in {Yes, May}
---     approxReturnSort(query) = No  -> returnSort(item) in {No, May}
---     approxReturnSort(query) = May -> returnSort(item) = May
---     approxReturnSort(query) = ?   -> returnSort(item) in {Yes, No, May}
-
---
---     may
---    /   \
---  yes   no
-
--- In agda-stdlib
---   yes : 2860
---   no  : 17067
---   may : 864
 data ReturnSort
   = YesReturnSort
   | NoReturnSort
   | MayReturnSort
-  deriving stock (Eq, Show)
-
-instance ToField ReturnSort where
-  toField x = toField tag
-    where
-      tag = case x of
-        NoReturnSort -> (0 :: Int)
-        YesReturnSort -> 1
-        MayReturnSort -> 2
-
-instance FromField ReturnSort where
-  fromField f dat =
-    fromField f dat >>= \case
-      (0 :: Int) -> pure NoReturnSort
-      1 -> pure YesReturnSort
-      2 -> pure MayReturnSort
-      _ -> empty
+  deriving stock (Eq, Show, Enum)
+  deriving (ToField, FromField) via ViaEnum ReturnSort
 
 -- | Polymorphic feature.
-
---   Compatibility:
---     approxPolymorphic(query) = Yes     -> polymorphic(item) = Yes
---     approxPolymorphic(query) = No      -> polymorphic(item) in {No, Yes}
---     approxPolymorphic(query) = ?       -> polymorphic(item) in {No, Yes}
-
---     yes
---      |
---      no
-
--- In agda-stdlib
---   yes : 11140
---   no  : 9651
-data Polymorphic = YesPolymorphic | NoPolymorphic
-  deriving stock (Eq, Show)
-
-instance ToField Polymorphic where
-  toField x = toField case x of
-    YesPolymorphic -> (1 :: Int)
-    NoPolymorphic -> 0
-
-instance FromField Polymorphic where
-  fromField f dat =
-    fromField f dat >>= \case
-      (1 :: Int) -> pure YesPolymorphic
-      0 -> pure NoPolymorphic
-      _ -> empty
+data Polymorphic = NoPolymorphic | YesPolymorphic
+  deriving stock (Eq, Ord, Show, Enum)
+  deriving (ToField, FromField) via ViaEnum Polymorphic
 
 infArity :: Int
 infArity = 127
 
 -- | Arity feature.
-
---   Compatibility:
---     approxArity(query) : arity at least
---     arity(item)        : actual arity
---     approxArity(query) <= arity(item)
-
---   0 < 1 < 2 < ... < ∞
-
--- In agda-stdlib
---   0 : 1514
---   1 : 1342
---   2 : 1943
---   3 : 2084
---   4 : 1736
---   5 : 1775
---   6 : 1728
---   7 : 1350
---   8 : 1103
---   9 : 850
---  10 : 522
---  11 : 430
---  12 : 255
---  13 : 215
---  14 : 188
---  15 : 123
---  16 : 74
---  17 : 49
---  18 : 60
---  19 : 18
---  20 : 22
---  21 : 4
---  22 : 9
---  23 : 13
---  24 : 0
---  25 : 22
---  26 : 1
---  27 : 1
---  28 : 2
---  29 : 0
---  30 : 0
---  31 : 0
---  32 : 1
---  33 : 0
---  34 : 0
---  35 : 0
---  36 : 2
---  ∞  : 3374
-data Arity = InfArity | Arity Int
-  deriving stock (Eq, Show)
+data Arity = Arity Int | InfArity
+  deriving stock (Eq, Show, Ord)
 
 instance ToField Arity where
   toField ar = toField case ar of
@@ -209,7 +116,7 @@ instance ToField Arity where
 
 instance FromField Arity where
   fromField f dat =
-    fromField f dat >>= \ar -> pure if ar == infArity then InfArity else Arity ar
+    fromField f dat >>= \ar -> pure $! if ar == infArity then InfArity else Arity ar
 
 --------------------------------------------------------------------------------
 
@@ -283,20 +190,20 @@ fetchBodyCanonish conn a = do
     query
       conn
       "SELECT DISTINCT name_qual, name_unqual, body_canonish FROM library_items WHERE name_qual in ? UNION SELECT DISTINCT name_qual, name_unqual, body_canonish FROM library_items WHERE name_unqual in ?"
-      (In quals, In unquals)
+      (In quals, In (unquals :: [DbName]))
   let bcs =
         M.fromListWith (<>) $
           map
-            (\(_, n, bc) -> maybe (n, BCCanonish) ((n,) . BCNames . S.fromList . map (\(DbQName (QName _ x)) -> DbName x) . fromPGArray) bc)
+            (\(_, n, bc) -> maybe (n, BCCanonish) ((n,) . BCNames . S.fromList . map (\(DbQName (QName _ x)) -> coerce x) . fromPGArray) bc)
             res
       resol =
         M.fromListWith (++) $
           map
-            (\(DbQName x, DbName y, _) -> (y, [x]))
+            (\(DbQName x, y, _) -> (coerce y, [x]))
             res
   pure (bcs, resol)
   where
-    (quals, unquals) = partitionEithers $ map (\case Unqual x -> Right (DbName x); Qual m x -> Left (DbQName (QName m x))) $ S.toList (freeVars a)
+    (quals, unquals) = partitionEithers $ map (\case Unqual x -> Right (As x); Qual m x -> Left (DbQName (QName m x))) $ S.toList (freeVars a)
 
 type ReturnSortBodyMap = M.Map DbName (Maybe ReturnSort, Maybe [Bool])
 
@@ -306,7 +213,7 @@ fetchReturnSortBody conn a = do
     query
       conn
       "SELECT DISTINCT name_unqual, return_sort_body, occurrence FROM library_items WHERE name_qual in ? UNION SELECT DISTINCT name_unqual, return_sort_body, occurrence FROM library_items WHERE name_unqual in ?"
-      (In quals, In unquals)
+      (In quals, In (unquals :: [DbName]))
   pure $! flip M.fromListWith (map (\(x, y, z) -> (x, (y, fromPGArray <$> z))) res) \(rs1, occ1) (rs2, occ2) ->
     ( case (rs1, rs2) of
         (Just rs1, Just rs2) | rs1 == rs2 -> Just rs1
@@ -316,7 +223,7 @@ fetchReturnSortBody conn a = do
         _ -> Nothing
     )
   where
-    (quals, unquals) = partitionEithers $ map (\case Unqual x -> Right (DbName x); Qual m x -> Left (DbQName (QName m x))) $ S.toList (freeVars a)
+    (quals, unquals) = partitionEithers $ map (\case Unqual x -> Right (As x); Qual m x -> Left (DbQName (QName m x))) $ S.toList (freeVars a)
 
 rawHead :: Raw -> Raw
 rawHead = \case
@@ -526,7 +433,7 @@ fetchTopEnv conn candNames = do
     "SELECT name_qual, body FROM library_items WHERE body IS NOT NULL AND name_unqual in (SELECT DISTINCT unnest(noncanonish) FROM library_items WHERE name_qual in ?)"
     (Only (In candNames))
     (HML.empty, mempty)
-    ( \(tenv, resol) (DbQName x, DbTerm t) -> do
+    ( \(tenv, resol) (DbQName x, ViaFlat t) -> do
         let tenv' = HML.insert x (eval emptyMetaCtx mempty [] t) tenv
             resol' = M.insertWith (++) x.name [x] resol
         pure (tenv', resol')

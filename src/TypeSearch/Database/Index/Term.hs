@@ -25,9 +25,11 @@ import TypeSearch.Term qualified as TS
 --------------------------------------------------------------------------------
 -- Agda Internal term/type to our Term
 
+-- | Translate a @Type@.
 translateType :: Type -> M TS.Term
 translateType ty = translateTerm (sort $ getSort ty) ty.unEl
 
+-- | Translate a @Term@ of a given @Type@.
 translateTerm :: Type -> Term -> M TS.Term
 translateTerm ty v = do
   v <- instantiate v
@@ -41,12 +43,14 @@ translateTerm ty v = do
 
   reduceProjectionLike v >>= \case
     Sort _ -> pure TS.U
-    Pi a b -> do
-      translateDomType a >>= \case
-        Nothing -> underAbstraction a b translateType
-        Just a' -> do
+    Pi a b ->
+      ifM
+        (isErasable a.unDom)
+        do underAbstraction a b translateType
+        do
+          a' <- translateType a.unDom
           let name = if isBinderUsed b then realName b.absName else "_"
-          addContextAndRenaming (KeepNames name, a) $
+          addContextAndRenaming (name, a) $
             TS.Pi (fromString name) a' <$> translateType (absBody b)
     Var i es -> do
       ty <- typeOfBV i
@@ -148,7 +152,7 @@ translateLam :: Type -> ArgInfo -> Abs Term -> M TS.Term
 translateLam ty _argi abs = do
   (dom, cod) <- mustBePi ty
   let name = realName abs.absName
-      ctxElt = (KeepNames name, dom)
+      ctxElt = (name, dom)
   ifM
     (isErasable dom.unDom)
     do addContext ctxElt $ translateTerm (absBody cod) (absBody abs)
@@ -163,12 +167,3 @@ translateLit = \case
     suc <- translateQName <$> getBuiltinName_ BuiltinSuc
     pure $ iterate' n (TS.Top suc `TS.App`) (TS.Top zero)
   x -> translateError $ vcat ["cannot compile literal:", nest 2 $ prettyTCM x]
-
-translateDomType :: Dom Type -> M (Maybe TS.Term)
-translateDomType a =
-  ifM
-    (isErasable a.unDom)
-    do pure Nothing
-    do
-      a <- translateType a.unDom
-      pure $ Just a

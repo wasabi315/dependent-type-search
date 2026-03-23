@@ -174,16 +174,16 @@ translateLibrary config = do
 saveModule :: Connection -> [Item] -> IO ()
 saveModule conn items = do
   let values = flip map items \(Item n a t occ (ncs, cs, return_type_head, rcs, polymorphic, arity) return_sort_body bcs) -> do
-        let name_qual = TS.DbQName n
-            name_unqual = TS.DbName n.name
-            modul = TS.DbModuleName n.moduleName
-            sig = TS.DbTerm a
-            body = TS.DbTerm <$> t
-            occurrence = PGArray <$> occ
-            noncanonish = PGArray $ coerce $ HS.toList ncs
-            canonish = PGArray $ coerce $ HS.toList cs
-            body_canonish = PGArray . coerce . HS.toList <$> bcs
-            return_type_canonish = PGArray $ coerce $ HS.toList rcs
+        let name_qual = coerce n
+            name_unqual = coerce n.name
+            modul = coerce n.moduleName
+            sig = coerce a
+            body = coerce t
+            occurrence = coerce occ
+            noncanonish = coerce $ HS.toList ncs
+            canonish = coerce $ HS.toList cs
+            body_canonish = coerce $ HS.toList <$> bcs
+            return_type_canonish = coerce $ HS.toList rcs
         TS.DbItem {..}
   TS.saveManyItems conn values
 

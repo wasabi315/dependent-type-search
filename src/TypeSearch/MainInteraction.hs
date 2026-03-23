@@ -4,16 +4,11 @@ import Control.Applicative
 import Control.Exception (displayException)
 import Control.Monad.IO.Class
 import Data.Foldable
-import Data.HashMap.Lazy qualified as HML
-import Data.HashMap.Strict qualified as HM
-import Data.List (isPrefixOf)
 import Data.Map.Strict qualified as M
 import Data.Maybe
-import Data.Set qualified as S
 import Data.Text qualified as T
 import Data.Time.Clock
 import Database.PostgreSQL.Simple
-import Debug.Trace
 import Stream
 import Streamly.Data.Stream.Prelude qualified as Streamly
 import System.Console.Haskeline
@@ -122,7 +117,7 @@ typeSearch tenv resol query items = do
     $ Streamly.fromList items
 
 typeSearchOne :: TopEnv -> Term -> DbItem -> Stream TypeSearchResult
-typeSearchOne tenv query DbItem {sig = DbTerm sig, name_qual = DbQName name} = do
+typeSearchOne tenv query DbItem {sig = ViaFlat sig, name_qual = DbQName name} = do
   (i, inst) <- check name (initCtx tenv, Here) (eval emptyMetaCtx tenv [] query) (eval emptyMetaCtx tenv [] sig)
   pure (TypeSearchResult name sig i inst)
 
@@ -194,6 +189,6 @@ displayTypeSearchResults cands matches time = do
 -- Search by name
 
 displaySearchByNameResult :: [(DbQName, DbTerm)] -> InputT IO ()
-displaySearchByNameResult = traverse_ \(DbQName (QName m x), DbTerm a) -> do
+displaySearchByNameResult = traverse_ \(DbQName (QName m x), ViaFlat a) -> do
   outputStrLn $ shows x $ showString " : " $ prettyTerm0 Unqualify a ""
   outputStrLn $ showString "  in " $ shows m "\n"

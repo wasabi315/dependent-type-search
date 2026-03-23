@@ -34,7 +34,3 @@ translateQName f = do
 
 translateName :: Concrete.Name -> TS.Name
 translateName = TS.Name . T.pack . Concrete.nameToRawName
-
--- | Compile a variable.
-translateDBVar :: Nat -> M TS.Index
-translateDBVar = fmap TS.Index . translateDBIndex
