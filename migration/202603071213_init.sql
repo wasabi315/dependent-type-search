@@ -7,18 +7,11 @@ CREATE TABLE library_items (
     module               text      NOT NULL,
     sig                  bytea     NOT NULL,
     body                 bytea,                     -- NULL for axioms
-    occurrence           boolean[],                 -- NULL for axioms
-    noncanonish          text[]    NOT NULL,
-    canonish             text[]    NOT NULL,
 
     -- Features
     arity                int       NOT NULL,
     polymorphic          int       NOT NULL,
-    return_type_head     jsonb     NOT NULL,
-    return_type_canonish text[] NOT NULL,
-
-    return_sort_body     int,
-    body_canonish        text[]
+    return_type_head     jsonb     NOT NULL
 );
 
 CREATE INDEX library_items_name_unqual_trgm    ON library_items USING GIST (name_unqual gist_trgm_ops);

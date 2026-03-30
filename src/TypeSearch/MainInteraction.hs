@@ -76,19 +76,12 @@ mainLoop conn = runInputT defaultSettings go
         Right (SearchByType typ) -> case parseRaw "interactive" (T.pack typ) of
           Left err -> outputStrLn (displayException err) >> go
           Right typ -> do
-            -- liftIO $ putStrLn $ prettyRaw 0 typ ""
-            (bcs, resol1) <- liftIO $ fetchBodyCanonish conn typ
-            -- liftIO $ print bcs
-            rsbm <- liftIO $ fetchReturnSortBody conn typ
-            -- liftIO $ print rsbm
-            cands <- liftIO $ filterByFeatures conn bcs rsbm typ
-            -- cands <- liftIO $ Just <$> fetchAllItems conn
+            cands <- liftIO $ filterByFeatures conn typ
             case cands of
               Nothing -> outputStrLn "Ill-formed type" >> go
               Just cands -> do
-                -- outputStrLn $ "Number of candidates: " ++ show (length cands)
+                resol1 <- liftIO $ fetchResolution conn typ
                 (tenv, resol2) <- liftIO $ fetchTopEnv conn $ map (\item -> item.name_qual) cands
-                -- outputStrLn $ "Size of top env: " ++ show (HML.size topEnv)
                 (result, time) <- liftIO $ timed $ typeSearch tenv (M.unionWith (++) resol1 resol2) typ cands
                 displayTypeSearchResults cands result time
                 go

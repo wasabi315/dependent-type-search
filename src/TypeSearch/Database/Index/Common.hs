@@ -51,10 +51,7 @@ data Item = Item
   { name :: TS.QName,
     signature :: TS.Term,
     body :: Maybe TS.Term,
-    occurrence :: Maybe [Bool],
-    feature :: (HS.HashSet TS.Name, HS.HashSet TS.Name, TS.ReturnTypeHead, HS.HashSet TS.Name, TS.Polymorphic, TS.Arity),
-    returnSortBody :: Maybe TS.ReturnSort,
-    canonishBody :: Maybe (HS.HashSet TS.Name)
+    feature :: (TS.ReturnTypeHead, TS.Polymorphic, TS.Arity)
   }
 
 --------------------------------------------------------------------------------

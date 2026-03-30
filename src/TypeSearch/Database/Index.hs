@@ -34,7 +34,6 @@ import Data.Map.Strict qualified as Map
 import Data.Maybe
 import Data.String
 import Database.PostgreSQL.Simple
-import Database.PostgreSQL.Simple.Types
 import System.Directory
 import System.FilePath.Find qualified as Find
 import TypeSearch.Common qualified as TS
@@ -47,26 +46,23 @@ import TypeSearch.Term qualified as TS
 --------------------------------------------------------------------------------
 -- Compute features
 
-feature :: Type -> M (HS.HashSet TS.Name, HS.HashSet TS.Name, TS.ReturnTypeHead, HS.HashSet TS.Name, TS.Polymorphic, TS.Arity)
+feature :: Type -> M (TS.ReturnTypeHead, TS.Polymorphic, TS.Arity)
 feature t = do
-  cs <- getDefNames =<< normalise t
-  ncs <- (`HS.difference` cs) <$> getDefNames t
-  (rt, rcs) <- returnTypeFeatures t
+  rt <- returnTypeFeatures t
   pl <- isPolymorphic t
   ar <- arity t
-  pure (ncs, cs, rt, rcs, pl, ar)
+  pure (rt, pl, ar)
 
-returnTypeFeatures :: Type -> M (TS.ReturnTypeHead, HS.HashSet TS.Name)
+returnTypeFeatures :: Type -> M TS.ReturnTypeHead
 returnTypeFeatures t = do
   TelV tel b <- telView t
   addContext tel do
     b <- normalise b
-    canons <- getDefNames b
-    case b.unEl of
-      Sort {} -> pure (TS.RHSort, canons)
-      Var {} -> pure (TS.RHVar, canons)
-      Def f _ -> pure (TS.RHFormer (translateQName f).name, canons)
-      _ -> pure (TS.RHOther, canons)
+    case unSpine b.unEl of
+      Sort {} -> pure TS.RHSort
+      Var {} -> pure TS.RHVar
+      Def f _ -> pure (TS.RHFormer (translateQName f).name)
+      _ -> pure TS.RHOther
 
 -- | Check if a given type may return Sort.
 returnSort :: Type -> M TS.ReturnSort
@@ -173,17 +169,12 @@ translateLibrary config = do
 
 saveModule :: Connection -> [Item] -> IO ()
 saveModule conn items = do
-  let values = flip map items \(Item n a t occ (ncs, cs, return_type_head, rcs, polymorphic, arity) return_sort_body bcs) -> do
+  let values = flip map items \(Item n a t (return_type_head, polymorphic, arity)) -> do
         let name_qual = coerce n
             name_unqual = coerce n.name
             modul = coerce n.moduleName
             sig = coerce a
             body = coerce t
-            occurrence = coerce occ
-            noncanonish = coerce $ HS.toList ncs
-            canonish = coerce $ HS.toList cs
-            body_canonish = coerce $ HS.toList <$> bcs
-            return_type_canonish = coerce $ HS.toList rcs
         TS.DbItem {..}
   TS.saveManyItems conn values
 
@@ -212,13 +203,13 @@ translateDefinition qname def = setCurrentRangeQ def.defName do
     (isErasable def.defType)
     do pure []
     case def.theDef of
-      AxiomDefn {} -> pure <$> translateToAxiom qname def.defType (Just TS.NoReturnSort)
-      AbstractDefn {} -> pure <$> translateToAxiom qname def.defType (Just TS.NoReturnSort)
+      AxiomDefn {} -> pure <$> translateToAxiom qname def.defType
+      AbstractDefn {} -> pure <$> translateToAxiom qname def.defType
       FunctionDefn {} -> translateFunDef qname def
-      DatatypeDefn {} -> pure <$> translateToAxiom qname def.defType (Just TS.NoReturnSort)
-      RecordDefn {} -> pure <$> translateToAxiom qname def.defType (Just TS.NoReturnSort)
-      ConstructorDefn {} -> pure <$> translateToAxiom qname def.defType (Just TS.NoReturnSort)
-      PrimitiveDefn {} -> pure <$> translateToAxiom qname def.defType (Just TS.NoReturnSort)
+      DatatypeDefn {} -> pure <$> translateToAxiom qname def.defType
+      RecordDefn {} -> pure <$> translateToAxiom qname def.defType
+      ConstructorDefn {} -> pure <$> translateToAxiom qname def.defType
+      PrimitiveDefn {} -> pure <$> translateToAxiom qname def.defType
       DataOrRecSigDefn {} -> pure []
       GeneralizableVar {} -> pure []
       PrimitiveSortDefn {} -> pure []
@@ -240,18 +231,18 @@ getDefNames x = do
           x
   pure ns
 
-translateToAxiom :: TS.QName -> Type -> Maybe TS.ReturnSort -> M Item
-translateToAxiom x ty retSortBody = do
+translateToAxiom :: TS.QName -> Type -> M Item
+translateToAxiom x ty = do
   feat <- feature ty
   ty <- translateType ty
-  pure $! Item x ty Nothing Nothing feat retSortBody Nothing
+  pure $! Item x ty Nothing feat
 
 translateFunDef :: TS.QName -> Definition -> M [Item]
 translateFunDef qname def = do
   ifM
     (isTypeAliasLike def)
     do translateTypeAliasLike qname def
-    do pure <$> translateToAxiom qname def.defType (Just TS.NoReturnSort)
+    do pure <$> translateToAxiom qname def.defType
 
 --------------------------------------------------------------------------------
 -- Translate type-alias-like into let
@@ -313,21 +304,16 @@ translateTypeAliasLike qname def = do
   let Function {..} = def.theDef
       [Clause {..}] = funClauses
   funTy <- translateType def.defType
-  occ <- getOccs def.defArgOccurrences def.defType
-  let occ' = if and occ then Nothing else Just occ
   fun <- translatePatternArgs def.defType namedClausePats \ty -> do
     clauseBody <- normalise (fromMaybe __IMPOSSIBLE__ clauseBody)
     translateTerm ty clauseBody
   feat <- feature def.defType
   addContext (KeepNames clauseTel) do
-    clauseBody <- normalise (fromMaybe __IMPOSSIBLE__ clauseBody)
-    retSortBody <- returnSortBody clauseBody
-    canons <- getDefNames clauseBody
     maxSize <- asks \config -> config.maxLetSize
     if termSize fun <= maxSize
       then do
-        pure [Item qname funTy (Just fun) occ' feat retSortBody (Just canons)]
-      else pure [Item qname funTy Nothing Nothing feat (Just TS.NoReturnSort) Nothing]
+        pure [Item qname funTy (Just fun) feat]
+      else pure [Item qname funTy Nothing feat]
 
 termSize :: TS.Term -> Int
 termSize = \case
