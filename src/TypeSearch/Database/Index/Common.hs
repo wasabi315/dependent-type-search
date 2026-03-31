@@ -2,6 +2,7 @@ module TypeSearch.Database.Index.Common where
 
 import Agda.Compiler.Backend hiding (Args, initEnv)
 import Agda.Syntax.Common
+import Agda.Syntax.Common.Pretty (prettyShow)
 import Agda.Syntax.Internal hiding (arity, termSize)
 import Agda.TypeChecking.Level
 import Agda.TypeChecking.Pretty
@@ -13,10 +14,10 @@ import Agda.Utils.CallStack (HasCallStack)
 import Agda.Utils.Impossible (__IMPOSSIBLE__)
 import Agda.Utils.Monad
 import Control.Monad.Reader
-import Data.HashSet qualified as HS
 import Data.IntMap qualified as IM
 import Data.Map.Strict qualified as M
 import Data.Maybe
+import Data.Set qualified as S
 import Data.Text qualified as T
 import Database.PostgreSQL.Simple
 import TypeSearch.Common qualified as TS
@@ -26,8 +27,19 @@ import TypeSearch.Term qualified as TS
 --------------------------------------------------------------------------------
 -- Types
 
+data IndexConfig = IndexConfig
+  { transparentDefinitions :: TransparentDefinitions,
+    -- | Path to Agda library.
+    libraryDirectory :: FilePath,
+    -- | Connection to database.
+    databaseConnection :: Connection
+  }
+
+-- | Set of definition names (qualified) subject to definition unfolding during search.
+type TransparentDefinitions = S.Set String
+
 data IndexEnv = IndexEnv
-  { maxLetSize :: Int,
+  { transparentDefinitions :: TransparentDefinitions,
     -- | Context size after erasure
     contextSizeAfterErasure :: Int,
     -- | De Bruijn level → De Bruijn level after erasure
@@ -37,17 +49,8 @@ data IndexEnv = IndexEnv
 -- | Index monad.
 type M = ReaderT IndexEnv TCM
 
-data IndexConfig = IndexConfig
-  { -- | Maximum Raw node count for a let-body; larger bodies fall back to DAxiom.
-    maxLetSize :: Int,
-    -- | Path to Agda library.
-    libraryDirectory :: FilePath,
-    -- | Connection to database.
-    databaseConnection :: Connection
-  }
-
 initEnv :: IndexConfig -> IndexEnv
-initEnv IndexConfig {..} = IndexEnv maxLetSize 0 mempty
+initEnv IndexConfig {..} = IndexEnv transparentDefinitions 0 mempty
 
 data Item = Item
   { name :: TS.QName,
@@ -94,6 +97,9 @@ isErasable a = do
       [ isLevelType b,
         isJust <$> isSizeType b
       ]
+
+isTransparent :: QName -> M Bool
+isTransparent x = asks \env -> prettyShow x `S.member` env.transparentDefinitions
 
 --------------------------------------------------------------------------------
 -- Agda utils

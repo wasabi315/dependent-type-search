@@ -16,6 +16,7 @@ import Agda.Syntax.Position
 import Agda.Syntax.Scope.Base
 import Agda.Syntax.Scope.Monad (getCurrentScope)
 import Agda.TypeChecking.Positivity.Occurrence
+import Agda.TypeChecking.Pretty
 import Agda.TypeChecking.Reduce
 import Agda.TypeChecking.Sort (ifIsSort)
 import Agda.TypeChecking.Substitute as Agda
@@ -240,8 +241,8 @@ translateToAxiom x ty = do
 translateFunDef :: TS.QName -> Definition -> M [Item]
 translateFunDef qname def = do
   ifM
-    (isTypeAliasLike def)
-    do translateTypeAliasLike qname def
+    (isTransparent def.defName)
+    do translateTransparent qname def
     do pure <$> translateToAxiom qname def.defType
 
 --------------------------------------------------------------------------------
@@ -250,44 +251,22 @@ translateFunDef qname def = do
 --   * No where clause
 --   * No pattern matching
 
-isTypeAliasLike :: Definition -> M Bool
-isTypeAliasLike def =
-  andM
-    [ (/= TS.NoReturnSort) <$> returnSort def.defType,
-      hasNoLocalDefs def,
-      pure $ isNonPatternMatching def,
-      -- FIXME: translate projection-like
-      isNotProjectionLike def
-    ]
-
-hasNoLocalDefs :: Definition -> M Bool
-hasNoLocalDefs def = do
+hasLocalDefs :: Definition -> M Bool
+hasLocalDefs def = do
   defs <- curDefs
   let locals =
         takeWhile (isAnonymousModuleName . qnameModule) $
           dropWhile (<= def.defName) $
             map fst $
               sortDefs defs
-  pure $! null locals
+  pure $! not (null locals)
 
-isNonPatternMatching :: Definition -> Bool
-isNonPatternMatching def = do
-  let Function {..} = def.theDef
-  case funClauses of
-    [cl] -> flip all cl.namedClausePats \nap ->
-      case nap.unArg.namedThing of
-        VarP {} -> isJust cl.clauseBody
-        _ -> False
-    _ -> False
-
-isNotProjectionLike :: Definition -> M Bool
-isNotProjectionLike def = do
+isProjectionLike :: Definition -> M Bool
+isProjectionLike def = do
   let Function {..} = def.theDef
   case funProjection of
-    Left {} -> pure True
-    Right {} -> do
-      liftIO $ putStrLn $ "Found projection-like: " ++ prettyShow def.defName
-      pure False
+    Left {} -> pure False
+    Right {} -> pure True
 
 getOccs :: [Occurrence] -> Type -> M [Bool]
 getOccs = \cases
@@ -299,36 +278,26 @@ getOccs = \cases
       (underAbstraction a b (getOccs occs))
       (((occ /= Unused) :) <$> underAbstraction a b (getOccs occs))
 
-translateTypeAliasLike :: TS.QName -> Definition -> M [Item]
-translateTypeAliasLike qname def = do
+translateTransparent :: TS.QName -> Definition -> M [Item]
+translateTransparent qname def = do
   let Function {..} = def.theDef
-      [Clause {..}] = funClauses
+
+  -- validation
+  let bad x = translateError $ vcat [prettyTCM def.defName, x]
+  whenM (hasLocalDefs def) do
+    void $ bad "Not supported: transparent definition with where clause"
+  whenM (isProjectionLike def) do
+    void $ bad "Work-in-progress: translate projection-like definition"
+  Clause {..} <- case funClauses of
+    [cl] -> pure cl
+    _ -> bad "Not supported: transparent definition with several clauses"
+
   funTy <- translateType def.defType
   fun <- translatePatternArgs def.defType namedClausePats \ty -> do
     clauseBody <- normalise (fromMaybe __IMPOSSIBLE__ clauseBody)
     translateTerm ty clauseBody
   feat <- feature def.defType
-  addContext (KeepNames clauseTel) do
-    maxSize <- asks \config -> config.maxLetSize
-    if termSize fun <= maxSize
-      then do
-        pure [Item qname funTy (Just fun) feat]
-      else pure [Item qname funTy Nothing feat]
-
-termSize :: TS.Term -> Int
-termSize = \case
-  TS.Var {} -> 1
-  TS.Top {} -> 1
-  TS.U -> 1
-  TS.Pi _ a b -> 1 + termSize a + termSize b
-  TS.Lam _ t -> 1 + termSize t
-  TS.App t u -> 1 + termSize t + termSize u
-  TS.Sigma _ a b -> 1 + termSize a + termSize b
-  TS.Pair t u -> 1 + termSize t + termSize u
-  TS.Proj1 t -> 1 + termSize t
-  TS.Proj2 t -> 1 + termSize t
-  TS.Meta {} -> __IMPOSSIBLE__
-  TS.AppPruning {} -> __IMPOSSIBLE__
+  pure [Item qname funTy (Just fun) feat]
 
 translatePatternArgs :: Type -> NAPs -> (Type -> M TS.Term) -> M TS.Term
 translatePatternArgs = \cases
@@ -343,4 +312,4 @@ translatePatternArgs = \cases
       do
         addContextAndRenaming ctxElt $
           TS.Lam (fromString varName) <$> translatePatternArgs (absBody cod) ps k
-  _ _ _ -> __IMPOSSIBLE__
+  _ _ _ -> translateError "Not supported: transparent definition by pattern-matching"

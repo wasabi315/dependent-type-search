@@ -6,7 +6,6 @@ import Agda.Syntax.Concrete qualified as Concrete
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Text qualified as T
 import TypeSearch.Common qualified as TS
-import TypeSearch.Database.Index.Common
 
 --------------------------------------------------------------------------------
 -- Name translation
