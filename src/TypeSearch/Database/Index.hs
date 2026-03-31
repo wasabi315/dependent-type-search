@@ -200,7 +200,7 @@ translateInterface intf = do
 translateDefinition :: TS.QName -> Definition -> M [Item]
 translateDefinition qname def = setCurrentRangeQ def.defName do
   ifM
-    (isErasable def.defType)
+    (orM [isErasable def.defType, isDeprecated def.defName])
     do pure []
     case def.theDef of
       AxiomDefn {} -> pure <$> translateToAxiom qname def.defType

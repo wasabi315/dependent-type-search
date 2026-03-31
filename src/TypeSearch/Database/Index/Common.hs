@@ -15,7 +15,9 @@ import Agda.Utils.Monad
 import Control.Monad.Reader
 import Data.HashSet qualified as HS
 import Data.IntMap qualified as IM
+import Data.Map.Strict qualified as M
 import Data.Maybe
+import Data.Text qualified as T
 import Database.PostgreSQL.Simple
 import TypeSearch.Common qualified as TS
 import TypeSearch.Database.Common qualified as TS
@@ -123,3 +125,10 @@ endsInSort t = do
 
 realName :: ArgName -> String
 realName s = if isNoName s then "x" else argNameToString s
+
+isDeprecated :: (ReadTCState m) => QName -> m Bool
+isDeprecated x = do
+  ws <- getUserWarnings
+  case M.lookup x ws of
+    Nothing -> pure False
+    Just txt -> pure $! T.toCaseFold "deprecated" `T.isInfixOf` T.toCaseFold txt
