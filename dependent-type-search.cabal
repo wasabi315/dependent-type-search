@@ -18,6 +18,8 @@ build-type:     Simple
 extra-source-files:
     README.md
     CHANGELOG.md
+data-files:
+    migration/202603071213_init.sql
 
 source-repository head
   type: git

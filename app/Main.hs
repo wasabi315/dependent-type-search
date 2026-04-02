@@ -5,8 +5,10 @@ import Data.Maybe
 import Database.PostgreSQL.Simple
 import Database.PostgreSQL.Simple.Migration
 import Options.Applicative
+import Paths_dependent_type_search
 import System.Environment (getEnv, lookupEnv)
 import System.Exit
+import System.FilePath
 import System.IO
 import TypeSearch.Database.Index
 import TypeSearch.Database.Index.Common
@@ -43,10 +45,12 @@ main = do
           Right transp -> pure transp
           Left err -> hPutStrLn stderr err >> exitFailure
       withConnect connInfo \conn -> do
+        dataDir <- getDataDir
+        let migrationDir = dataDir </> "migration"
         _ <-
           runMigrations
             conn
             defaultOptions
-            [MigrationInitialization, MigrationDirectory "migration"]
+            [MigrationInitialization, MigrationDirectory migrationDir]
         translateLibrary (IndexConfig transp libDir conn)
     Main.Search -> withConnect connInfo mainLoop
