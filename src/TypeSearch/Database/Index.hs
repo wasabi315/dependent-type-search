@@ -2,7 +2,7 @@
 
 module TypeSearch.Database.Index where
 
-import Agda.Compiler.Backend hiding (Args, initEnv)
+import Agda.Compiler.Backend
 import Agda.Compiler.Common
 import Agda.Interaction.FindFile
 import Agda.Interaction.Imports
@@ -10,7 +10,7 @@ import Agda.Interaction.Library
 import Agda.Interaction.Options
 import Agda.Syntax.Common
 import Agda.Syntax.Common.Pretty (prettyShow)
-import Agda.Syntax.Internal hiding (arity, termSize)
+import Agda.Syntax.Internal hiding (arity)
 import Agda.Syntax.Internal.Defs
 import Agda.Syntax.Position
 import Agda.Syntax.Scope.Base
@@ -147,7 +147,7 @@ translateLibrary config = do
       _ -> __IMPOSSIBLE__
     checkAndSetOptionsFromPragma libOpts
     importPrimitiveModules
-    let env = initEnv config
+    let env = initIndexEnv config
     libDirPrim <- useTC stPrimitiveLibDir
     files <-
       Data.List.sort . map Find.infoPath . concat <$> forM (filePath libDirPrim : paths) \path ->
@@ -199,7 +199,7 @@ translateInterface intf = do
 -- Definition translation
 
 translateDefinition :: TS.QName -> Definition -> M [Item]
-translateDefinition qname def = setCurrentRangeQ def.defName do
+translateDefinition qname def = setCurrentRangeQ def.defName $ resolvingTrasparentDefs do
   ifM
     (orM [isErasable def.defType, isDeprecated def.defName])
     do pure []
@@ -246,10 +246,7 @@ translateFunDef qname def = do
     do pure <$> translateToAxiom qname def.defType
 
 --------------------------------------------------------------------------------
--- Translate type-alias-like into let
---   * The return type *can* be Set
---   * No where clause
---   * No pattern matching
+-- Translate transparent functions
 
 hasLocalDefs :: Definition -> M Bool
 hasLocalDefs def = do

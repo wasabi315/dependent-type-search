@@ -1,9 +1,12 @@
 module TypeSearch.Database.Index.Common where
 
 import Agda.Compiler.Backend hiding (Args, initEnv)
+import Agda.Interaction.BasicOps
 import Agda.Syntax.Common
-import Agda.Syntax.Common.Pretty (prettyShow)
 import Agda.Syntax.Internal hiding (arity, termSize)
+import Agda.Syntax.Position
+import Agda.Syntax.Scope.Base
+import Agda.Syntax.Scope.Monad
 import Agda.TypeChecking.Level
 import Agda.TypeChecking.Pretty
 import Agda.TypeChecking.Reduce
@@ -28,18 +31,18 @@ import TypeSearch.Term qualified as TS
 -- Types
 
 data IndexConfig = IndexConfig
-  { transparentDefinitions :: TransparentDefinitions,
+  { -- | Set of fully-qualified definition names subject to definition unfolding during search.
+    transparentDefinitions :: S.Set String,
     -- | Path to Agda library.
     libraryDirectory :: FilePath,
     -- | Connection to database.
     databaseConnection :: Connection
   }
 
--- | Set of definition names (qualified) subject to definition unfolding during search.
-type TransparentDefinitions = S.Set String
-
 data IndexEnv = IndexEnv
-  { transparentDefinitions :: TransparentDefinitions,
+  { transparentDefinitions :: S.Set String,
+    -- | Like @transparentDefinitions@, but only contains resolved names
+    resolvedTransparentDefinitions :: S.Set QName,
     -- | Context size after erasure
     contextSizeAfterErasure :: Int,
     -- | De Bruijn level → De Bruijn level after erasure
@@ -49,8 +52,9 @@ data IndexEnv = IndexEnv
 -- | Index monad.
 type M = ReaderT IndexEnv TCM
 
-initEnv :: IndexConfig -> IndexEnv
-initEnv IndexConfig {..} = IndexEnv transparentDefinitions 0 mempty
+initIndexEnv :: IndexConfig -> IndexEnv
+initIndexEnv IndexConfig {..} =
+  IndexEnv transparentDefinitions mempty 0 mempty
 
 data Item = Item
   { name :: TS.QName,
@@ -99,7 +103,18 @@ isErasable a = do
       ]
 
 isTransparent :: QName -> M Bool
-isTransparent x = asks \env -> prettyShow x `S.member` env.transparentDefinitions
+isTransparent x = asks \env -> x `S.member` env.resolvedTransparentDefinitions
+
+resolvingTrasparentDefs :: M a -> M a
+resolvingTrasparentDefs m = do
+  transparentDefs <- asks \env -> S.toList env.transparentDefinitions
+  transparentDefs <- mapMaybeM resolveDefinedName transparentDefs
+  local (\env -> env {resolvedTransparentDefinitions = S.fromList transparentDefs}) m
+
+locallyReduceTransparentDefs :: M a -> M a
+locallyReduceTransparentDefs m = do
+  ds <- asks \env -> OnlyReduceDefs env.resolvedTransparentDefinitions
+  locallyReduceDefs ds m
 
 --------------------------------------------------------------------------------
 -- Agda utils
@@ -138,3 +153,10 @@ isDeprecated x = do
   case M.lookup x ws of
     Nothing -> pure False
     Just txt -> pure $! T.toCaseFold "deprecated" `T.isInfixOf` T.toCaseFold txt
+
+resolveDefinedName :: (MonadTCM m) => String -> m (Maybe QName)
+resolveDefinedName s = do
+  rname <- liftTCM $ resolveName =<< parseName noRange s
+  case rname of
+    DefinedName _ aname _ -> pure $ Just $ anameName aname
+    _ -> pure Nothing

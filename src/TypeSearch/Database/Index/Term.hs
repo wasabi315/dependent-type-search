@@ -33,6 +33,7 @@ translateType ty = translateTerm (sort $ getSort ty) ty.unEl
 translateTerm :: Type -> Term -> M TS.Term
 translateTerm ty v = do
   v <- instantiate v
+  v <- locallyReduceTransparentDefs $ reduce v
 
   let bad s t =
         translateError $
