@@ -110,7 +110,7 @@ typeSearch tenv resol query items = do
     $ Streamly.fromList items
 
 typeSearchOne :: TopEnv -> Term -> DbItem -> Stream TypeSearchResult
-typeSearchOne tenv query DbItem {sig = ViaFlat sig, name_qual = DbQName name} = do
+typeSearchOne tenv query DbItem {sig = sig, name_qual = name} = do
   (i, inst) <- check name (initCtx tenv, Here) (eval emptyMetaCtx tenv [] query) (eval emptyMetaCtx tenv [] sig)
   pure (TypeSearchResult name sig i inst)
 
@@ -181,7 +181,7 @@ displayTypeSearchResults cands matches time = do
 --------------------------------------------------------------------------------
 -- Search by name
 
-displaySearchByNameResult :: [(DbQName, DbTerm)] -> InputT IO ()
-displaySearchByNameResult = traverse_ \(DbQName (QName m x), ViaFlat a) -> do
+displaySearchByNameResult :: [(QName, Term)] -> InputT IO ()
+displaySearchByNameResult = traverse_ \(QName m x, a) -> do
   outputStrLn $ shows x $ showString " : " $ prettyTerm0 Unqualify a ""
   outputStrLn $ showString "  in " $ shows m "\n"

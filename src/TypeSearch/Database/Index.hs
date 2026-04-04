@@ -27,7 +27,6 @@ import Agda.Utils.Impossible (__IMPOSSIBLE__)
 import Agda.Utils.Monad
 import Control.Monad.Except (throwError)
 import Control.Monad.Reader
-import Data.Coerce
 import Data.HashSet qualified as HS
 import Data.List (sort)
 import Data.List.NonEmpty qualified as NonEmpty
@@ -170,12 +169,9 @@ translateLibrary config = do
 
 saveModule :: Connection -> [Item] -> IO ()
 saveModule conn items = do
-  let values = flip map items \(Item n a t (return_type_head, polymorphic, arity)) -> do
-        let name_qual = coerce n
-            name_unqual = coerce n.name
-            modul = coerce n.moduleName
-            sig = coerce a
-            body = coerce t
+  let values = flip map items \(Item name_qual sig body (return_type_head, polymorphic, arity)) -> do
+        let name_unqual = name_qual.name
+            modul = name_qual.moduleName
         TS.DbItem {..}
   TS.saveManyItems conn values
 

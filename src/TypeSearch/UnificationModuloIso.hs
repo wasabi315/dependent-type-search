@@ -2,7 +2,6 @@ module TypeSearch.UnificationModuloIso where
 
 import Control.Applicative
 import Data.Maybe
-import Debug.Trace
 import TypeSearch.Common
 import TypeSearch.Evaluation
 import TypeSearch.Term

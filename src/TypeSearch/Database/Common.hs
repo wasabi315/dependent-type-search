@@ -1,14 +1,10 @@
 module TypeSearch.Database.Common where
 
-import Control.Exception
 import Control.Monad
-import Data.ByteString qualified as BS
-import Data.Data (Typeable)
 import Data.Either
 import Data.HashMap.Lazy qualified as HML
 import Data.Map.Strict qualified as M
 import Data.Set qualified as S
-import Data.Text qualified as T
 import Database.PostgreSQL.Simple
 import Database.PostgreSQL.Simple.FromField hiding (Binary)
 import Database.PostgreSQL.Simple.Newtypes
@@ -17,64 +13,6 @@ import TypeSearch.Common
 import TypeSearch.Evaluation
 import TypeSearch.Raw
 import TypeSearch.Term
-
---------------------------------------------------------------------------------
--- Wrapper types for DB
-
-newtype a `As` b = As a
-  deriving newtype (Show, Eq, Ord)
-
-instance (Coercible a b, ToField b) => ToField (a `As` b) where
-  toField x = toField @b (coerce x)
-
-instance (Coercible a b, FromField b) => FromField (a `As` b) where
-  fromField f dat = coerce (fromField @b f dat)
-
--- | Store @Enum@ instance in @int@.
-newtype ViaEnum a = ViaEnum a
-  deriving newtype (Show, Eq, Ord)
-
-instance (Enum a) => ToField (ViaEnum a) where
-  toField (ViaEnum x) = toField (fromEnum x)
-
-instance (Enum a) => FromField (ViaEnum a) where
-  fromField f dat = coerce (toEnum @a <$!> fromField f dat)
-
--- | Store @Flat@ instance in @bytea@.
-newtype ViaFlat a = ViaFlat a
-  deriving newtype (Show, Eq, Ord)
-
-instance (Flat a) => ToField (ViaFlat a) where
-  toField (ViaFlat x) = toField (Binary $ flat x)
-
-instance (Flat a, Typeable a) => FromField (ViaFlat a) where
-  fromField f dat = coerce do
-    Binary (x :: BS.ByteString) <- fromField f dat
-    case unflat @a x of
-      Right t -> pure t
-      Left e ->
-        returnError ConversionFailed f $
-          "Flat deserialisation error: " ++ displayException e
-
-type DbName = Name `As` T.Text
-
-type DbModuleName = ModuleName `As` T.Text
-
-type DbTerm = ViaFlat Term
-
-newtype DbQName = DbQName QName
-  deriving newtype (Show)
-
-instance ToField DbQName where
-  toField (DbQName x) = toField (T.pack $ show x)
-
-instance FromField DbQName where
-  fromField f dat = do
-    x <- fromField @T.Text f dat
-    let xs = T.splitOn "." x
-        m = coerce $ T.intercalate "." (init xs)
-        f = coerce $ last xs
-    pure $ DbQName (QName m f)
 
 --------------------------------------------------------------------------------
 -- Features
@@ -120,11 +58,11 @@ instance FromField Arity where
 --------------------------------------------------------------------------------
 
 data DbItem = DbItem
-  { name_qual :: DbQName,
-    name_unqual :: DbName,
-    modul :: DbModuleName,
-    sig :: DbTerm,
-    body :: Maybe DbTerm,
+  { name_qual :: QName,
+    name_unqual :: Name,
+    modul :: ModuleName,
+    sig :: Term,
+    body :: Maybe Term,
     return_type_head :: ReturnTypeHead,
     polymorphic :: Polymorphic,
     arity :: Arity
@@ -140,9 +78,9 @@ saveManyItems conn items =
       "INSERT INTO library_items(name_qual,name_unqual,module,sig,body,return_type_head,polymorphic,arity) VALUES (?,?,?,?,?,?,?,?)"
       items
 
-fuzzySearchByName :: Connection -> String -> IO [(DbQName, DbTerm)]
+fuzzySearchByName :: Connection -> String -> IO [(QName, Term)]
 fuzzySearchByName conn name = do
-  rows :: [(DbQName, DbTerm, Float)] <- query conn "SELECT name_qual, sig, similarity(?, name_unqual) AS sml FROM library_items WHERE similarity(?, name_unqual) > 0.9 ORDER BY sml DESC" (name, name)
+  rows :: [(QName, Term, Float)] <- query conn "SELECT name_qual, sig, similarity(?, name_unqual) AS sml FROM library_items WHERE similarity(?, name_unqual) > 0.9 ORDER BY sml DESC" (name, name)
   pure $ map (\(x, a, _) -> (x, a)) rows
 
 --------------------------------------------------------------------------------
@@ -160,16 +98,16 @@ freeVars = \case
   RProj2 t -> freeVars t
   RPos t _ -> freeVars t
 
-returnTypeFreeVars :: Raw -> S.Set DbName
+returnTypeFreeVars :: Raw -> S.Set Name
 returnTypeFreeVars = \case
-  RPi x _ b -> S.delete (coerce x) $ returnTypeFreeVars b
+  RPi x _ b -> S.delete x $ returnTypeFreeVars b
   RPos t _ -> returnTypeFreeVars t
-  t -> S.map (\case (Unqual x) -> coerce x; (Qual _ x) -> coerce x) $ freeVars t
+  t -> S.map (\case (Unqual x) -> x; (Qual _ x) -> x) $ freeVars t
 
 data BodyCanonish
   = BCMixed
   | BCCanonish
-  | BCNames (S.Set DbName)
+  | BCNames (S.Set Name)
   deriving stock (Show)
 
 instance Semigroup BodyCanonish where
@@ -307,19 +245,19 @@ fetchAllItems conn = do
 
 fetchResolution :: Connection -> Raw -> IO (M.Map Name [QName])
 fetchResolution conn a = do
-  res :: [(DbQName, DbName)] <-
+  res :: [(QName, Name)] <-
     query
       conn
       "SELECT DISTINCT name_qual, name_unqual FROM library_items WHERE name_qual in ? UNION SELECT DISTINCT name_qual, name_unqual FROM library_items WHERE name_unqual in ?"
-      (In quals, In (unquals :: [DbName]))
+      (In quals, In (unquals :: [Name]))
   let resol =
         M.fromListWith (++) $
           map
-            (\(DbQName x, y) -> (coerce y, [x]))
+            (\(x, y) -> (y, [x]))
             res
   pure resol
   where
-    (quals, unquals) = partitionEithers $ map (\case Unqual x -> Right (As x); Qual m x -> Left (DbQName (QName m x))) $ S.toList (freeVars a)
+    (quals, unquals) = partitionEithers $ map (\case Unqual x -> Right x; Qual m x -> Left (QName m x)) $ S.toList (freeVars a)
 
 filterByFeatures :: Connection -> Raw -> IO (Maybe [DbItem])
 filterByFeatures conn a = do
@@ -358,14 +296,14 @@ filterByFeatures conn a = do
           rar
         )
 
-fetchTopEnv :: Connection -> [DbQName] -> IO (TopEnv, M.Map Name [QName])
+fetchTopEnv :: Connection -> [QName] -> IO (TopEnv, M.Map Name [QName])
 fetchTopEnv conn _candNames = do
   fold
     conn
     "SELECT name_qual, body FROM library_items WHERE body IS NOT NULL"
     ()
     (HML.empty, mempty)
-    ( \(tenv, resol) (DbQName x, ViaFlat t) -> do
+    ( \(tenv, resol) (x, t) -> do
         let tenv' = HML.insert x (eval emptyMetaCtx mempty [] t) tenv
             resol' = M.insertWith (++) x.name [x] resol
         pure (tenv', resol')

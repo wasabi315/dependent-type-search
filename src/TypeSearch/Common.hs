@@ -8,6 +8,10 @@ module TypeSearch.Common
     (//),
     DontPrint (..),
 
+    -- * DB
+    ViaEnum (..),
+    ViaFlat (..),
+
     -- * Names
     Index (..),
     Level (..),
@@ -33,12 +37,19 @@ module TypeSearch.Common
 where
 
 import Control.Applicative
+import Control.Exception
+import Control.Monad
 import Data.Aeson
+import Data.ByteString qualified as BS
 import Data.Coerce
 import Data.Hashable
 import Data.Monoid
 import Data.String
 import Data.Text qualified as T
+import Data.Typeable
+import Database.PostgreSQL.Simple
+import Database.PostgreSQL.Simple.FromField hiding (Binary)
+import Database.PostgreSQL.Simple.ToField
 import Flat
 import GHC.Stack
 import Text.Megaparsec
@@ -79,6 +90,35 @@ instance Show (DontPrint a) where
   showsPrec _ _ = id
 
 --------------------------------------------------------------------------------
+-- Wrapper type for DB
+
+-- | Store @Enum@ instance in @int@.
+newtype ViaEnum a = ViaEnum a
+  deriving newtype (Show, Eq, Ord)
+
+instance (Enum a) => ToField (ViaEnum a) where
+  toField (ViaEnum x) = toField (fromEnum x)
+
+instance (Enum a) => FromField (ViaEnum a) where
+  fromField f dat = coerce (toEnum @a <$!> fromField f dat)
+
+-- | Store @Flat@ instance in @bytea@.
+newtype ViaFlat a = ViaFlat a
+  deriving newtype (Show, Eq, Ord)
+
+instance (Flat a) => ToField (ViaFlat a) where
+  toField (ViaFlat x) = toField (Binary $ flat x)
+
+instance (Flat a, Typeable a) => FromField (ViaFlat a) where
+  fromField f dat = coerce do
+    Binary (x :: BS.ByteString) <- fromField f dat
+    case unflat @a x of
+      Right t -> pure t
+      Left e ->
+        returnError ConversionFailed f $
+          "Flat deserialisation error: " ++ displayException e
+
+--------------------------------------------------------------------------------
 -- Names
 
 -- | De Bruijn indices
@@ -98,14 +138,14 @@ instance Show MetaVar where
 
 -- | Names
 newtype Name = Name T.Text
-  deriving newtype (Eq, Ord, Hashable, IsString, Flat, ToJSON, FromJSON)
+  deriving newtype (Eq, Ord, Hashable, IsString, Flat, ToJSON, FromJSON, ToField, FromField)
 
 instance Show Name where
   showsPrec _ (Name n) = showString (T.unpack n)
 
 -- | Module names
 newtype ModuleName = ModuleName T.Text
-  deriving newtype (Eq, Ord, Hashable, IsString, Flat, ToJSON, FromJSON)
+  deriving newtype (Eq, Ord, Hashable, IsString, Flat, ToJSON, FromJSON, ToField, FromField)
 
 instance Show ModuleName where
   showsPrec _ (ModuleName n) = showString (T.unpack n)
@@ -120,6 +160,17 @@ data QName = QName
 
 instance Show QName where
   showsPrec _ x = shows x.moduleName . showChar '.' . shows x.name
+
+instance ToField QName where
+  toField x = toField (T.pack $ show x)
+
+instance FromField QName where
+  fromField f dat = do
+    x <- fromField @T.Text f dat
+    let xs = T.splitOn "." x
+        m = coerce $ T.intercalate "." (init xs)
+        f = coerce $ last xs
+    pure $ QName m f
 
 -- | Possibly qualified names
 data PQName

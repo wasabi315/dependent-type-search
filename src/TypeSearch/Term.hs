@@ -4,6 +4,8 @@ import Control.Monad.State.Strict
 import Data.List (elemIndex)
 import Data.Map.Strict qualified as M
 import Data.Maybe
+import Database.PostgreSQL.Simple.FromField
+import Database.PostgreSQL.Simple.ToField
 import GHC.Generics
 import TypeSearch.Common
 import TypeSearch.Raw
@@ -26,6 +28,7 @@ data Term
   | Proj2 Term -- t.2
   deriving stock (Show, Generic)
   deriving anyclass (Flat)
+  deriving (FromField, ToField) via ViaFlat Term
 
 type Type = Term
 
