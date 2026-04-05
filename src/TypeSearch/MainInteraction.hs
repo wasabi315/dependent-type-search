@@ -2,6 +2,7 @@ module TypeSearch.MainInteraction (mainLoop) where
 
 import Control.Applicative
 import Control.Exception (displayException)
+import Control.Monad
 import Control.Monad.IO.Class
 import Data.Foldable
 import Data.Map.Strict qualified as M
@@ -133,6 +134,7 @@ check h (ctx, locs) query item =
   ( do
       (item, inst, mctx) <- possibleInstantiation emptyMetaCtx (ctx, locs) item (VTop h SNil Nothing)
       (i, i', mctx) <- maybeToStream $ listToMaybe $ unifyIso mctx ctx query item
+      guard $ allMetaSolved mctx
       let j = i <> sym i'
           ~sol = closeTm locs $ quote mctx ctx.level $ transportInv j inst
       pure (j, sol)

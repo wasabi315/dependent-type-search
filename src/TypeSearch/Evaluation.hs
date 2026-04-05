@@ -133,6 +133,11 @@ data MetaEntry
 emptyMetaCtx :: MetaCtx
 emptyMetaCtx = MetaCtx 0 mempty
 
+allMetaSolved :: MetaCtx -> Bool
+allMetaSolved mctx = flip all mctx.metaCtx \case
+  Unsolved {} -> False
+  Solved {} -> True
+
 --------------------------------------------------------------------------------
 -- Evaluation
 
