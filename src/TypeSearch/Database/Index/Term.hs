@@ -29,7 +29,7 @@ import TypeSearch.Term qualified as TS
 translateType :: Type -> M TS.Term
 translateType ty = translateTerm (sort $ getSort ty) ty.unEl
 
--- | Translate a @Term@ of a given @Type@.
+-- | Translate a @Term@ of a given @Type@. Reduce transparent definitions.
 translateTerm :: Type -> Term -> M TS.Term
 translateTerm ty v = do
   v <- instantiate v

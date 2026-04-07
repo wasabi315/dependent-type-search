@@ -26,14 +26,6 @@ data ReturnTypeHead
   deriving anyclass (ToJSON, FromJSON)
   deriving (ToField, FromField) via Aeson ReturnTypeHead
 
--- | Return-sort feature.
-data ReturnSort
-  = YesReturnSort
-  | NoReturnSort
-  | MayReturnSort
-  deriving stock (Eq, Show, Enum)
-  deriving (ToField, FromField) via ViaEnum ReturnSort
-
 -- | Polymorphic feature.
 data Polymorphic = NoPolymorphic | YesPolymorphic
   deriving stock (Eq, Ord, Show, Enum)
@@ -164,35 +156,6 @@ approxReturnTypeHead = go []
             True -> Just ARHVar
             False -> Just ARHUnknown
         _ -> Just ARHUnknown
-
-approxReturnSort :: Raw -> Maybe (Maybe ReturnSort)
-approxReturnSort = go []
-  where
-    go :: [(Name, Raw)] -> Raw -> Maybe (Maybe ReturnSort)
-    go ctx = \case
-      RPos t _ -> go ctx t
-      RPi x a b -> go ((x, a) : ctx) b
-      RU -> Just (Just YesReturnSort)
-      RSigma {} -> Just (Just NoReturnSort)
-      RLam {} -> Nothing
-      RPair {} -> Nothing
-      RProj1 {} -> Just Nothing
-      RProj2 {} -> Just Nothing
-      t -> case rawHead t of
-        RVar (Unqual (flip lookup ctx -> Just t)) ->
-          endsInSort t >>= \case
-            True -> Just (Just MayReturnSort)
-            False -> Just Nothing
-        RVar {} -> Just Nothing
-        RLam {} -> Just Nothing
-        RProj1 {} -> Just Nothing
-        RProj2 {} -> Just Nothing
-        RU -> Nothing
-        RPi {} -> Nothing
-        RSigma {} -> Nothing
-        RPair {} -> Nothing
-        RApp {} -> impossible
-        RPos {} -> impossible
 
 approxPolymorphic :: Raw -> Maybe Polymorphic
 approxPolymorphic = \case

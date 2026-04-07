@@ -15,7 +15,6 @@ import Agda.Syntax.Internal.Defs
 import Agda.Syntax.Position
 import Agda.Syntax.Scope.Base
 import Agda.Syntax.Scope.Monad (getCurrentScope)
-import Agda.TypeChecking.Positivity.Occurrence
 import Agda.TypeChecking.Pretty
 import Agda.TypeChecking.Reduce
 import Agda.TypeChecking.Sort (ifIsSort)
@@ -64,30 +63,6 @@ returnTypeFeatures t = do
       Def f _ -> pure (TS.RHFormer (translateQName f).name)
       _ -> pure TS.RHOther
 
--- | Check if a given type may return Sort.
-returnSort :: Type -> M TS.ReturnSort
-returnSort t = do
-  TelV tel b <- telView t
-  addContext tel do
-    b <- reduce b
-    case b.unEl of
-      Sort {} -> pure TS.YesReturnSort
-      Var i _ -> do
-        ty <- typeOfBV i
-        TelV _ b <- telView ty
-        pure $ case b.unEl of
-          Sort {} -> TS.MayReturnSort
-          _ -> TS.NoReturnSort
-      _ -> pure TS.NoReturnSort
-
-returnSortBody :: Term -> M (Maybe TS.ReturnSort)
-returnSortBody = \case
-  Sort {} -> pure (Just TS.YesReturnSort)
-  Pi a b -> underAbstraction a b (fmap Just . returnSort)
-  Lam _ t -> underAbstraction_ t returnSortBody
-  Def {} -> pure (Just TS.NoReturnSort)
-  _ -> pure Nothing
-
 -- | Check if a given type is polymorphic.
 
 -- FIXME: Look under records
@@ -102,27 +77,27 @@ arity = go (0 :: Int)
     go acc t =
       ifPiType
         t
-        ( \dom rest -> do
-            dom <- reduce dom
-            case dom.unDom.unEl of
-              Var i _ -> do
-                ty <- typeOfBV i
-                TelV _ b <- telView ty
-                case b.unEl of
-                  Sort {} -> pure TS.InfArity
-                  _ -> underAbstraction dom rest (go (acc + 1))
-              _ -> underAbstraction dom rest (go (acc + 1))
+        ( \dom rest ->
+            ifM
+              (isErasable dom.unDom)
+              do underAbstraction dom rest (go acc)
+              case unSpine dom.unDom.unEl of
+                Var i _ -> do
+                  ty <- typeOfBV i
+                  TelV _ b <- telView ty
+                  case b.unEl of
+                    Sort {} -> pure TS.InfArity
+                    _ -> underAbstraction dom rest (go (acc + 1))
+                _ -> underAbstraction dom rest (go (acc + 1))
         )
-        ( \cod -> do
-            cod <- reduce cod
-            case cod.unEl of
-              Var i _ -> do
-                ty <- typeOfBV i
-                TelV _ b <- telView ty
-                case b.unEl of
-                  Sort {} -> pure TS.InfArity
-                  _ -> pure (TS.Arity acc)
-              _ -> pure (TS.Arity acc)
+        ( \cod -> case unSpine cod.unEl of
+            Var i _ -> do
+              ty <- typeOfBV i
+              TelV _ b <- telView ty
+              case b.unEl of
+                Sort {} -> pure TS.InfArity
+                _ -> pure (TS.Arity acc)
+            _ -> pure (TS.Arity acc)
         )
 
 --------------------------------------------------------------------------------
@@ -261,16 +236,6 @@ isProjectionLike def = do
     Left {} -> pure False
     Right {} -> pure True
 
-getOccs :: [Occurrence] -> Type -> M [Bool]
-getOccs = \cases
-  [] _ -> pure []
-  (occ : occs) t -> do
-    (a, b) <- mustBePi t
-    ifM
-      (isErasable a.unDom)
-      (underAbstraction a b (getOccs occs))
-      (((occ /= Unused) :) <$> underAbstraction a b (getOccs occs))
-
 translateTransparent :: TS.QName -> Definition -> M [Item]
 translateTransparent qname def = do
   let Function {..} = def.theDef
@@ -286,9 +251,8 @@ translateTransparent qname def = do
     _ -> bad "Not supported: transparent definition with several clauses"
 
   funTy <- translateType def.defType
-  fun <- translatePatternArgs def.defType namedClausePats \ty -> do
-    clauseBody <- normalise (fromMaybe __IMPOSSIBLE__ clauseBody)
-    translateTerm ty clauseBody
+  fun <- translatePatternArgs def.defType namedClausePats \ty ->
+    translateTerm ty (fromMaybe __IMPOSSIBLE__ clauseBody)
   feat <- feature def.defType
   pure [Item qname funTy (Just fun) feat]
 

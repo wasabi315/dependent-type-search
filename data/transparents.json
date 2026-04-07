@@ -1,7 +1,4 @@
 [
-  "Agda.Builtin.Cubical.Equiv._≃_",
-  "Agda.Builtin.Cubical.Equiv.equivFun",
-  "Agda.Builtin.Cubical.Path._≡_",
   "Agda.Builtin.Reflection.Telescope",
   "Agda.Builtin.Reflection.Type",
   "Agda.Builtin.Size.SizeUniv",
