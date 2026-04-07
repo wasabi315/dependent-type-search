@@ -10,6 +10,7 @@ CREATE TABLE library_items (
 
     -- Features
     arity                int       NOT NULL,
+    arity_has_var        boolean   NOT NULL,
     polymorphic          int       NOT NULL,
     return_type_head     jsonb     NOT NULL
 );

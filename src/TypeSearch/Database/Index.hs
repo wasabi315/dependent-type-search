@@ -16,8 +16,6 @@ import Agda.Syntax.Position
 import Agda.Syntax.Scope.Base
 import Agda.Syntax.Scope.Monad (getCurrentScope)
 import Agda.TypeChecking.Pretty
-import Agda.TypeChecking.Reduce
-import Agda.TypeChecking.Sort (ifIsSort)
 import Agda.TypeChecking.Substitute as Agda
 import Agda.TypeChecking.Telescope
 import Agda.Utils.FileName
@@ -32,73 +30,27 @@ import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map.Strict qualified as Map
 import Data.Maybe
 import Data.String
-import Database.PostgreSQL.Simple
 import System.Directory
 import System.FilePath.Find qualified as Find
 import TypeSearch.Common qualified as TS
-import TypeSearch.Database.Common qualified as TS
+import TypeSearch.Database.Feature qualified as TS
 import TypeSearch.Database.Index.Common
 import TypeSearch.Database.Index.Name
 import TypeSearch.Database.Index.Term
+import TypeSearch.Database.PostgreSQL qualified as TS
 import TypeSearch.Term qualified as TS
 
 --------------------------------------------------------------------------------
--- Compute features
+-- Utils
 
-feature :: Type -> M (TS.ReturnTypeHead, TS.Polymorphic, TS.Arity)
-feature t = do
-  rt <- returnTypeFeatures t
-  pl <- isPolymorphic t
-  ar <- arity t
-  pure (rt, pl, ar)
-
-returnTypeFeatures :: Type -> M TS.ReturnTypeHead
-returnTypeFeatures t = do
-  TelV tel b <- telView t
-  addContext tel do
-    b <- normalise b
-    case unSpine b.unEl of
-      Sort {} -> pure TS.RHSort
-      Var {} -> pure TS.RHVar
-      Def f _ -> pure (TS.RHFormer (translateQName f).name)
-      _ -> pure TS.RHOther
-
--- | Check if a given type is polymorphic.
-
--- FIXME: Look under records
-isPolymorphic :: Type -> M TS.Polymorphic
-isPolymorphic t = ifNotPiType t (\_ -> pure TS.NoPolymorphic) \a rest -> do
-  TelV _ b <- telView a.unDom
-  ifIsSort b (\_ -> pure TS.YesPolymorphic) (underAbstraction a rest isPolymorphic)
-
-arity :: Type -> M TS.Arity
-arity = go (0 :: Int)
+dbItem :: TS.QName -> TS.Term -> Maybe TS.Term -> TS.DbItem
+dbItem name_qual sig body = TS.DbItem {..}
   where
-    go acc t =
-      ifPiType
-        t
-        ( \dom rest ->
-            ifM
-              (isErasable dom.unDom)
-              do underAbstraction dom rest (go acc)
-              case unSpine dom.unDom.unEl of
-                Var i _ -> do
-                  ty <- typeOfBV i
-                  TelV _ b <- telView ty
-                  case b.unEl of
-                    Sort {} -> pure TS.InfArity
-                    _ -> underAbstraction dom rest (go (acc + 1))
-                _ -> underAbstraction dom rest (go (acc + 1))
-        )
-        ( \cod -> case unSpine cod.unEl of
-            Var i _ -> do
-              ty <- typeOfBV i
-              TelV _ b <- telView ty
-              case b.unEl of
-                Sort {} -> pure TS.InfArity
-                _ -> pure (TS.Arity acc)
-            _ -> pure (TS.Arity acc)
-        )
+    name_unqual = name_qual.name
+    modul = name_qual.moduleName
+    return_type_head = TS.computeReturnTypeHead sig
+    polymorphic = TS.computePolymorphic sig
+    TS.Arity arity_has_var arity = TS.computeArity sig
 
 --------------------------------------------------------------------------------
 -- Entrypoint
@@ -140,20 +92,12 @@ translateLibrary config = do
             setInterface mi.miInterface
             mod' <- withScope_ mi.miInterface.iInsideScope do
               runReaderT (translateInterface mi.miInterface) env
-            liftIO $ saveModule config.databaseConnection mod'
-
-saveModule :: Connection -> [Item] -> IO ()
-saveModule conn items = do
-  let values = flip map items \(Item name_qual sig body (return_type_head, polymorphic, arity)) -> do
-        let name_unqual = name_qual.name
-            modul = name_qual.moduleName
-        TS.DbItem {..}
-  TS.saveManyItems conn values
+            liftIO $ TS.saveManyItems config.databaseConnection mod'
 
 --------------------------------------------------------------------------------
 -- Module translation
 
-translateInterface :: Interface -> M [Item]
+translateInterface :: Interface -> M [TS.DbItem]
 translateInterface intf = do
   scope <- lift getCurrentScope
   let names = namesInScope [PublicNS] scope :: NamesInScope
@@ -169,8 +113,8 @@ translateInterface intf = do
 --------------------------------------------------------------------------------
 -- Definition translation
 
-translateDefinition :: TS.QName -> Definition -> M [Item]
-translateDefinition qname def = setCurrentRangeQ def.defName $ resolvingTrasparentDefs do
+translateDefinition :: TS.QName -> Definition -> M [TS.DbItem]
+translateDefinition qname def = setCurrentRangeQ def.defName $ resolvingAliasNames do
   ifM
     (orM [isErasable def.defType, isDeprecated def.defName])
     do pure []
@@ -203,16 +147,15 @@ getDefNames x = do
           x
   pure ns
 
-translateToAxiom :: TS.QName -> Type -> M Item
+translateToAxiom :: TS.QName -> Type -> M TS.DbItem
 translateToAxiom x ty = do
-  feat <- feature ty
   ty <- translateType ty
-  pure $! Item x ty Nothing feat
+  pure $! dbItem x ty Nothing
 
-translateFunDef :: TS.QName -> Definition -> M [Item]
+translateFunDef :: TS.QName -> Definition -> M [TS.DbItem]
 translateFunDef qname def = do
   ifM
-    (isTransparent def.defName)
+    (isAlias def.defName)
     do translateTransparent qname def
     do pure <$> translateToAxiom qname def.defType
 
@@ -236,7 +179,7 @@ isProjectionLike def = do
     Left {} -> pure False
     Right {} -> pure True
 
-translateTransparent :: TS.QName -> Definition -> M [Item]
+translateTransparent :: TS.QName -> Definition -> M [TS.DbItem]
 translateTransparent qname def = do
   let Function {..} = def.theDef
 
@@ -253,8 +196,8 @@ translateTransparent qname def = do
   funTy <- translateType def.defType
   fun <- translatePatternArgs def.defType namedClausePats \ty ->
     translateTerm ty (fromMaybe __IMPOSSIBLE__ clauseBody)
-  feat <- feature def.defType
-  pure [Item qname funTy (Just fun) feat]
+  let item = dbItem qname funTy (Just fun)
+  pure [item]
 
 translatePatternArgs :: Type -> NAPs -> (Type -> M TS.Term) -> M TS.Term
 translatePatternArgs = \cases

@@ -47,29 +47,35 @@ vdelta = VMeta 4
 vlist :: Value
 vlist = VTop (QName "Agda.Builtin.List" "List") SNil Nothing
 
-tFoldr :: Term
+tFoldr :: Type
 tFoldr =
   quote exMetaCtx 0 $
     VPi "A" VU \a -> VPi "B" VU \b ->
       (a --> b --> b) --> b --> (vlist $$ a) --> b
 
-tFoldl :: Term
+tFoldl :: Type
 tFoldl =
   quote exMetaCtx 0 $
     VPi "A" VU \a -> VPi "B" VU \b ->
       (b --> a --> b) --> b --> (vlist $$ a) --> b
 
-tFoldr1 :: Term
+tMap :: Type
+tMap =
+  quote exMetaCtx 0 $
+    VPi "A" VU \a -> VPi "B" VU \b ->
+      (a --> b) --> (vlist $$ a) --> (vlist $$ b)
+
+tFoldr1 :: Type
 tFoldr1 =
   quote exMetaCtx 0 $
     (valpha --> vbeta --> vbeta) --> vbeta --> (vlist $$ valpha) --> vbeta
 
-tFoldr2 :: Term
+tFoldr2 :: Type
 tFoldr2 =
   quote exMetaCtx 0 $
     (vlist $$ vgamma) --> (veps *** vgamma --> veps) --> veps --> veps
 
-tFoldr3 :: Term
+tFoldr3 :: Type
 tFoldr3 =
   quote exMetaCtx 0 $
     VPi "xs" (vlist $$ vgamma) \xs -> ((vdelta $$ xs) *** (vdelta $$ xs) --> (vdelta $$ xs)) *** (vdelta $$ xs) --> (vdelta $$ xs)

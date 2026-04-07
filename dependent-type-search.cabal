@@ -30,11 +30,12 @@ library
       Stream
       TypeSearch
       TypeSearch.Common
-      TypeSearch.Database.Common
+      TypeSearch.Database.Feature
       TypeSearch.Database.Index
       TypeSearch.Database.Index.Common
       TypeSearch.Database.Index.Name
       TypeSearch.Database.Index.Term
+      TypeSearch.Database.PostgreSQL
       TypeSearch.Evaluation
       TypeSearch.MainInteraction
       TypeSearch.Parser

@@ -24,15 +24,13 @@ import Data.Set qualified as S
 import Data.Text qualified as T
 import Database.PostgreSQL.Simple
 import TypeSearch.Common qualified as TS
-import TypeSearch.Database.Common qualified as TS
-import TypeSearch.Term qualified as TS
 
 --------------------------------------------------------------------------------
 -- Types
 
 data IndexConfig = IndexConfig
   { -- | Set of fully-qualified definition names subject to definition unfolding during search.
-    transparentDefinitions :: S.Set String,
+    aliasNames :: S.Set String,
     -- | Path to Agda library.
     libraryDirectory :: FilePath,
     -- | Connection to database.
@@ -40,9 +38,9 @@ data IndexConfig = IndexConfig
   }
 
 data IndexEnv = IndexEnv
-  { transparentDefinitions :: S.Set String,
+  { aliasNames :: S.Set String,
     -- | Like @transparentDefinitions@, but only contains resolved names
-    resolvedTransparentDefinitions :: S.Set QName,
+    resolvedAliasNames :: S.Set QName,
     -- | Context size after erasure
     contextSizeAfterErasure :: Int,
     -- | De Bruijn level → De Bruijn level after erasure
@@ -54,14 +52,7 @@ type M = ReaderT IndexEnv TCM
 
 initIndexEnv :: IndexConfig -> IndexEnv
 initIndexEnv IndexConfig {..} =
-  IndexEnv transparentDefinitions mempty 0 mempty
-
-data Item = Item
-  { name :: TS.QName,
-    signature :: TS.Term,
-    body :: Maybe TS.Term,
-    feature :: (TS.ReturnTypeHead, TS.Polymorphic, TS.Arity)
-  }
+  IndexEnv aliasNames mempty 0 mempty
 
 --------------------------------------------------------------------------------
 -- Utils
@@ -102,18 +93,18 @@ isErasable a = do
         isJust <$> isSizeType b
       ]
 
-isTransparent :: QName -> M Bool
-isTransparent x = asks \env -> x `S.member` env.resolvedTransparentDefinitions
+isAlias :: QName -> M Bool
+isAlias x = asks \env -> x `S.member` env.resolvedAliasNames
 
-resolvingTrasparentDefs :: M a -> M a
-resolvingTrasparentDefs m = do
-  transparentDefs <- asks \env -> S.toList env.transparentDefinitions
+resolvingAliasNames :: M a -> M a
+resolvingAliasNames m = do
+  transparentDefs <- asks \env -> S.toList env.aliasNames
   transparentDefs <- mapMaybeM resolveDefinedName transparentDefs
-  local (\env -> env {resolvedTransparentDefinitions = S.fromList transparentDefs}) m
+  local (\env -> env {resolvedAliasNames = S.fromList transparentDefs}) m
 
-locallyReduceTransparentDefs :: M a -> M a
-locallyReduceTransparentDefs m = do
-  ds <- asks \env -> OnlyReduceDefs env.resolvedTransparentDefinitions
+locallyReduceAliases :: M a -> M a
+locallyReduceAliases m = do
+  ds <- asks \env -> OnlyReduceDefs env.resolvedAliasNames
   locallyReduceDefs ds m
 
 --------------------------------------------------------------------------------

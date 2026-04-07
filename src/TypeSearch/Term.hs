@@ -41,23 +41,35 @@ revPruning = RevPruning . reverse
 
 --------------------------------------------------------------------------------
 
-rawToTerm :: Raw -> Maybe Term
-rawToTerm = go []
+data TeleView = TeleView
+  { tele :: [Type],
+    cod :: Type
+  }
+
+teleView :: Type -> TeleView
+teleView = go []
   where
-    go ns = \case
-      RVar (Qual m x) -> pure $ Top (QName m x)
-      RVar (Unqual x) -> case x `elemIndex` ns of
-        Nothing -> Nothing
-        Just i -> pure $ Var (Index i)
-      RU -> pure U
-      RPi x a b -> Pi x <$> go ns a <*> go (x : ns) b
-      RLam x t -> Lam x <$> go (x : ns) t
-      RApp t u -> App <$> go ns t <*> go ns u
-      RSigma x a b -> Sigma x <$> go ns a <*> go (x : ns) b
-      RPair t u -> Pair <$> go ns t <*> go ns u
-      RProj1 t -> Proj1 <$> go ns t
-      RProj2 t -> Proj2 <$> go ns t
-      RPos t _ -> go ns t
+    go tele = \case
+      Pi _ a b -> go (a : tele) b
+      cod -> TeleView tele cod
+
+-- | Get the return type. Doesn't perform any reduction.
+returnType :: Type -> Type
+returnType = (.cod) . teleView
+
+-- | Is the return type U? Doesn't perform any reduction.
+endsInSort :: Type -> Bool
+endsInSort t = case teleView t of
+  TeleView _ U -> True
+  _ -> False
+
+-- | The head term. Doesn't consider projections as elimination. Doesn't perform any reduction.
+headTerm :: Term -> Term
+headTerm = \case
+  App t _ -> headTerm t
+  t -> t
+
+--------------------------------------------------------------------------------
 
 possibleResolutions :: M.Map Name [QName] -> Raw -> [Term]
 possibleResolutions tbl = flip evalStateT mempty . go []

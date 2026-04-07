@@ -7,6 +7,7 @@ import Control.Monad.IO.Class
 import Data.Foldable
 import Data.Map.Strict qualified as M
 import Data.Maybe
+import Data.Set qualified as S
 import Data.Text qualified as T
 import Data.Time.Clock
 import Database.PostgreSQL.Simple
@@ -14,7 +15,7 @@ import Stream
 import Streamly.Data.Stream.Prelude qualified as Streamly
 import System.Console.Haskeline
 import TypeSearch.Common
-import TypeSearch.Database.Common
+import TypeSearch.Database.PostgreSQL
 import TypeSearch.Evaluation
 import TypeSearch.Parser
 import TypeSearch.Pretty
@@ -56,8 +57,8 @@ helpText =
       ""
     ]
 
-mainLoop :: Connection -> IO ()
-mainLoop conn = runInputT defaultSettings go
+mainLoop :: Connection -> S.Set QName -> IO ()
+mainLoop conn aliasSet = runInputT defaultSettings go
   where
     go = do
       input <- getInputLine ">> "
@@ -77,12 +78,12 @@ mainLoop conn = runInputT defaultSettings go
         Right (SearchByType typ) -> case parseRaw "interactive" (T.pack typ) of
           Left err -> outputStrLn (displayException err) >> go
           Right typ -> do
-            cands <- liftIO $ filterByFeatures conn typ
+            cands <- liftIO $ filterByFeatures conn aliasSet typ
             case cands of
               Nothing -> outputStrLn "Ill-formed type" >> go
               Just cands -> do
                 resol1 <- liftIO $ fetchResolution conn typ
-                (tenv, resol2) <- liftIO $ fetchTopEnv conn $ map (\item -> item.name_qual) cands
+                (tenv, resol2) <- liftIO $ fetchTopEnv conn $ map (.name_qual) cands
                 (result, time) <- liftIO $ timed $ typeSearch tenv (M.unionWith (++) resol1 resol2) typ cands
                 displayTypeSearchResults cands result time
                 go
