@@ -82,6 +82,7 @@ mainLoop conn aliasSet = runInputT defaultSettings go
             case cands of
               Nothing -> outputStrLn "Ill-formed type" >> go
               Just cands -> do
+                -- outputStrLn $ show $ map (.name_unqual) cands
                 resol1 <- liftIO $ fetchResolution conn typ
                 (tenv, resol2) <- liftIO $ fetchTopEnv conn $ map (.name_qual) cands
                 (result, time) <- liftIO $ timed $ typeSearch tenv (M.unionWith (++) resol1 resol2) typ cands

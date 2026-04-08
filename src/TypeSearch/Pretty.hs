@@ -10,7 +10,6 @@ module TypeSearch.Pretty
   )
 where
 
-import Data.List (intersperse)
 import Data.Monoid
 import TypeSearch.Common
 import TypeSearch.Raw as Raw
@@ -22,14 +21,6 @@ import TypeSearch.Term as Term
 par :: Int -> Int -> ShowS -> ShowS
 par p q = showParen (p > q)
 {-# INLINE par #-}
-
-punctuate :: ShowS -> [ShowS] -> ShowS
-punctuate sep xs = foldr (.) id (intersperse sep xs)
-{-# INLINE punctuate #-}
-
-enclose :: ShowS -> ShowS -> ShowS -> ShowS
-enclose open close x = open . x . close
-{-# INLINE enclose #-}
 
 -- Operator precedence
 projP, appP, sigmaP, piP, absP, pairP :: Int

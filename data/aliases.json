@@ -346,7 +346,6 @@
   "Data.Trie.Word",
   "Data.Unit.NonEta.Hidden",
   "Data.Unit.Polymorphic.Base.⊤",
-  "Data.Vec.Base.FoldrOp",
   "Data.Vec.Base.FoldlOp",
   "Data.Vec.Functional.Relation.Binary.Equality.Setoid._≋_",
   "Data.Vec.Functional.Relation.Binary.Permutation._↭_",

@@ -1,9 +1,7 @@
 module TypeSearch.Evaluation where
 
-import Data.Foldable
 import Data.HashMap.Lazy qualified as HML
 import TypeSearch.Common
-import TypeSearch.Pretty
 import TypeSearch.Term
 
 infixr 6 -->

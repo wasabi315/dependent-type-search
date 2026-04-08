@@ -51,9 +51,6 @@ decimal = lexeme L.decimal
 parens :: Parser a -> Parser a
 parens p = char '(' *> p <* char ')'
 
-brackets :: Parser a -> Parser a
-brackets p = char '[' *> p <* char ']'
-
 pArrow :: Parser T.Text
 pArrow = symbol "→" <|> symbol "->"
 
@@ -97,12 +94,6 @@ pPQName = do
       "Eq" -> "_≡_"
       _ -> x
     Just z -> Qual (ModuleName x) (Name z)
-
-pMeta :: Parser Name
-pMeta = do
-  _ <- char '?'
-  v <- pIdent
-  pure $ Name (T.cons '?' v)
 
 pKeyword :: T.Text -> Parser ()
 pKeyword kw = do

@@ -9,9 +9,7 @@ import Agda.Interaction.Imports
 import Agda.Interaction.Library
 import Agda.Interaction.Options
 import Agda.Syntax.Common
-import Agda.Syntax.Common.Pretty (prettyShow)
 import Agda.Syntax.Internal hiding (arity)
-import Agda.Syntax.Internal.Defs
 import Agda.Syntax.Position
 import Agda.Syntax.Scope.Base
 import Agda.Syntax.Scope.Monad (getCurrentScope)
@@ -24,11 +22,12 @@ import Agda.Utils.Impossible (__IMPOSSIBLE__)
 import Agda.Utils.Monad
 import Control.Monad.Except (throwError)
 import Control.Monad.Reader
-import Data.HashSet qualified as HS
+import Data.Either
 import Data.List (sort)
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map.Strict qualified as Map
 import Data.Maybe
+import Data.Set qualified as S
 import Data.String
 import System.Directory
 import System.FilePath.Find qualified as Find
@@ -73,11 +72,36 @@ translateLibrary config = do
       _ -> __IMPOSSIBLE__
     checkAndSetOptionsFromPragma libOpts
     importPrimitiveModules
-    let env = initIndexEnv config
     libDirPrim <- useTC stPrimitiveLibDir
     files <-
-      Data.List.sort . map Find.infoPath . concat <$> forM (filePath libDirPrim : paths) \path ->
-        liftIO $ findWithInfo (pure True) (hasAgdaExtension <$> Find.filePath) path
+      liftIO $
+        Data.List.sort . map Find.infoPath . concat <$> forM (filePath libDirPrim : paths) (findWithInfo (pure True) (hasAgdaExtension <$> Find.filePath))
+
+    -- resolve alias names
+    (aliasNames, unresolved) <-
+      foldM
+        ( \(resolved, unresolved) inputFile -> do
+            path <- liftIO (absolute inputFile)
+            sf <- srcFromPath path
+            src <- parseSource sf
+            let m = srcModuleName src
+            setCurrentRange (beginningOfFile path) do
+              checkModuleName m (srcOrigin src) Nothing
+              withCurrentModule noModuleName $
+                withTopLevelModule m $ do
+                  mi <- getNonMainModuleInfo m (Just src)
+                  setInterface mi.miInterface
+                  (unresolved, resolved') <- withScope_ mi.miInterface.iInsideScope do
+                    partitionEithers <$> forM unresolved \x ->
+                      maybe (Left x) Right <$> resolveDefinedName x
+                  pure (foldr S.insert resolved resolved', unresolved)
+        )
+        (mempty, S.toList config.aliasNames)
+        files
+
+    liftIO . print =<< vcat [text "Couldn't find definitions", prettyTCM unresolved]
+
+    let env = IndexEnv aliasNames 0 mempty
 
     forM_ files \inputFile -> do
       path <- liftIO (absolute inputFile)
@@ -114,7 +138,7 @@ translateInterface intf = do
 -- Definition translation
 
 translateDefinition :: TS.QName -> Definition -> M [TS.DbItem]
-translateDefinition qname def = setCurrentRangeQ def.defName $ resolvingAliasNames do
+translateDefinition qname def = setCurrentRangeQ def.defName do
   ifM
     (orM [isErasable def.defType, isDeprecated def.defName])
     do pure []
@@ -129,23 +153,6 @@ translateDefinition qname def = setCurrentRangeQ def.defName $ resolvingAliasNam
       DataOrRecSigDefn {} -> pure []
       GeneralizableVar {} -> pure []
       PrimitiveSortDefn {} -> pure []
-
-getDefNames :: (GetDefs a) => a -> M (HS.HashSet TS.Name)
-getDefNames x = do
-  unwanted <-
-    traverse
-      (fmap prettyShow . getBuiltinName_)
-      [BuiltinLevel]
-  let ns =
-        getDefs'
-          (const Nothing)
-          ( \n ->
-              if prettyShow n `elem` unwanted
-                then mempty
-                else HS.singleton (translateQName n).name
-          )
-          x
-  pure ns
 
 translateToAxiom :: TS.QName -> Type -> M TS.DbItem
 translateToAxiom x ty = do

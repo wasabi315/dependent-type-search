@@ -38,9 +38,7 @@ data IndexConfig = IndexConfig
   }
 
 data IndexEnv = IndexEnv
-  { aliasNames :: S.Set String,
-    -- | Like @transparentDefinitions@, but only contains resolved names
-    resolvedAliasNames :: S.Set QName,
+  { aliasNames :: S.Set QName,
     -- | Context size after erasure
     contextSizeAfterErasure :: Int,
     -- | De Bruijn level → De Bruijn level after erasure
@@ -49,10 +47,6 @@ data IndexEnv = IndexEnv
 
 -- | Index monad.
 type M = ReaderT IndexEnv TCM
-
-initIndexEnv :: IndexConfig -> IndexEnv
-initIndexEnv IndexConfig {..} =
-  IndexEnv aliasNames mempty 0 mempty
 
 --------------------------------------------------------------------------------
 -- Utils
@@ -94,17 +88,11 @@ isErasable a = do
       ]
 
 isAlias :: QName -> M Bool
-isAlias x = asks \env -> x `S.member` env.resolvedAliasNames
-
-resolvingAliasNames :: M a -> M a
-resolvingAliasNames m = do
-  transparentDefs <- asks \env -> S.toList env.aliasNames
-  transparentDefs <- mapMaybeM resolveDefinedName transparentDefs
-  local (\env -> env {resolvedAliasNames = S.fromList transparentDefs}) m
+isAlias x = asks \env -> x `S.member` env.aliasNames
 
 locallyReduceAliases :: M a -> M a
 locallyReduceAliases m = do
-  ds <- asks \env -> OnlyReduceDefs env.resolvedAliasNames
+  ds <- asks \env -> OnlyReduceDefs env.aliasNames
   locallyReduceDefs ds m
 
 --------------------------------------------------------------------------------
