@@ -9,6 +9,7 @@ import Agda.Interaction.Imports
 import Agda.Interaction.Library
 import Agda.Interaction.Options
 import Agda.Syntax.Common
+import Agda.Syntax.Common.Pretty (prettyShow)
 import Agda.Syntax.Internal hiding (arity)
 import Agda.Syntax.Position
 import Agda.Syntax.Scope.Base
@@ -22,8 +23,7 @@ import Agda.Utils.Impossible (__IMPOSSIBLE__)
 import Agda.Utils.Monad
 import Control.Monad.Except (throwError)
 import Control.Monad.Reader
-import Data.Either
-import Data.List (sort)
+import Data.List (partition, sort)
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map.Strict qualified as Map
 import Data.Maybe
@@ -77,7 +77,7 @@ translateLibrary config = do
       liftIO $
         Data.List.sort . map Find.infoPath . concat <$> forM (filePath libDirPrim : paths) (findWithInfo (pure True) (hasAgdaExtension <$> Find.filePath))
 
-    -- resolve alias names
+    -- alias resolution
     (aliasNames, unresolved) <-
       foldM
         ( \(resolved, unresolved) inputFile -> do
@@ -91,15 +91,20 @@ translateLibrary config = do
                 withTopLevelModule m $ do
                   mi <- getNonMainModuleInfo m (Just src)
                   setInterface mi.miInterface
-                  (unresolved, resolved') <- withScope_ mi.miInterface.iInsideScope do
-                    partitionEithers <$> forM unresolved \x ->
-                      maybe (Left x) Right <$> resolveDefinedName x
-                  pure (foldr S.insert resolved resolved', unresolved)
+                  withScope_ mi.miInterface.iInsideScope do
+                    let mname = prettyShow mi.miInterface.iTopLevelModuleName
+                        (toResolve, unresolved') = partition ((mname ==) . show . (.moduleName)) unresolved
+                    resolved' <- forM toResolve \x ->
+                      resolveDefinedName (show x.name) >>= \case
+                        Nothing -> translateError $ vcat [text "Couldn't find definition", text $ show x]
+                        Just x -> pure x
+                    pure (foldr S.insert resolved resolved', unresolved')
         )
         (mempty, S.toList config.aliasNames)
         files
 
-    liftIO . print =<< vcat [text "Couldn't find definitions", prettyTCM unresolved]
+    unless (null unresolved) do
+      translateError $ vcat [text "Couldn't find definitions", text $ show unresolved]
 
     let env = IndexEnv aliasNames 0 mempty
 

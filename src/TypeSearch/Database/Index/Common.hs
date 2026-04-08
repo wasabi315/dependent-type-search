@@ -30,7 +30,7 @@ import TypeSearch.Common qualified as TS
 
 data IndexConfig = IndexConfig
   { -- | Set of fully-qualified definition names subject to definition unfolding during search.
-    aliasNames :: S.Set String,
+    aliasNames :: S.Set TS.QName,
     -- | Path to Agda library.
     libraryDirectory :: FilePath,
     -- | Connection to database.

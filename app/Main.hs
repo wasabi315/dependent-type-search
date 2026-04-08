@@ -2,8 +2,6 @@ module Main (main) where
 
 import Data.Aeson (eitherDecodeFileStrict)
 import Data.Maybe
-import Data.Set qualified as S
-import Data.Text qualified as T
 import Database.PostgreSQL.Simple
 import Database.PostgreSQL.Simple.Migration
 import Options.Applicative
@@ -12,7 +10,6 @@ import System.Environment (getEnv, lookupEnv)
 import System.Exit
 import System.FilePath
 import System.IO
-import TypeSearch.Common hiding (Index)
 import TypeSearch.Database.Index
 import TypeSearch.Database.Index.Common
 import TypeSearch.MainInteraction
@@ -61,9 +58,4 @@ main = do
         eitherDecodeFileStrict aliasFile >>= \case
           Right transp -> pure transp
           Left err -> hPutStrLn stderr err >> exitFailure
-      let alias' = flip S.map alias \x -> do
-            let xs = T.splitOn "." x
-                m = coerce $ T.intercalate "." (init xs)
-                f = coerce $ last xs
-            QName m f
-      withConnect connInfo (flip mainLoop alias')
+      withConnect connInfo (flip mainLoop alias)

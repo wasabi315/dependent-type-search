@@ -1,759 +1,3030 @@
 [
-  "Agda.Builtin.Reflection.Telescope",
-  "Agda.Builtin.Reflection.Type",
-  "Agda.Builtin.Size.SizeUniv",
-  "Algebra.Bundles.BoundedLattice",
-  "Algebra.Core.Op₁",
-  "Algebra.Core.Op₂",
-  "Algebra.Definitions._Absorbs_",
-  "Algebra.Definitions._DistributesOver_",
-  "Algebra.Definitions._DistributesOverˡ_",
-  "Algebra.Definitions._DistributesOverʳ_",
-  "Algebra.Definitions._IdempotentOn_",
-  "Algebra.Definitions._MiddleFourExchange_",
-  "Algebra.Definitions.Absorptive",
-  "Algebra.Definitions.AlmostCancellative",
-  "Algebra.Definitions.AlmostLeftCancellative",
-  "Algebra.Definitions.AlmostRightCancellative",
-  "Algebra.Definitions.Alternative",
-  "Algebra.Definitions.Associative",
-  "Algebra.Definitions.Cancellative",
-  "Algebra.Definitions.Commutative",
-  "Algebra.Definitions.Congruent₁",
-  "Algebra.Definitions.Congruent₂",
-  "Algebra.Definitions.Conical",
-  "Algebra.Definitions.Flexible",
-  "Algebra.Definitions.Idempotent",
-  "Algebra.Definitions.IdempotentFun",
-  "Algebra.Definitions.Identical",
-  "Algebra.Definitions.Identity",
-  "Algebra.Definitions.Interchangable",
-  "Algebra.Definitions.Inverse",
-  "Algebra.Definitions.Invertible",
-  "Algebra.Definitions.Involutive",
-  "Algebra.Definitions.LeftAlternative",
-  "Algebra.Definitions.LeftBol",
-  "Algebra.Definitions.LeftCancellative",
-  "Algebra.Definitions.LeftCongruent",
-  "Algebra.Definitions.LeftConical",
-  "Algebra.Definitions.LeftDivides",
-  "Algebra.Definitions.LeftDividesˡ",
-  "Algebra.Definitions.LeftDividesʳ",
-  "Algebra.Definitions.LeftIdentity",
-  "Algebra.Definitions.LeftInverse",
-  "Algebra.Definitions.LeftInvertible",
-  "Algebra.Definitions.LeftSemimedial",
-  "Algebra.Definitions.LeftZero",
-  "Algebra.Definitions.Medial",
-  "Algebra.Definitions.MiddleBol",
-  "Algebra.Definitions.RawMagma._∣_",
-  "Algebra.Definitions.RawMagma._∤_",
-  "Algebra.Definitions.RawMagma._∥_",
-  "Algebra.Definitions.RawMagma._∦_",
-  "Algebra.Definitions.RawMagma._∤ˡ_",
-  "Algebra.Definitions.RawMagma._∤ʳ_",
-  "Algebra.Definitions.RawMonoid._∦_",
-  "Algebra.Definitions.RawSemiring._∣_",
-  "Algebra.Definitions.RawSemiring._∤_",
-  "Algebra.Definitions.RawSemiring.Coprime",
-  "Algebra.Definitions.RightAlternative",
-  "Algebra.Definitions.RightBol",
-  "Algebra.Definitions.RightCancellative",
-  "Algebra.Definitions.RightCongruent",
-  "Algebra.Definitions.RightConical",
-  "Algebra.Definitions.RightDivides",
-  "Algebra.Definitions.RightDividesˡ",
-  "Algebra.Definitions.RightDividesʳ",
-  "Algebra.Definitions.RightIdentity",
-  "Algebra.Definitions.RightInverse",
-  "Algebra.Definitions.RightInvertible",
-  "Algebra.Definitions.RightSemimedial",
-  "Algebra.Definitions.RightZero",
-  "Algebra.Definitions.Selective",
-  "Algebra.Definitions.SelfInverse",
-  "Algebra.Definitions.Semimedial",
-  "Algebra.Definitions.StarDestructive",
-  "Algebra.Definitions.StarExpansive",
-  "Algebra.Definitions.StarLeftDestructive",
-  "Algebra.Definitions.StarLeftExpansive",
-  "Algebra.Definitions.StarRightDestructive",
-  "Algebra.Definitions.StarRightExpansive",
-  "Algebra.Definitions.Zero",
-  "Algebra.Module.Core.Opₗ",
-  "Algebra.Module.Core.Opᵣ",
-  "Algebra.Module.Definitions.Bi.Associative",
-  "Algebra.Module.Definitions.Bi.Simultaneous.Coincident",
-  "Algebra.Module.Definitions.Left._DistributesOverˡ_",
-  "Algebra.Module.Definitions.Left._DistributesOverʳ_⟶_",
-  "Algebra.Module.Definitions.Left.Associative",
-  "Algebra.Module.Definitions.Left.Commutative",
-  "Algebra.Module.Definitions.Left.Congruent",
-  "Algebra.Module.Definitions.Left.LeftCongruent",
-  "Algebra.Module.Definitions.Left.LeftIdentity",
-  "Algebra.Module.Definitions.Left.LeftZero",
-  "Algebra.Module.Definitions.Left.RightCongruent",
-  "Algebra.Module.Definitions.Left.RightZero",
-  "Algebra.Module.Definitions.Right._DistributesOverˡ_⟶_",
-  "Algebra.Module.Definitions.Right._DistributesOverʳ_",
-  "Algebra.Module.Definitions.Right.Associative",
-  "Algebra.Module.Definitions.Right.Commutative",
-  "Algebra.Module.Definitions.Right.Congruent",
-  "Algebra.Module.Definitions.Right.LeftCongruent",
-  "Algebra.Module.Definitions.Right.LeftZero",
-  "Algebra.Module.Definitions.Right.RightCongruent",
-  "Algebra.Module.Definitions.Right.RightIdentity",
-  "Algebra.Module.Definitions.Right.RightZero",
-  "Algebra.Module.Morphism.Definitions.Homomorphicₗ",
-  "Algebra.Module.Morphism.Definitions.Homomorphicᵣ",
-  "Algebra.Module.Morphism.Definitions.Morphism",
-  "Algebra.Module.Morphism.ModuleHomomorphism.NonTrivial",
-  "Algebra.Morphism.Definitions.Homomorphic₀",
-  "Algebra.Morphism.Definitions.Homomorphic₁",
-  "Algebra.Morphism.Definitions.Homomorphic₂",
-  "Algebra.Morphism.IsAbelianGroupMorphism-syntax",
-  "Algebra.Morphism.IsCommutativeMonoidMorphism-syntax",
-  "Algebra.Morphism.IsGroupMorphism-syntax",
-  "Algebra.Morphism.IsIdempotentCommutativeMonoidMorphism-syntax",
-  "Algebra.Morphism.IsMonoidMorphism-syntax",
-  "Algebra.Morphism.IsRingMorphism-syntax",
-  "Algebra.Morphism.IsSemigroupMorphism-syntax",
-  "Algebra.Properties.Magma.Divisibility._∦_",
-  "Algebra.Solver.CommutativeMonoid.Env",
-  "Algebra.Solver.IdempotentCommutativeMonoid.Env",
-  "Algebra.Solver.Monoid.Env",
-  "Algebra.Solver.Monoid.Expression.Env",
-  "Algebra.Solver.Ring.Env",
-  "Axiom.DoubleNegationElimination.DoubleNegationElimination",
-  "Axiom.ExcludedMiddle.ExcludedMiddle",
-  "Axiom.Extensionality.Heterogeneous.Extensionality",
-  "Axiom.Extensionality.Propositional.Extensionality",
-  "Axiom.Extensionality.Propositional.ExtensionalityImplicit",
-  "Axiom.UniquenessOfIdentityProofs.UIP",
-  "Codata.Musical.Colist._∈_",
-  "Codata.Musical.Colist._⊆_",
-  "Codata.Musical.Costring.Costring",
-  "Codata.Sized.Conat._ℕ<_",
-  "Codata.Sized.Thunk.Thunk^P",
-  "Codata.Sized.Thunk.Thunk^R",
-  "Data.Char.Base._≈_",
-  "Data.Char.Base._≉_",
-  "Data.Char.Base._≤_",
-  "Data.Char.Base._<_",
-  "Data.Char.Properties.≈-subst",
-  "Data.Container.μ",
-  "Data.Container.Fixpoints.Guarded.ν",
-  "Data.Container.Fixpoints.Sized.μ",
-  "Data.Container.Fixpoints.Sized.ν",
-  "Data.Container.Indexed.μ",
-  "Data.Container.Indexed._▷_",
-  "Data.Container.Indexed._⇒C_",
-  "Data.Container.Indexed.Fixpoints.Guarded.ν",
-  "Data.Container.Indexed.FreeMonad._⋆_",
-  "Data.Container.Indexed.WithK._∈_",
-  "Data.Container.Membership._∈_",
-  "Data.Container.Related._∼[_]_",
-  "Data.Container.Related._≲[_]_",
-  "Data.DifferenceList.DiffList",
-  "Data.DifferenceNat.Diffℕ",
-  "Data.DifferenceVec.DiffVec",
-  "Data.DifferenceVec.head",
-  "Data.Digit.Bit",
-  "Data.Digit.Decimal",
-  "Data.Digit.Digit",
-  "Data.Digit.Expansion",
-  "Data.Empty.⊥",
-  "Data.Empty.Polymorphic.⊥",
-  "Data.Fin.Base._≤_",
-  "Data.Fin.Base._≥_",
-  "Data.Fin.Base._≮_",
-  "Data.Fin.Base._≰_",
-  "Data.Fin.Base._<_",
-  "Data.Fin.Base._>_",
-  "Data.Fin.Base.Fin′",
-  "Data.Fin.Induction.≺-Rec",
-  "Data.Fin.Induction.≺-recBuilder",
-  "Data.Fin.Permutation._≈_",
-  "Data.Fin.Permutation.Permutation",
-  "Data.Fin.Permutation.Permutation′",
-  "Data.Fin.Permutation.Transposition.List.TranspositionList",
-  "Data.Fin.Subset._∈_",
-  "Data.Fin.Subset._∉_",
-  "Data.Fin.Subset._⊂_",
-  "Data.Fin.Subset._⊃_",
-  "Data.Fin.Subset._⊄_",
-  "Data.Fin.Subset._⊅_",
-  "Data.Fin.Subset._⊆_",
-  "Data.Fin.Subset._⊇_",
-  "Data.Fin.Subset._⊈_",
-  "Data.Fin.Subset._⊉_",
-  "Data.Fin.Subset.Empty",
-  "Data.Fin.Subset.Lift",
-  "Data.Fin.Subset.Nonempty",
-  "Data.Fin.Subset.Subset",
-  "Data.Fin.Substitution.Sub",
-  "Data.Fin.Substitution.Subs",
-  "Data.Float.Base._≈_",
-  "Data.Float.Base._≤_",
-  "Data.Float.Properties.≈-subst",
-  "Data.Integer.Base._≥_",
-  "Data.Integer.Base._≮_",
-  "Data.Integer.Base._≯_",
-  "Data.Integer.Base._≰_",
-  "Data.Integer.Base._≱_",
-  "Data.Integer.Base._>_",
-  "Data.Integer.Base.NonZero",
-  "Data.Integer.Coprimality.Coprime",
-  "Data.Integer.Divisibility._∣_",
-  "Data.List.Fresh.Membership.Setoid._∈_",
-  "Data.List.Fresh.Membership.Setoid._∉_",
-  "Data.List.Membership.Propositional._≢∈_",
-  "Data.List.Membership.Setoid._∈_",
-  "Data.List.Membership.Setoid._∉_",
-  "Data.List.Relation.Binary.BagAndSetEquality._∼[_]_",
-  "Data.List.Relation.Binary.Disjoint.Setoid.Disjoint",
-  "Data.List.Relation.Binary.Equality.Setoid._≋_",
-  "Data.List.Relation.Binary.Lex.Core.Lex-≤",
-  "Data.List.Relation.Binary.Lex.Core.Lex-<",
-  "Data.List.Relation.Binary.Permutation.Setoid._↭_",
-  "Data.List.Relation.Binary.Sublist.Heterogeneous.Solver._⊆R_",
-  "Data.List.Relation.Binary.Sublist.Heterogeneous.Solver._⊆T_",
-  "Data.List.Relation.Binary.Sublist.Heterogeneous.Solver.RList",
-  "Data.List.Relation.Binary.Sublist.Propositional.Example.UniqueBoundVariables.BVars",
-  "Data.List.Relation.Binary.Sublist.Propositional.Example.UniqueBoundVariables.Cxt",
-  "Data.List.Relation.Binary.Sublist.Setoid._⊂_",
-  "Data.List.Relation.Binary.Sublist.Setoid._⊃_",
-  "Data.List.Relation.Binary.Sublist.Setoid._⊄_",
-  "Data.List.Relation.Binary.Sublist.Setoid._⊆_",
-  "Data.List.Relation.Binary.Sublist.Setoid._⊇_",
-  "Data.List.Relation.Binary.Sublist.Setoid._⊈_",
-  "Data.List.Relation.Binary.Sublist.Setoid._⊉_",
-  "Data.List.Relation.Binary.Subset.DecSetoid._⊉_",
-  "Data.List.Relation.Binary.Subset.Propositional._⊉_",
-  "Data.List.Relation.Binary.Subset.Setoid._⊆_",
-  "Data.List.Relation.Binary.Subset.Setoid._⊇_",
-  "Data.List.Relation.Binary.Subset.Setoid._⊈_",
-  "Data.List.Relation.Binary.Subset.Setoid._⊉_",
-  "Data.List.Relation.Ternary.Appending.Propositional.Appending",
-  "Data.List.Relation.Ternary.Interleaving.Propositional.Interleaving",
-  "Data.List.Relation.Ternary.Interleaving.Setoid.Interleaving",
-  "Data.List.Relation.Unary.All.Null",
-  "Data.List.Relation.Unary.Any.lookup",
-  "Data.List.Relation.Unary.Enumerates.Setoid.IsEnumeration",
-  "Data.Maybe.Is-just",
-  "Data.Maybe.Is-nothing",
-  "Data.Nat.Base._≤″_",
-  "Data.Nat.Base._≥_",
-  "Data.Nat.Base._≥′_",
-  "Data.Nat.Base._≥″_",
-  "Data.Nat.Base._≥‴_",
-  "Data.Nat.Base._≮_",
-  "Data.Nat.Base._≯_",
-  "Data.Nat.Base._≰_",
-  "Data.Nat.Base._≱_",
-  "Data.Nat.Base._<_",
-  "Data.Nat.Base._<′_",
-  "Data.Nat.Base._<″_",
-  "Data.Nat.Base._<‴_",
-  "Data.Nat.Base._>_",
-  "Data.Nat.Base._>′_",
-  "Data.Nat.Base._>″_",
-  "Data.Nat.Base._>‴_",
-  "Data.Nat.Binary.Base._≤_",
-  "Data.Nat.Binary.Base._≥_",
-  "Data.Nat.Binary.Base._≮_",
-  "Data.Nat.Binary.Base._≯_",
-  "Data.Nat.Binary.Base._≰_",
-  "Data.Nat.Binary.Base._≱_",
-  "Data.Nat.Binary.Base._<ℕ_",
-  "Data.Nat.Binary.Base._>_",
-  "Data.Nat.Coprimality.Coprime",
-  "Data.Nat.Divisibility.Core._∤_",
-  "Data.Nat.Induction.<-Rec",
-  "Data.Nat.Induction.<′-Rec",
-  "Data.Nat.InfinitelyOften.Fin",
-  "Data.Nat.InfinitelyOften.Inf",
-  "Data.Nat.Primality._Rough_",
-  "Data.Nat.Primality.Composite",
-  "Data.Nat.Primality.Irreducible",
-  "Data.Product.∄",
-  "Data.Product.∄-syntax",
-  "Data.Product.∃!",
-  "Data.Product.Base.∃",
-  "Data.Product.Base.∃₂",
-  "Data.Product.Base._×_",
-  "Data.Product.Base._-×-_",
-  "Data.Product.Base.Σ-syntax",
-  "Data.Product.Base.∃-syntax",
-  "Data.Product.Effectful.Left.Base.Productₗ",
-  "Data.Product.Effectful.Right.Base.Productᵣ",
-  "Data.Product.Nary.NonDependent.HomoProduct",
-  "Data.Product.Nary.NonDependent.HomoProduct′",
-  "Data.Product.Relation.Binary.Lex.NonStrict.×-Lex",
-  "Data.Product.Relation.Binary.Lex.Strict.×-Lex",
-  "Data.Rational.Base._≄_",
-  "Data.Rational.Base._≥_",
-  "Data.Rational.Base._≮_",
-  "Data.Rational.Base._≯_",
-  "Data.Rational.Base._≰_",
-  "Data.Rational.Base._≱_",
-  "Data.Rational.Base._>_",
-  "Data.Rational.Base.Negative",
-  "Data.Rational.Base.NonNegative",
-  "Data.Rational.Base.NonPositive",
-  "Data.Rational.Base.NonZero",
-  "Data.Rational.Base.Positive",
-  "Data.Rational.Unnormalised.Base._≄_",
-  "Data.Rational.Unnormalised.Base._≠_",
-  "Data.Rational.Unnormalised.Base._≥_",
-  "Data.Rational.Unnormalised.Base._≮_",
-  "Data.Rational.Unnormalised.Base._≯_",
-  "Data.Rational.Unnormalised.Base._≰_",
-  "Data.Rational.Unnormalised.Base._≱_",
-  "Data.Rational.Unnormalised.Base._>_",
-  "Data.Rational.Unnormalised.Base.Negative",
-  "Data.Rational.Unnormalised.Base.NonNegative",
-  "Data.Rational.Unnormalised.Base.NonPositive",
-  "Data.Rational.Unnormalised.Base.NonZero",
-  "Data.Rational.Unnormalised.Base.Positive",
-  "Data.Record._∈_",
-  "Data.Record.Restricted",
-  "Data.Star.Decoration.All",
-  "Data.Star.Decoration.EdgePred",
-  "Data.Star.Environment.Ctxt",
-  "Data.Star.Environment.Env",
-  "Data.Star.List.List",
-  "Data.Star.Nat.ℕ",
-  "Data.String.Base._≈_",
-  "Data.String.Base._≤_",
-  "Data.String.Base._<_",
-  "Data.Sum.Effectful.Left.Sumₗ",
-  "Data.Sum.Effectful.Right.Sumᵣ",
-  "Data.These.Effectful.Left.Base.Theseₗ",
-  "Data.These.Effectful.Right.Base.Theseᵣ",
-  "Data.Tree.AVL.Height.ℕ₂",
-  "Data.Tree.AVL.IndexedMap.KV",
-  "Data.Tree.AVL.Key._<_<_",
-  "Data.Tree.AVL.Map.Map",
-  "Data.Tree.AVL.Map.Membership.Propositional._∈ₖᵥ_",
-  "Data.Tree.AVL.Map.Membership.Propositional._∉ₖᵥ_",
-  "Data.Tree.AVL.Map.Membership.Propositional._≈ₖᵥ_",
-  "Data.Tree.AVL.Map.Relation.Unary.Any.Any",
-  "Data.Tree.AVL.NonEmpty.Propositional.Tree⁺",
-  "Data.Tree.AVL.Sets.Membership._∈_",
-  "Data.Tree.AVL.Sets.Membership._∉_",
-  "Data.Tree.AVL.Sets.⟨Set⟩",
-  "Data.Trie.NonEmpty.Word",
-  "Data.Trie.Word",
-  "Data.Unit.NonEta.Hidden",
-  "Data.Unit.Polymorphic.Base.⊤",
-  "Data.Vec.Base.FoldlOp",
-  "Data.Vec.Functional.Relation.Binary.Equality.Setoid._≋_",
-  "Data.Vec.Functional.Relation.Binary.Permutation._↭_",
-  "Data.Vec.Functional.Relation.Binary.Pointwise.map",
-  "Data.Vec.Functional.Relation.Unary.All.Properties.⊛⁺",
-  "Data.Vec.Functional.Relation.Unary.All.Properties.head⁺",
-  "Data.Vec.Functional.Relation.Unary.All.Properties.map⁺",
-  "Data.Vec.Functional.Relation.Unary.All.Properties.replicate⁺",
-  "Data.Vec.Functional.Relation.Unary.All.Properties.zipWith⁺",
-  "Data.Vec.Functional.Vector",
-  "Data.Vec.Membership.Setoid._∈_",
-  "Data.Vec.Membership.Setoid._∉_",
-  "Data.Vec.N-ary.Eq",
-  "Data.Vec.N-ary.Eqʰ",
-  "Data.Vec.Recursive.Effectful.forM",
-  "Data.Vec.Relation.Binary.Equality.Cast._≈[_]_",
-  "Data.Vec.Relation.Binary.Equality.Setoid._≋_",
-  "Data.Word64.Base._≈_",
-  "Data.Word64.Base._≤_",
-  "Data.Word64.Base._<_",
-  "Effect.Applicative.Indexed.IFun",
-  "Effect.Monad.Continuation.DCont",
-  "Effect.Monad.Continuation.DContT",
-  "Effect.Monad.Indexed.RawIMonadT",
-  "Effect.Monad.Partiality.Equality",
-  "Effect.Monad.RawMonadT",
-  "Effect.Monad.Reader.Reader",
-  "Effect.Monad.State.Indexed.IStateT",
-  "Effect.Monad.State.State",
-  "Effect.Monad.Writer.Writer",
-  "Foreign.Haskell.Coerce.Coercible₁",
-  "Foreign.Haskell.Coerce.Coercible₂",
-  "Function.Base._∋_",
-  "Function.Base._∘_",
-  "Function.Base._∘′_",
-  "Function.Base._∘₂_",
-  "Function.Base._∘₂′_",
-  "Function.Base._⟨_⟩_",
-  "Function.Base._-⟨_∣",
-  "Function.Base._-⟪_∣",
-  "Function.Base.∣_⟩-_",
-  "Function.Base.∣_⟫-_",
-  "Function.Base._-⟨_⟩-_",
-  "Function.Base._-⟨_⟫-_",
-  "Function.Base._-⟪_⟩-_",
-  "Function.Base._-⟪_⟫-_",
-  "Function.Base._-[_]-_",
-  "Function.Base._|>_",
-  "Function.Base._|>′_",
-  "Function.Base._$_",
-  "Function.Base._$′_",
-  "Function.Base._$-",
-  "Function.Base._on_",
-  "Function.Base._on₂_",
-  "Function.Base._ˢ_",
-  "Function.Base.λ-",
-  "Function.Base.const",
-  "Function.Base.constᵣ",
-  "Function.Base.flip",
-  "Function.Base.flip′",
-  "Function.Base.id",
-  "Function.Base.it",
-  "Function.Base.typeOf",
-  "Function.Bijection._⤖_",
-  "Function.Bundles._↠_",
-  "Function.Bundles._↣_",
-  "Function.Bundles._↩_",
-  "Function.Bundles._↩↪_",
-  "Function.Bundles._↪_",
-  "Function.Bundles._⇔_",
-  "Function.Bundles._⟶_",
-  "Function.Bundles._⤖_",
-  "Function.Bundles._⟶ₛ_",
-  "Function.Bundles.SplitSurjection",
-  "Function.Core.Fun₁",
-  "Function.Core.Fun₂",
-  "Function.Core.Morphism",
-  "Function.Definitions.Inverseᵇ",
-  "Function.Definitions.StrictlyInverseˡ",
-  "Function.Definitions.StrictlyInverseʳ",
-  "Function.Definitions.StrictlySurjective",
-  "Function.Endo.Propositional.Endo",
-  "Function.Endo.Setoid.Endo",
-  "Function.Endomorphism.Propositional.Endo",
-  "Function.Endomorphism.Propositional.fromSetoidEndo",
-  "Function.Endomorphism.Setoid.Endo",
-  "Function.Equality._⟶_",
-  "Function.Equivalence._⇔_",
-  "Function.Identity.Effectful.Identity",
-  "Function.Indexed.Bundles._↔ᵢ_",
-  "Function.Indexed.Bundles._↠ᵢ_",
-  "Function.Indexed.Bundles._↣ᵢ_",
-  "Function.Indexed.Bundles._↩ᵢ_",
-  "Function.Indexed.Bundles._↩↪ᵢ_",
-  "Function.Indexed.Bundles._↪ᵢ_",
-  "Function.Indexed.Bundles._⇔ᵢ_",
-  "Function.Indexed.Bundles._⟶ᵢ_",
-  "Function.Indexed.Bundles._⤖ᵢ_",
-  "Function.Injection._↣_",
-  "Function.Injection.Injective",
-  "Function.Inverse._↔_",
-  "Function.Inverse._↔̇_",
-  "Function.LeftInverse._↞_",
-  "Function.LeftInverse._LeftInverseOf_",
-  "Function.LeftInverse._RightInverseOf_",
-  "Function.LeftInverse.RightInverse",
-  "Function.Metric.Core.DistanceFunction",
-  "Function.Metric.Definitions.Bounded",
-  "Function.Metric.Definitions.Congruent",
-  "Function.Metric.Definitions.Contracting",
-  "Function.Metric.Definitions.ContractingOnOrbits",
-  "Function.Metric.Definitions.Definite",
-  "Function.Metric.Definitions.Indiscernable",
-  "Function.Metric.Definitions.NonNegative",
-  "Function.Metric.Definitions.StrictlyContracting",
-  "Function.Metric.Definitions.StrictlyContractingOnOrbits",
-  "Function.Metric.Definitions.Symmetric",
-  "Function.Metric.Definitions.TranslationInvariant",
-  "Function.Metric.Definitions.TriangleInequality",
-  "Function.Metric.Nat.Core.DistanceFunction",
-  "Function.Metric.Nat.Definitions.Bounded",
-  "Function.Metric.Nat.Definitions.Congruent",
-  "Function.Metric.Nat.Definitions.Contracting",
-  "Function.Metric.Nat.Definitions.ContractingOnOrbits",
-  "Function.Metric.Nat.Definitions.Definite",
-  "Function.Metric.Nat.Definitions.Indiscernable",
-  "Function.Metric.Nat.Definitions.MaxTriangleInequality",
-  "Function.Metric.Nat.Definitions.StrictlyContracting",
-  "Function.Metric.Nat.Definitions.StrictlyContractingOnOrbits",
-  "Function.Metric.Nat.Definitions.Symmetric",
-  "Function.Metric.Nat.Definitions.TranslationInvariant",
-  "Function.Metric.Nat.Definitions.TriangleInequality",
-  "Function.Metric.Nat.Structures.IsPreMetric",
-  "Function.Metric.Nat.Structures.IsProtoMetric",
-  "Function.Metric.Nat.Structures.IsQuasiSemiMetric",
-  "Function.Metric.Nat.Structures.IsSemiMetric",
-  "Function.Metric.Rational.Core.DistanceFunction",
-  "Function.Metric.Rational.Definitions.Bounded",
-  "Function.Metric.Rational.Definitions.Congruent",
-  "Function.Metric.Rational.Definitions.Contracting",
-  "Function.Metric.Rational.Definitions.ContractingOnOrbits",
-  "Function.Metric.Rational.Definitions.MaxTriangleInequality",
-  "Function.Metric.Rational.Definitions.StrictlyContracting",
-  "Function.Metric.Rational.Definitions.StrictlyContractingOnOrbits",
-  "Function.Metric.Rational.Definitions.Symmetric",
-  "Function.Metric.Rational.Definitions.TranslationInvariant",
-  "Function.Metric.Rational.Definitions.TriangleInequality",
-  "Function.Reasoning.∋-syntax",
-  "Function.Related.InducedRelation₁",
-  "Function.Related.InducedRelation₂",
-  "Function.Related.Propositional.InducedRelation₁",
-  "Function.Related.Propositional.InducedRelation₂",
-  "Function.Related.Propositional.Related",
-  "Function.Related.Related",
-  "Function.Relation.Binary.Setoid.Equality._≈_",
-  "Function.Strict._!|>_",
-  "Function.Strict._!|>′_",
-  "Function.Strict._$!_",
-  "Function.Strict._$!′_",
-  "Function.Strict.force′",
-  "Function.Strict.seq",
-  "Function.Surjection._↠_",
-  "Induction.InfiniteDescent.Descent",
-  "Induction.InfiniteDescent.DescentFrom",
-  "Induction.InfiniteDescent.InfiniteDescendingSequence",
-  "Induction.InfiniteDescent.InfiniteDescendingSequence⁺",
-  "Induction.InfiniteDescent.InfiniteDescendingSequenceFrom",
-  "Induction.InfiniteDescent.InfiniteDescendingSequenceFrom⁺",
-  "Induction.InfiniteDescent.InfiniteDescent",
-  "Induction.InfiniteDescent.InfiniteDescent⁺",
-  "Induction.InfiniteDescent.InfiniteDescentFrom",
-  "Induction.InfiniteDescent.InfiniteDescentFrom⁺",
-  "Induction.InfiniteDescent.NoSmallestCounterExample",
-  "Induction.RecStruct",
-  "Induction.Recursor",
-  "Induction.RecursorBuilder",
-  "Induction.SubsetRecursor",
-  "Induction.SubsetRecursorBuilder",
-  "Induction.WellFounded.WellFounded",
-  "Induction.WellFounded.WfRec",
-  "IO.Base.Main",
-  "Reflection.AnnotatedAST.Absₐ",
-  "Reflection.AnnotatedAST.Annotated",
-  "Reflection.AnnotatedAST.Annotation",
-  "Reflection.AnnotatedAST.Argₐ",
-  "Reflection.AnnotatedAST.Argsₐ",
-  "Reflection.AnnotatedAST.Clauseₐ",
-  "Reflection.AnnotatedAST.Clausesₐ",
-  "Reflection.AnnotatedAST.Free.FVs",
-  "Reflection.AnnotatedAST.Listₐ",
-  "Reflection.AnnotatedAST.Namedₐ",
-  "Reflection.AnnotatedAST.Patternₐ",
-  "Reflection.AnnotatedAST.Sortₐ",
-  "Reflection.AnnotatedAST.Telₐ",
-  "Reflection.AnnotatedAST.Termₐ",
-  "Reflection.AnnotatedAST.Typeₐ",
-  "Reflection.Arg-info",
-  "Reflection.AST.Argument.Args",
-  "Reflection.AST.Meta._≈_",
-  "Reflection.AST.Name._≈_",
-  "Reflection.AST.Name.Names",
-  "Reflection.AST.Term.Clauses",
-  "Reflection.AST.Term.Telescope",
-  "Reflection.AST.Traversal.Action",
-  "Reflection.External.CmdName",
-  "Reflection.External.StdErr",
-  "Reflection.External.StdIn",
-  "Reflection.External.StdOut",
-  "Relation.Binary.Construct.Closure.Reflexive.Refl",
-  "Relation.Binary.Construct.Closure.Transitive.Plus′",
-  "Relation.Binary.Construct.Constant.Core.Const",
-  "Relation.Binary.Construct.NaturalOrder.Left._≤_",
-  "Relation.Binary.Construct.NaturalOrder.Right._≤_",
-  "Relation.Binary.Construct.Never.Never",
-  "Relation.Binary.Construct.NonStrictToStrict._<_",
-  "Relation.Binary.Construct.StrictToNonStrict._≤_",
-  "Relation.Binary.Core._⇒_",
-  "Relation.Binary.Core._⇔_",
-  "Relation.Binary.Core._=[_]⇒_",
-  "Relation.Binary.Core._Preserves_⟶_",
-  "Relation.Binary.Core._Preserves₂_⟶_⟶_",
-  "Relation.Binary.Core.Rel",
-  "Relation.Binary.Core.REL",
-  "Relation.Binary.Definitions._⟶_Respects_",
-  "Relation.Binary.Definitions._Respects_",
-  "Relation.Binary.Definitions._Respects₂_",
-  "Relation.Binary.Definitions._Respectsˡ_",
-  "Relation.Binary.Definitions._Respectsʳ_",
-  "Relation.Binary.Definitions.Adjoint",
-  "Relation.Binary.Definitions.Antisym",
-  "Relation.Binary.Definitions.Antisymmetric",
-  "Relation.Binary.Definitions.Antitonic₁",
-  "Relation.Binary.Definitions.Antitonic₂",
-  "Relation.Binary.Definitions.AntitonicMonotonic",
-  "Relation.Binary.Definitions.Asymmetric",
-  "Relation.Binary.Definitions.Connex",
-  "Relation.Binary.Definitions.Cotransitive",
-  "Relation.Binary.Definitions.Decidable",
-  "Relation.Binary.Definitions.DecidableEquality",
-  "Relation.Binary.Definitions.Dense",
-  "Relation.Binary.Definitions.Empty",
-  "Relation.Binary.Definitions.Irreflexive",
-  "Relation.Binary.Definitions.Irrelevant",
-  "Relation.Binary.Definitions.LeftMonotonic",
-  "Relation.Binary.Definitions.LeftTrans",
-  "Relation.Binary.Definitions.Max",
-  "Relation.Binary.Definitions.Maximum",
-  "Relation.Binary.Definitions.Min",
-  "Relation.Binary.Definitions.Minimum",
-  "Relation.Binary.Definitions.Monotonic₁",
-  "Relation.Binary.Definitions.Monotonic₂",
-  "Relation.Binary.Definitions.MonotonicAntitonic",
-  "Relation.Binary.Definitions.Recomputable",
-  "Relation.Binary.Definitions.Reflexive",
-  "Relation.Binary.Definitions.RightMonotonic",
-  "Relation.Binary.Definitions.RightTrans",
-  "Relation.Binary.Definitions.Stable",
-  "Relation.Binary.Definitions.Substitutive",
-  "Relation.Binary.Definitions.Sym",
-  "Relation.Binary.Definitions.Symmetric",
-  "Relation.Binary.Definitions.Tight",
-  "Relation.Binary.Definitions.Total",
-  "Relation.Binary.Definitions.Trans",
-  "Relation.Binary.Definitions.TransFlip",
-  "Relation.Binary.Definitions.Transitive",
-  "Relation.Binary.Definitions.Universal",
-  "Relation.Binary.Definitions.WeaklyDecidable",
-  "Relation.Binary.HeterogeneousEquality._≇_",
-  "Relation.Binary.HeterogeneousEquality.Quotients.Examples.ℕ²",
-  "Relation.Binary.Indexed.Heterogeneous.Core._=[_]⇒_",
-  "Relation.Binary.Indexed.Heterogeneous.Core.IRel",
-  "Relation.Binary.Indexed.Heterogeneous.Core.IREL",
-  "Relation.Binary.Indexed.Heterogeneous.Definitions.Reflexive",
-  "Relation.Binary.Indexed.Heterogeneous.Definitions.Symmetric",
-  "Relation.Binary.Indexed.Heterogeneous.Definitions.Transitive",
-  "Relation.Binary.Indexed.Homogeneous.Core.fromHetIndexed",
-  "Relation.Binary.Indexed.Homogeneous.Core.IRel",
-  "Relation.Binary.Indexed.Homogeneous.Core.IREL",
-  "Relation.Binary.Lattice.Definitions.Exponential",
-  "Relation.Binary.Lattice.Definitions.Infimum",
-  "Relation.Binary.Lattice.Definitions.Supremum",
-  "Relation.Binary.Morphism.Definitions.Homomorphic₂",
-  "Relation.Binary.Morphism.OrderMonomorphism.antisym",
-  "Relation.Binary.Morphism.OrderMonomorphism.reflexive",
-  "Relation.Binary.Morphism.OrderMonomorphism.respˡ",
-  "Relation.Binary.Morphism.OrderMonomorphism.respʳ",
-  "Relation.Binary.Morphism.OrderMonomorphism.trans",
-  "Relation.Binary.Morphism.RelMonomorphism.refl",
-  "Relation.Binary.Morphism.RelMonomorphism.sym",
-  "Relation.Binary.Morphism.RelMonomorphism.trans",
-  "Relation.Binary.OrderMorphism._⇒-DTO_",
-  "Relation.Binary.Properties.DecTotalOrder._<_",
-  "Relation.Binary.Properties.Poset._<_",
-  "Relation.Binary.Properties.TotalOrder._<_",
-  "Relation.Binary.PropositionalEquality.Core._≗_",
-  "Relation.Binary.PropositionalEquality.Core._≢_",
-  "Relation.Binary.PropositionalEquality.isPropositional",
-  "Relation.Binary.Rewriting.WeaklyConfluent",
-  "Relation.Nary.∃⟨_⟩",
-  "Relation.Nary.Π[_]",
-  "Relation.Nary.∀[_]",
-  "Relation.Nary.Decidable",
-  "Relation.Nullary.Construct.Add.Extrema._±",
-  "Relation.Nullary.Decidable.Core.False",
-  "Relation.Nullary.Decidable.Core.recompute",
-  "Relation.Nullary.Decidable.Core.True",
-  "Relation.Nullary.Indexed.¬",
-  "Relation.Nullary.Irrelevant.Irrelevant",
-  "Relation.Nullary.Negation.Core.¬_",
-  "Relation.Nullary.Negation.Core.DoubleNegation",
-  "Relation.Nullary.Negation.Core.Stable",
-  "Relation.Nullary.WeaklyDecidable",
-  "Relation.Unary.∁",
-  "Relation.Unary.∅",
-  "Relation.Unary.⋂",
-  "Relation.Unary.⋃",
-  "Relation.Unary.⌊_⌋",
-  "Relation.Unary.｛_｝",
-  "Relation.Unary._⇒_",
-  "Relation.Unary._∈_",
-  "Relation.Unary._∉_",
-  "Relation.Unary._∖_",
-  "Relation.Unary._∩_",
-  "Relation.Unary._∪_",
-  "Relation.Unary._≐_",
-  "Relation.Unary._≐′_",
-  "Relation.Unary._≬_",
-  "Relation.Unary._⊂_",
-  "Relation.Unary._⊂′_",
-  "Relation.Unary._⊃_",
-  "Relation.Unary._⊃′_",
-  "Relation.Unary._⊄_",
-  "Relation.Unary._⊄′_",
-  "Relation.Unary._⊅_",
-  "Relation.Unary._⊅′_",
-  "Relation.Unary._⊆_",
-  "Relation.Unary._⊆′_",
-  "Relation.Unary._⊇_",
-  "Relation.Unary._⊇′_",
-  "Relation.Unary._⊈_",
-  "Relation.Unary._⊈′_",
-  "Relation.Unary._⊉_",
-  "Relation.Unary._⊉′_",
-  "Relation.Unary._⊢_",
-  "Relation.Unary._⊥_",
-  "Relation.Unary._⊥′_",
-  "Relation.Unary._⟨→⟩_",
-  "Relation.Unary._⟨⊎⟩_",
-  "Relation.Unary._\\\\_",
-  "Relation.Unary._~",
-  "Relation.Unary.Closure.Base.□",
-  "Relation.Unary.Closure.Base.◇",
-  "Relation.Unary.Closure.Preorder.□",
-  "Relation.Unary.Closure.Preorder.◇",
-  "Relation.Unary.Closure.StrictPartialOrder.□",
-  "Relation.Unary.Closure.StrictPartialOrder.◇",
-  "Relation.Unary.Decidable",
-  "Relation.Unary.Empty",
-  "Relation.Unary.Indexed._∉_",
-  "Relation.Unary.Irrelevant",
-  "Relation.Unary.IUniversal",
-  "Relation.Unary.Polymorphic.∅",
-  "Relation.Unary.Polymorphic.U",
-  "Relation.Unary.Pred",
-  "Relation.Unary.PredicateTransformer.⨅",
-  "Relation.Unary.PredicateTransformer.⨆",
-  "Relation.Unary.PredicateTransformer.∼_",
-  "Relation.Unary.PredicateTransformer.⟨_⟩",
-  "Relation.Unary.PredicateTransformer._⇛_",
-  "Relation.Unary.PredicateTransformer._⊑_",
-  "Relation.Unary.PredicateTransformer._⊑′_",
-  "Relation.Unary.PredicateTransformer._⊒_",
-  "Relation.Unary.PredicateTransformer._⊒′_",
-  "Relation.Unary.PredicateTransformer._⊓_",
-  "Relation.Unary.PredicateTransformer._⊔_",
-  "Relation.Unary.PredicateTransformer._⋢_",
-  "Relation.Unary.PredicateTransformer._⍮_",
-  "Relation.Unary.PredicateTransformer.[_]",
-  "Relation.Unary.PredicateTransformer.abort",
-  "Relation.Unary.PredicateTransformer.magic",
-  "Relation.Unary.PredicateTransformer.Pt",
-  "Relation.Unary.PredicateTransformer.PT",
-  "Relation.Unary.PredicateTransformer.skip",
-  "Relation.Unary.Recomputable",
-  "Relation.Unary.Satisfiable",
-  "Relation.Unary.Sized._⇒_",
-  "Relation.Unary.Sized.∀[_]",
-  "Relation.Unary.Stable",
-  "Relation.Unary.U",
-  "Relation.Unary.Universal",
-  "Relation.Unary.WeaklyDecidable",
-  "Size.SizedSet",
-  "System.FilePath.Posix.Primitive.AbsolutePath",
-  "System.FilePath.Posix.Primitive.RelativePath",
-  "System.FilePath.Posix.Primitive.SomePath",
-  "System.Random.RandomRIO",
-  "Tactic.RingSolver.Core.NatSet.NatSet",
-  "Tactic.RingSolver.Core.Polynomial.Base.Coeff",
-  "Tactic.RingSolver.Core.Polynomial.Base.Fold",
-  "Tactic.RingSolver.Core.Polynomial.Base.PolyF",
-  "Test.Golden.Result",
-  "Text.Pretty.Core.All",
-  "Text.Pretty.Core.All≤",
-  "Text.Pretty.Core.Content",
-  "Text.Regex._∉_",
-  "Text.Regex._∉ᴿ_",
-  "Text.Regex.Base._∉_",
-  "Text.Regex.Base._∉ᴿ_",
-  "Text.Regex.String.Unsafe._∈_",
-  "Text.Regex.String.Unsafe._∉_"
+  {
+    "moduleName": "Agda.Builtin.Reflection",
+    "name": "Telescope"
+  },
+  {
+    "moduleName": "Agda.Builtin.Reflection",
+    "name": "Type"
+  },
+  {
+    "moduleName": "Agda.Builtin.Size",
+    "name": "SizeUniv"
+  },
+  {
+    "moduleName": "Algebra.Bundles",
+    "name": "BoundedLattice"
+  },
+  {
+    "moduleName": "Algebra.Core",
+    "name": "Op₁"
+  },
+  {
+    "moduleName": "Algebra.Core",
+    "name": "Op₂"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "_Absorbs_"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "_DistributesOver_"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "_DistributesOverˡ_"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "_DistributesOverʳ_"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "_IdempotentOn_"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "_MiddleFourExchange_"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "Absorptive"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "AlmostCancellative"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "AlmostLeftCancellative"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "AlmostRightCancellative"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "Alternative"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "Associative"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "Cancellative"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "Commutative"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "Congruent₁"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "Congruent₂"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "Conical"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "Flexible"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "Idempotent"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "IdempotentFun"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "Identical"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "Identity"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "Interchangable"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "Inverse"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "Invertible"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "Involutive"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "LeftAlternative"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "LeftBol"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "LeftCancellative"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "LeftCongruent"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "LeftConical"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "LeftDivides"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "LeftDividesˡ"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "LeftDividesʳ"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "LeftIdentity"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "LeftInverse"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "LeftInvertible"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "LeftSemimedial"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "LeftZero"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "Medial"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "MiddleBol"
+  },
+  {
+    "moduleName": "Algebra.Definitions.RawMagma",
+    "name": "_∣_"
+  },
+  {
+    "moduleName": "Algebra.Definitions.RawMagma",
+    "name": "_∤_"
+  },
+  {
+    "moduleName": "Algebra.Definitions.RawMagma",
+    "name": "_∥_"
+  },
+  {
+    "moduleName": "Algebra.Definitions.RawMagma",
+    "name": "_∦_"
+  },
+  {
+    "moduleName": "Algebra.Definitions.RawMagma",
+    "name": "_∤ˡ_"
+  },
+  {
+    "moduleName": "Algebra.Definitions.RawMagma",
+    "name": "_∤ʳ_"
+  },
+  {
+    "moduleName": "Algebra.Definitions.RawMonoid",
+    "name": "_∦_"
+  },
+  {
+    "moduleName": "Algebra.Definitions.RawSemiring",
+    "name": "_∣_"
+  },
+  {
+    "moduleName": "Algebra.Definitions.RawSemiring",
+    "name": "_∤_"
+  },
+  {
+    "moduleName": "Algebra.Definitions.RawSemiring",
+    "name": "Coprime"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "RightAlternative"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "RightBol"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "RightCancellative"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "RightCongruent"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "RightConical"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "RightDivides"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "RightDividesˡ"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "RightDividesʳ"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "RightIdentity"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "RightInverse"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "RightInvertible"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "RightSemimedial"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "RightZero"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "Selective"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "SelfInverse"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "Semimedial"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "StarDestructive"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "StarExpansive"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "StarLeftDestructive"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "StarLeftExpansive"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "StarRightDestructive"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "StarRightExpansive"
+  },
+  {
+    "moduleName": "Algebra.Definitions",
+    "name": "Zero"
+  },
+  {
+    "moduleName": "Algebra.Module.Core",
+    "name": "Opₗ"
+  },
+  {
+    "moduleName": "Algebra.Module.Core",
+    "name": "Opᵣ"
+  },
+  {
+    "moduleName": "Algebra.Module.Definitions.Bi",
+    "name": "Associative"
+  },
+  {
+    "moduleName": "Algebra.Module.Definitions.Bi.Simultaneous",
+    "name": "Coincident"
+  },
+  {
+    "moduleName": "Algebra.Module.Definitions.Left",
+    "name": "_DistributesOverˡ_"
+  },
+  {
+    "moduleName": "Algebra.Module.Definitions.Left",
+    "name": "_DistributesOverʳ_⟶_"
+  },
+  {
+    "moduleName": "Algebra.Module.Definitions.Left",
+    "name": "Associative"
+  },
+  {
+    "moduleName": "Algebra.Module.Definitions.Left",
+    "name": "Commutative"
+  },
+  {
+    "moduleName": "Algebra.Module.Definitions.Left",
+    "name": "Congruent"
+  },
+  {
+    "moduleName": "Algebra.Module.Definitions.Left",
+    "name": "LeftCongruent"
+  },
+  {
+    "moduleName": "Algebra.Module.Definitions.Left",
+    "name": "LeftIdentity"
+  },
+  {
+    "moduleName": "Algebra.Module.Definitions.Left",
+    "name": "LeftZero"
+  },
+  {
+    "moduleName": "Algebra.Module.Definitions.Left",
+    "name": "RightCongruent"
+  },
+  {
+    "moduleName": "Algebra.Module.Definitions.Left",
+    "name": "RightZero"
+  },
+  {
+    "moduleName": "Algebra.Module.Definitions.Right",
+    "name": "_DistributesOverˡ_⟶_"
+  },
+  {
+    "moduleName": "Algebra.Module.Definitions.Right",
+    "name": "_DistributesOverʳ_"
+  },
+  {
+    "moduleName": "Algebra.Module.Definitions.Right",
+    "name": "Associative"
+  },
+  {
+    "moduleName": "Algebra.Module.Definitions.Right",
+    "name": "Commutative"
+  },
+  {
+    "moduleName": "Algebra.Module.Definitions.Right",
+    "name": "Congruent"
+  },
+  {
+    "moduleName": "Algebra.Module.Definitions.Right",
+    "name": "LeftCongruent"
+  },
+  {
+    "moduleName": "Algebra.Module.Definitions.Right",
+    "name": "LeftZero"
+  },
+  {
+    "moduleName": "Algebra.Module.Definitions.Right",
+    "name": "RightCongruent"
+  },
+  {
+    "moduleName": "Algebra.Module.Definitions.Right",
+    "name": "RightIdentity"
+  },
+  {
+    "moduleName": "Algebra.Module.Definitions.Right",
+    "name": "RightZero"
+  },
+  {
+    "moduleName": "Algebra.Module.Morphism.Definitions",
+    "name": "Homomorphicₗ"
+  },
+  {
+    "moduleName": "Algebra.Module.Morphism.Definitions",
+    "name": "Homomorphicᵣ"
+  },
+  {
+    "moduleName": "Algebra.Module.Morphism.Definitions",
+    "name": "Morphism"
+  },
+  {
+    "moduleName": "Algebra.Module.Morphism.ModuleHomomorphism",
+    "name": "NonTrivial"
+  },
+  {
+    "moduleName": "Algebra.Morphism.Definitions",
+    "name": "Homomorphic₀"
+  },
+  {
+    "moduleName": "Algebra.Morphism.Definitions",
+    "name": "Homomorphic₁"
+  },
+  {
+    "moduleName": "Algebra.Morphism.Definitions",
+    "name": "Homomorphic₂"
+  },
+  {
+    "moduleName": "Algebra.Morphism",
+    "name": "IsAbelianGroupMorphism-syntax"
+  },
+  {
+    "moduleName": "Algebra.Morphism",
+    "name": "IsCommutativeMonoidMorphism-syntax"
+  },
+  {
+    "moduleName": "Algebra.Morphism",
+    "name": "IsGroupMorphism-syntax"
+  },
+  {
+    "moduleName": "Algebra.Morphism",
+    "name": "IsIdempotentCommutativeMonoidMorphism-syntax"
+  },
+  {
+    "moduleName": "Algebra.Morphism",
+    "name": "IsMonoidMorphism-syntax"
+  },
+  {
+    "moduleName": "Algebra.Morphism",
+    "name": "IsRingMorphism-syntax"
+  },
+  {
+    "moduleName": "Algebra.Morphism",
+    "name": "IsSemigroupMorphism-syntax"
+  },
+  {
+    "moduleName": "Algebra.Properties.Magma.Divisibility",
+    "name": "_∦_"
+  },
+  {
+    "moduleName": "Algebra.Solver.CommutativeMonoid",
+    "name": "Env"
+  },
+  {
+    "moduleName": "Algebra.Solver.IdempotentCommutativeMonoid",
+    "name": "Env"
+  },
+  {
+    "moduleName": "Algebra.Solver.Monoid",
+    "name": "Env"
+  },
+  {
+    "moduleName": "Algebra.Solver.Monoid.Expression",
+    "name": "Env"
+  },
+  {
+    "moduleName": "Algebra.Solver.Ring",
+    "name": "Env"
+  },
+  {
+    "moduleName": "Axiom.DoubleNegationElimination",
+    "name": "DoubleNegationElimination"
+  },
+  {
+    "moduleName": "Axiom.ExcludedMiddle",
+    "name": "ExcludedMiddle"
+  },
+  {
+    "moduleName": "Axiom.Extensionality.Heterogeneous",
+    "name": "Extensionality"
+  },
+  {
+    "moduleName": "Axiom.Extensionality.Propositional",
+    "name": "Extensionality"
+  },
+  {
+    "moduleName": "Axiom.Extensionality.Propositional",
+    "name": "ExtensionalityImplicit"
+  },
+  {
+    "moduleName": "Axiom.UniquenessOfIdentityProofs",
+    "name": "UIP"
+  },
+  {
+    "moduleName": "Codata.Musical.Colist",
+    "name": "_∈_"
+  },
+  {
+    "moduleName": "Codata.Musical.Colist",
+    "name": "_⊆_"
+  },
+  {
+    "moduleName": "Codata.Musical.Costring",
+    "name": "Costring"
+  },
+  {
+    "moduleName": "Codata.Sized.Conat",
+    "name": "_ℕ<_"
+  },
+  {
+    "moduleName": "Codata.Sized.Thunk",
+    "name": "Thunk^P"
+  },
+  {
+    "moduleName": "Codata.Sized.Thunk",
+    "name": "Thunk^R"
+  },
+  {
+    "moduleName": "Data.Char.Base",
+    "name": "_≈_"
+  },
+  {
+    "moduleName": "Data.Char.Base",
+    "name": "_≉_"
+  },
+  {
+    "moduleName": "Data.Char.Base",
+    "name": "_≤_"
+  },
+  {
+    "moduleName": "Data.Char.Base",
+    "name": "_<_"
+  },
+  {
+    "moduleName": "Data.Char.Properties",
+    "name": "≈-subst"
+  },
+  {
+    "moduleName": "Data.Container",
+    "name": "μ"
+  },
+  {
+    "moduleName": "Data.Container.Fixpoints.Guarded",
+    "name": "ν"
+  },
+  {
+    "moduleName": "Data.Container.Fixpoints.Sized",
+    "name": "μ"
+  },
+  {
+    "moduleName": "Data.Container.Fixpoints.Sized",
+    "name": "ν"
+  },
+  {
+    "moduleName": "Data.Container.Indexed",
+    "name": "μ"
+  },
+  {
+    "moduleName": "Data.Container.Indexed",
+    "name": "_▷_"
+  },
+  {
+    "moduleName": "Data.Container.Indexed",
+    "name": "_⇒C_"
+  },
+  {
+    "moduleName": "Data.Container.Indexed.Fixpoints.Guarded",
+    "name": "ν"
+  },
+  {
+    "moduleName": "Data.Container.Indexed.FreeMonad",
+    "name": "_⋆_"
+  },
+  {
+    "moduleName": "Data.Container.Indexed.WithK",
+    "name": "_∈_"
+  },
+  {
+    "moduleName": "Data.Container.Membership",
+    "name": "_∈_"
+  },
+  {
+    "moduleName": "Data.Container.Related",
+    "name": "_∼[_]_"
+  },
+  {
+    "moduleName": "Data.Container.Related",
+    "name": "_≲[_]_"
+  },
+  {
+    "moduleName": "Data.DifferenceList",
+    "name": "DiffList"
+  },
+  {
+    "moduleName": "Data.DifferenceNat",
+    "name": "Diffℕ"
+  },
+  {
+    "moduleName": "Data.DifferenceVec",
+    "name": "DiffVec"
+  },
+  {
+    "moduleName": "Data.DifferenceVec",
+    "name": "head"
+  },
+  {
+    "moduleName": "Data.Digit",
+    "name": "Bit"
+  },
+  {
+    "moduleName": "Data.Digit",
+    "name": "Decimal"
+  },
+  {
+    "moduleName": "Data.Digit",
+    "name": "Digit"
+  },
+  {
+    "moduleName": "Data.Digit",
+    "name": "Expansion"
+  },
+  {
+    "moduleName": "Data.Empty",
+    "name": "⊥"
+  },
+  {
+    "moduleName": "Data.Empty.Polymorphic",
+    "name": "⊥"
+  },
+  {
+    "moduleName": "Data.Fin.Base",
+    "name": "_≤_"
+  },
+  {
+    "moduleName": "Data.Fin.Base",
+    "name": "_≥_"
+  },
+  {
+    "moduleName": "Data.Fin.Base",
+    "name": "_≮_"
+  },
+  {
+    "moduleName": "Data.Fin.Base",
+    "name": "_≰_"
+  },
+  {
+    "moduleName": "Data.Fin.Base",
+    "name": "_<_"
+  },
+  {
+    "moduleName": "Data.Fin.Base",
+    "name": "_>_"
+  },
+  {
+    "moduleName": "Data.Fin.Base",
+    "name": "Fin′"
+  },
+  {
+    "moduleName": "Data.Fin.Induction",
+    "name": "≺-Rec"
+  },
+  {
+    "moduleName": "Data.Fin.Induction",
+    "name": "≺-recBuilder"
+  },
+  {
+    "moduleName": "Data.Fin.Permutation",
+    "name": "_≈_"
+  },
+  {
+    "moduleName": "Data.Fin.Permutation",
+    "name": "Permutation"
+  },
+  {
+    "moduleName": "Data.Fin.Permutation",
+    "name": "Permutation′"
+  },
+  {
+    "moduleName": "Data.Fin.Permutation.Transposition.List",
+    "name": "TranspositionList"
+  },
+  {
+    "moduleName": "Data.Fin.Subset",
+    "name": "_∈_"
+  },
+  {
+    "moduleName": "Data.Fin.Subset",
+    "name": "_∉_"
+  },
+  {
+    "moduleName": "Data.Fin.Subset",
+    "name": "_⊂_"
+  },
+  {
+    "moduleName": "Data.Fin.Subset",
+    "name": "_⊃_"
+  },
+  {
+    "moduleName": "Data.Fin.Subset",
+    "name": "_⊄_"
+  },
+  {
+    "moduleName": "Data.Fin.Subset",
+    "name": "_⊅_"
+  },
+  {
+    "moduleName": "Data.Fin.Subset",
+    "name": "_⊆_"
+  },
+  {
+    "moduleName": "Data.Fin.Subset",
+    "name": "_⊇_"
+  },
+  {
+    "moduleName": "Data.Fin.Subset",
+    "name": "_⊈_"
+  },
+  {
+    "moduleName": "Data.Fin.Subset",
+    "name": "_⊉_"
+  },
+  {
+    "moduleName": "Data.Fin.Subset",
+    "name": "Empty"
+  },
+  {
+    "moduleName": "Data.Fin.Subset",
+    "name": "Lift"
+  },
+  {
+    "moduleName": "Data.Fin.Subset",
+    "name": "Nonempty"
+  },
+  {
+    "moduleName": "Data.Fin.Subset",
+    "name": "Subset"
+  },
+  {
+    "moduleName": "Data.Fin.Substitution",
+    "name": "Sub"
+  },
+  {
+    "moduleName": "Data.Fin.Substitution",
+    "name": "Subs"
+  },
+  {
+    "moduleName": "Data.Float.Base",
+    "name": "_≈_"
+  },
+  {
+    "moduleName": "Data.Float.Base",
+    "name": "_≤_"
+  },
+  {
+    "moduleName": "Data.Float.Properties",
+    "name": "≈-subst"
+  },
+  {
+    "moduleName": "Data.Integer.Base",
+    "name": "_≥_"
+  },
+  {
+    "moduleName": "Data.Integer.Base",
+    "name": "_≮_"
+  },
+  {
+    "moduleName": "Data.Integer.Base",
+    "name": "_≯_"
+  },
+  {
+    "moduleName": "Data.Integer.Base",
+    "name": "_≰_"
+  },
+  {
+    "moduleName": "Data.Integer.Base",
+    "name": "_≱_"
+  },
+  {
+    "moduleName": "Data.Integer.Base",
+    "name": "_>_"
+  },
+  {
+    "moduleName": "Data.Integer.Base",
+    "name": "NonZero"
+  },
+  {
+    "moduleName": "Data.Integer.Coprimality",
+    "name": "Coprime"
+  },
+  {
+    "moduleName": "Data.Integer.Divisibility",
+    "name": "_∣_"
+  },
+  {
+    "moduleName": "Data.List.Fresh.Membership.Setoid",
+    "name": "_∈_"
+  },
+  {
+    "moduleName": "Data.List.Fresh.Membership.Setoid",
+    "name": "_∉_"
+  },
+  {
+    "moduleName": "Data.List.Membership.Propositional",
+    "name": "_≢∈_"
+  },
+  {
+    "moduleName": "Data.List.Membership.Setoid",
+    "name": "_∈_"
+  },
+  {
+    "moduleName": "Data.List.Membership.Setoid",
+    "name": "_∉_"
+  },
+  {
+    "moduleName": "Data.List.Relation.Binary.BagAndSetEquality",
+    "name": "_∼[_]_"
+  },
+  {
+    "moduleName": "Data.List.Relation.Binary.Disjoint.Setoid",
+    "name": "Disjoint"
+  },
+  {
+    "moduleName": "Data.List.Relation.Binary.Equality.Setoid",
+    "name": "_≋_"
+  },
+  {
+    "moduleName": "Data.List.Relation.Binary.Lex.Core",
+    "name": "Lex-≤"
+  },
+  {
+    "moduleName": "Data.List.Relation.Binary.Lex.Core",
+    "name": "Lex-<"
+  },
+  {
+    "moduleName": "Data.List.Relation.Binary.Permutation.Setoid",
+    "name": "_↭_"
+  },
+  {
+    "moduleName": "Data.List.Relation.Binary.Sublist.Heterogeneous.Solver",
+    "name": "_⊆R_"
+  },
+  {
+    "moduleName": "Data.List.Relation.Binary.Sublist.Heterogeneous.Solver",
+    "name": "_⊆T_"
+  },
+  {
+    "moduleName": "Data.List.Relation.Binary.Sublist.Heterogeneous.Solver",
+    "name": "RList"
+  },
+  {
+    "moduleName": "Data.List.Relation.Binary.Sublist.Propositional.Example.UniqueBoundVariables",
+    "name": "BVars"
+  },
+  {
+    "moduleName": "Data.List.Relation.Binary.Sublist.Propositional.Example.UniqueBoundVariables",
+    "name": "Cxt"
+  },
+  {
+    "moduleName": "Data.List.Relation.Binary.Sublist.Setoid",
+    "name": "_⊂_"
+  },
+  {
+    "moduleName": "Data.List.Relation.Binary.Sublist.Setoid",
+    "name": "_⊃_"
+  },
+  {
+    "moduleName": "Data.List.Relation.Binary.Sublist.Setoid",
+    "name": "_⊄_"
+  },
+  {
+    "moduleName": "Data.List.Relation.Binary.Sublist.Setoid",
+    "name": "_⊆_"
+  },
+  {
+    "moduleName": "Data.List.Relation.Binary.Sublist.Setoid",
+    "name": "_⊇_"
+  },
+  {
+    "moduleName": "Data.List.Relation.Binary.Sublist.Setoid",
+    "name": "_⊈_"
+  },
+  {
+    "moduleName": "Data.List.Relation.Binary.Sublist.Setoid",
+    "name": "_⊉_"
+  },
+  {
+    "moduleName": "Data.List.Relation.Binary.Subset.DecSetoid",
+    "name": "_⊉_"
+  },
+  {
+    "moduleName": "Data.List.Relation.Binary.Subset.Propositional",
+    "name": "_⊉_"
+  },
+  {
+    "moduleName": "Data.List.Relation.Binary.Subset.Setoid",
+    "name": "_⊆_"
+  },
+  {
+    "moduleName": "Data.List.Relation.Binary.Subset.Setoid",
+    "name": "_⊇_"
+  },
+  {
+    "moduleName": "Data.List.Relation.Binary.Subset.Setoid",
+    "name": "_⊈_"
+  },
+  {
+    "moduleName": "Data.List.Relation.Binary.Subset.Setoid",
+    "name": "_⊉_"
+  },
+  {
+    "moduleName": "Data.List.Relation.Ternary.Appending.Propositional",
+    "name": "Appending"
+  },
+  {
+    "moduleName": "Data.List.Relation.Ternary.Interleaving.Propositional",
+    "name": "Interleaving"
+  },
+  {
+    "moduleName": "Data.List.Relation.Ternary.Interleaving.Setoid",
+    "name": "Interleaving"
+  },
+  {
+    "moduleName": "Data.List.Relation.Unary.All",
+    "name": "Null"
+  },
+  {
+    "moduleName": "Data.List.Relation.Unary.Any",
+    "name": "lookup"
+  },
+  {
+    "moduleName": "Data.List.Relation.Unary.Enumerates.Setoid",
+    "name": "IsEnumeration"
+  },
+  {
+    "moduleName": "Data.Maybe",
+    "name": "Is-just"
+  },
+  {
+    "moduleName": "Data.Maybe",
+    "name": "Is-nothing"
+  },
+  {
+    "moduleName": "Data.Nat.Base",
+    "name": "_≤″_"
+  },
+  {
+    "moduleName": "Data.Nat.Base",
+    "name": "_≥_"
+  },
+  {
+    "moduleName": "Data.Nat.Base",
+    "name": "_≥′_"
+  },
+  {
+    "moduleName": "Data.Nat.Base",
+    "name": "_≥″_"
+  },
+  {
+    "moduleName": "Data.Nat.Base",
+    "name": "_≥‴_"
+  },
+  {
+    "moduleName": "Data.Nat.Base",
+    "name": "_≮_"
+  },
+  {
+    "moduleName": "Data.Nat.Base",
+    "name": "_≯_"
+  },
+  {
+    "moduleName": "Data.Nat.Base",
+    "name": "_≰_"
+  },
+  {
+    "moduleName": "Data.Nat.Base",
+    "name": "_≱_"
+  },
+  {
+    "moduleName": "Data.Nat.Base",
+    "name": "_<_"
+  },
+  {
+    "moduleName": "Data.Nat.Base",
+    "name": "_<′_"
+  },
+  {
+    "moduleName": "Data.Nat.Base",
+    "name": "_<″_"
+  },
+  {
+    "moduleName": "Data.Nat.Base",
+    "name": "_<‴_"
+  },
+  {
+    "moduleName": "Data.Nat.Base",
+    "name": "_>_"
+  },
+  {
+    "moduleName": "Data.Nat.Base",
+    "name": "_>′_"
+  },
+  {
+    "moduleName": "Data.Nat.Base",
+    "name": "_>″_"
+  },
+  {
+    "moduleName": "Data.Nat.Base",
+    "name": "_>‴_"
+  },
+  {
+    "moduleName": "Data.Nat.Binary.Base",
+    "name": "_≤_"
+  },
+  {
+    "moduleName": "Data.Nat.Binary.Base",
+    "name": "_≥_"
+  },
+  {
+    "moduleName": "Data.Nat.Binary.Base",
+    "name": "_≮_"
+  },
+  {
+    "moduleName": "Data.Nat.Binary.Base",
+    "name": "_≯_"
+  },
+  {
+    "moduleName": "Data.Nat.Binary.Base",
+    "name": "_≰_"
+  },
+  {
+    "moduleName": "Data.Nat.Binary.Base",
+    "name": "_≱_"
+  },
+  {
+    "moduleName": "Data.Nat.Binary.Base",
+    "name": "_<ℕ_"
+  },
+  {
+    "moduleName": "Data.Nat.Binary.Base",
+    "name": "_>_"
+  },
+  {
+    "moduleName": "Data.Nat.Coprimality",
+    "name": "Coprime"
+  },
+  {
+    "moduleName": "Data.Nat.Divisibility.Core",
+    "name": "_∤_"
+  },
+  {
+    "moduleName": "Data.Nat.Induction",
+    "name": "<-Rec"
+  },
+  {
+    "moduleName": "Data.Nat.Induction",
+    "name": "<′-Rec"
+  },
+  {
+    "moduleName": "Data.Nat.InfinitelyOften",
+    "name": "Fin"
+  },
+  {
+    "moduleName": "Data.Nat.InfinitelyOften",
+    "name": "Inf"
+  },
+  {
+    "moduleName": "Data.Nat.Primality",
+    "name": "_Rough_"
+  },
+  {
+    "moduleName": "Data.Nat.Primality",
+    "name": "Composite"
+  },
+  {
+    "moduleName": "Data.Nat.Primality",
+    "name": "Irreducible"
+  },
+  {
+    "moduleName": "Data.Product",
+    "name": "∄"
+  },
+  {
+    "moduleName": "Data.Product",
+    "name": "∄-syntax"
+  },
+  {
+    "moduleName": "Data.Product",
+    "name": "∃!"
+  },
+  {
+    "moduleName": "Data.Product.Base",
+    "name": "∃"
+  },
+  {
+    "moduleName": "Data.Product.Base",
+    "name": "∃₂"
+  },
+  {
+    "moduleName": "Data.Product.Base",
+    "name": "_×_"
+  },
+  {
+    "moduleName": "Data.Product.Base",
+    "name": "_-×-_"
+  },
+  {
+    "moduleName": "Data.Product.Base",
+    "name": "Σ-syntax"
+  },
+  {
+    "moduleName": "Data.Product.Base",
+    "name": "∃-syntax"
+  },
+  {
+    "moduleName": "Data.Product.Effectful.Left.Base",
+    "name": "Productₗ"
+  },
+  {
+    "moduleName": "Data.Product.Effectful.Right.Base",
+    "name": "Productᵣ"
+  },
+  {
+    "moduleName": "Data.Product.Nary.NonDependent",
+    "name": "HomoProduct"
+  },
+  {
+    "moduleName": "Data.Product.Nary.NonDependent",
+    "name": "HomoProduct′"
+  },
+  {
+    "moduleName": "Data.Product.Relation.Binary.Lex.NonStrict",
+    "name": "×-Lex"
+  },
+  {
+    "moduleName": "Data.Product.Relation.Binary.Lex.Strict",
+    "name": "×-Lex"
+  },
+  {
+    "moduleName": "Data.Rational.Base",
+    "name": "_≄_"
+  },
+  {
+    "moduleName": "Data.Rational.Base",
+    "name": "_≥_"
+  },
+  {
+    "moduleName": "Data.Rational.Base",
+    "name": "_≮_"
+  },
+  {
+    "moduleName": "Data.Rational.Base",
+    "name": "_≯_"
+  },
+  {
+    "moduleName": "Data.Rational.Base",
+    "name": "_≰_"
+  },
+  {
+    "moduleName": "Data.Rational.Base",
+    "name": "_≱_"
+  },
+  {
+    "moduleName": "Data.Rational.Base",
+    "name": "_>_"
+  },
+  {
+    "moduleName": "Data.Rational.Base",
+    "name": "Negative"
+  },
+  {
+    "moduleName": "Data.Rational.Base",
+    "name": "NonNegative"
+  },
+  {
+    "moduleName": "Data.Rational.Base",
+    "name": "NonPositive"
+  },
+  {
+    "moduleName": "Data.Rational.Base",
+    "name": "NonZero"
+  },
+  {
+    "moduleName": "Data.Rational.Base",
+    "name": "Positive"
+  },
+  {
+    "moduleName": "Data.Rational.Unnormalised.Base",
+    "name": "_≄_"
+  },
+  {
+    "moduleName": "Data.Rational.Unnormalised.Base",
+    "name": "_≠_"
+  },
+  {
+    "moduleName": "Data.Rational.Unnormalised.Base",
+    "name": "_≥_"
+  },
+  {
+    "moduleName": "Data.Rational.Unnormalised.Base",
+    "name": "_≮_"
+  },
+  {
+    "moduleName": "Data.Rational.Unnormalised.Base",
+    "name": "_≯_"
+  },
+  {
+    "moduleName": "Data.Rational.Unnormalised.Base",
+    "name": "_≰_"
+  },
+  {
+    "moduleName": "Data.Rational.Unnormalised.Base",
+    "name": "_≱_"
+  },
+  {
+    "moduleName": "Data.Rational.Unnormalised.Base",
+    "name": "_>_"
+  },
+  {
+    "moduleName": "Data.Rational.Unnormalised.Base",
+    "name": "Negative"
+  },
+  {
+    "moduleName": "Data.Rational.Unnormalised.Base",
+    "name": "NonNegative"
+  },
+  {
+    "moduleName": "Data.Rational.Unnormalised.Base",
+    "name": "NonPositive"
+  },
+  {
+    "moduleName": "Data.Rational.Unnormalised.Base",
+    "name": "NonZero"
+  },
+  {
+    "moduleName": "Data.Rational.Unnormalised.Base",
+    "name": "Positive"
+  },
+  {
+    "moduleName": "Data.Record",
+    "name": "_∈_"
+  },
+  {
+    "moduleName": "Data.Record",
+    "name": "Restricted"
+  },
+  {
+    "moduleName": "Data.Star.Decoration",
+    "name": "All"
+  },
+  {
+    "moduleName": "Data.Star.Decoration",
+    "name": "EdgePred"
+  },
+  {
+    "moduleName": "Data.Star.Environment",
+    "name": "Ctxt"
+  },
+  {
+    "moduleName": "Data.Star.Environment",
+    "name": "Env"
+  },
+  {
+    "moduleName": "Data.Star.List",
+    "name": "List"
+  },
+  {
+    "moduleName": "Data.Star.Nat",
+    "name": "ℕ"
+  },
+  {
+    "moduleName": "Data.String.Base",
+    "name": "_≈_"
+  },
+  {
+    "moduleName": "Data.String.Base",
+    "name": "_≤_"
+  },
+  {
+    "moduleName": "Data.String.Base",
+    "name": "_<_"
+  },
+  {
+    "moduleName": "Data.Sum.Effectful.Left",
+    "name": "Sumₗ"
+  },
+  {
+    "moduleName": "Data.Sum.Effectful.Right",
+    "name": "Sumᵣ"
+  },
+  {
+    "moduleName": "Data.These.Effectful.Left.Base",
+    "name": "Theseₗ"
+  },
+  {
+    "moduleName": "Data.These.Effectful.Right.Base",
+    "name": "Theseᵣ"
+  },
+  {
+    "moduleName": "Data.Tree.AVL.Height",
+    "name": "ℕ₂"
+  },
+  {
+    "moduleName": "Data.Tree.AVL.IndexedMap",
+    "name": "KV"
+  },
+  {
+    "moduleName": "Data.Tree.AVL.Key",
+    "name": "_<_<_"
+  },
+  {
+    "moduleName": "Data.Tree.AVL.Map",
+    "name": "Map"
+  },
+  {
+    "moduleName": "Data.Tree.AVL.Map.Membership.Propositional",
+    "name": "_∈ₖᵥ_"
+  },
+  {
+    "moduleName": "Data.Tree.AVL.Map.Membership.Propositional",
+    "name": "_∉ₖᵥ_"
+  },
+  {
+    "moduleName": "Data.Tree.AVL.Map.Membership.Propositional",
+    "name": "_≈ₖᵥ_"
+  },
+  {
+    "moduleName": "Data.Tree.AVL.Map.Relation.Unary.Any",
+    "name": "Any"
+  },
+  {
+    "moduleName": "Data.Tree.AVL.NonEmpty.Propositional",
+    "name": "Tree⁺"
+  },
+  {
+    "moduleName": "Data.Tree.AVL.Sets.Membership",
+    "name": "_∈_"
+  },
+  {
+    "moduleName": "Data.Tree.AVL.Sets.Membership",
+    "name": "_∉_"
+  },
+  {
+    "moduleName": "Data.Tree.AVL.Sets",
+    "name": "⟨Set⟩"
+  },
+  {
+    "moduleName": "Data.Trie.NonEmpty",
+    "name": "Word"
+  },
+  {
+    "moduleName": "Data.Trie",
+    "name": "Word"
+  },
+  {
+    "moduleName": "Data.Unit.NonEta",
+    "name": "Hidden"
+  },
+  {
+    "moduleName": "Data.Unit.Polymorphic.Base",
+    "name": "⊤"
+  },
+  {
+    "moduleName": "Data.Vec.Base",
+    "name": "FoldlOp"
+  },
+  {
+    "moduleName": "Data.Vec.Functional.Relation.Binary.Equality.Setoid",
+    "name": "_≋_"
+  },
+  {
+    "moduleName": "Data.Vec.Functional.Relation.Binary.Permutation",
+    "name": "_↭_"
+  },
+  {
+    "moduleName": "Data.Vec.Functional.Relation.Binary.Pointwise",
+    "name": "map"
+  },
+  {
+    "moduleName": "Data.Vec.Functional.Relation.Unary.All.Properties",
+    "name": "⊛⁺"
+  },
+  {
+    "moduleName": "Data.Vec.Functional.Relation.Unary.All.Properties",
+    "name": "head⁺"
+  },
+  {
+    "moduleName": "Data.Vec.Functional.Relation.Unary.All.Properties",
+    "name": "map⁺"
+  },
+  {
+    "moduleName": "Data.Vec.Functional.Relation.Unary.All.Properties",
+    "name": "replicate⁺"
+  },
+  {
+    "moduleName": "Data.Vec.Functional.Relation.Unary.All.Properties",
+    "name": "zipWith⁺"
+  },
+  {
+    "moduleName": "Data.Vec.Functional",
+    "name": "Vector"
+  },
+  {
+    "moduleName": "Data.Vec.Membership.Setoid",
+    "name": "_∈_"
+  },
+  {
+    "moduleName": "Data.Vec.Membership.Setoid",
+    "name": "_∉_"
+  },
+  {
+    "moduleName": "Data.Vec.N-ary",
+    "name": "Eq"
+  },
+  {
+    "moduleName": "Data.Vec.N-ary",
+    "name": "Eqʰ"
+  },
+  {
+    "moduleName": "Data.Vec.Recursive.Effectful",
+    "name": "forM"
+  },
+  {
+    "moduleName": "Data.Vec.Relation.Binary.Equality.Cast",
+    "name": "_≈[_]_"
+  },
+  {
+    "moduleName": "Data.Vec.Relation.Binary.Equality.Setoid",
+    "name": "_≋_"
+  },
+  {
+    "moduleName": "Data.Word64.Base",
+    "name": "_≈_"
+  },
+  {
+    "moduleName": "Data.Word64.Base",
+    "name": "_≤_"
+  },
+  {
+    "moduleName": "Data.Word64.Base",
+    "name": "_<_"
+  },
+  {
+    "moduleName": "Effect.Applicative.Indexed",
+    "name": "IFun"
+  },
+  {
+    "moduleName": "Effect.Monad.Continuation",
+    "name": "DCont"
+  },
+  {
+    "moduleName": "Effect.Monad.Continuation",
+    "name": "DContT"
+  },
+  {
+    "moduleName": "Effect.Monad.Indexed",
+    "name": "RawIMonadT"
+  },
+  {
+    "moduleName": "Effect.Monad.Partiality",
+    "name": "Equality"
+  },
+  {
+    "moduleName": "Effect.Monad",
+    "name": "RawMonadT"
+  },
+  {
+    "moduleName": "Effect.Monad.Reader",
+    "name": "Reader"
+  },
+  {
+    "moduleName": "Effect.Monad.State.Indexed",
+    "name": "IStateT"
+  },
+  {
+    "moduleName": "Effect.Monad.State",
+    "name": "State"
+  },
+  {
+    "moduleName": "Effect.Monad.Writer",
+    "name": "Writer"
+  },
+  {
+    "moduleName": "Foreign.Haskell.Coerce",
+    "name": "Coercible₁"
+  },
+  {
+    "moduleName": "Foreign.Haskell.Coerce",
+    "name": "Coercible₂"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "_∋_"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "_∘_"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "_∘′_"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "_∘₂_"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "_∘₂′_"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "_⟨_⟩_"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "_-⟨_∣"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "_-⟪_∣"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "∣_⟩-_"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "∣_⟫-_"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "_-⟨_⟩-_"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "_-⟨_⟫-_"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "_-⟪_⟩-_"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "_-⟪_⟫-_"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "_-[_]-_"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "_|>_"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "_|>′_"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "_$_"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "_$′_"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "_$-"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "_on_"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "_on₂_"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "_ˢ_"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "λ-"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "const"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "constᵣ"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "flip"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "flip′"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "id"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "it"
+  },
+  {
+    "moduleName": "Function.Base",
+    "name": "typeOf"
+  },
+  {
+    "moduleName": "Function.Bijection",
+    "name": "_⤖_"
+  },
+  {
+    "moduleName": "Function.Bundles",
+    "name": "_↠_"
+  },
+  {
+    "moduleName": "Function.Bundles",
+    "name": "_↣_"
+  },
+  {
+    "moduleName": "Function.Bundles",
+    "name": "_↩_"
+  },
+  {
+    "moduleName": "Function.Bundles",
+    "name": "_↩↪_"
+  },
+  {
+    "moduleName": "Function.Bundles",
+    "name": "_↪_"
+  },
+  {
+    "moduleName": "Function.Bundles",
+    "name": "_⇔_"
+  },
+  {
+    "moduleName": "Function.Bundles",
+    "name": "_⟶_"
+  },
+  {
+    "moduleName": "Function.Bundles",
+    "name": "_⤖_"
+  },
+  {
+    "moduleName": "Function.Bundles",
+    "name": "_⟶ₛ_"
+  },
+  {
+    "moduleName": "Function.Bundles",
+    "name": "SplitSurjection"
+  },
+  {
+    "moduleName": "Function.Core",
+    "name": "Fun₁"
+  },
+  {
+    "moduleName": "Function.Core",
+    "name": "Fun₂"
+  },
+  {
+    "moduleName": "Function.Core",
+    "name": "Morphism"
+  },
+  {
+    "moduleName": "Function.Definitions",
+    "name": "Inverseᵇ"
+  },
+  {
+    "moduleName": "Function.Definitions",
+    "name": "StrictlyInverseˡ"
+  },
+  {
+    "moduleName": "Function.Definitions",
+    "name": "StrictlyInverseʳ"
+  },
+  {
+    "moduleName": "Function.Definitions",
+    "name": "StrictlySurjective"
+  },
+  {
+    "moduleName": "Function.Endo.Propositional",
+    "name": "Endo"
+  },
+  {
+    "moduleName": "Function.Endo.Setoid",
+    "name": "Endo"
+  },
+  {
+    "moduleName": "Function.Endomorphism.Propositional",
+    "name": "Endo"
+  },
+  {
+    "moduleName": "Function.Endomorphism.Propositional",
+    "name": "fromSetoidEndo"
+  },
+  {
+    "moduleName": "Function.Endomorphism.Setoid",
+    "name": "Endo"
+  },
+  {
+    "moduleName": "Function.Equality",
+    "name": "_⟶_"
+  },
+  {
+    "moduleName": "Function.Equivalence",
+    "name": "_⇔_"
+  },
+  {
+    "moduleName": "Function.Identity.Effectful",
+    "name": "Identity"
+  },
+  {
+    "moduleName": "Function.Indexed.Bundles",
+    "name": "_↔ᵢ_"
+  },
+  {
+    "moduleName": "Function.Indexed.Bundles",
+    "name": "_↠ᵢ_"
+  },
+  {
+    "moduleName": "Function.Indexed.Bundles",
+    "name": "_↣ᵢ_"
+  },
+  {
+    "moduleName": "Function.Indexed.Bundles",
+    "name": "_↩ᵢ_"
+  },
+  {
+    "moduleName": "Function.Indexed.Bundles",
+    "name": "_↩↪ᵢ_"
+  },
+  {
+    "moduleName": "Function.Indexed.Bundles",
+    "name": "_↪ᵢ_"
+  },
+  {
+    "moduleName": "Function.Indexed.Bundles",
+    "name": "_⇔ᵢ_"
+  },
+  {
+    "moduleName": "Function.Indexed.Bundles",
+    "name": "_⟶ᵢ_"
+  },
+  {
+    "moduleName": "Function.Indexed.Bundles",
+    "name": "_⤖ᵢ_"
+  },
+  {
+    "moduleName": "Function.Injection",
+    "name": "_↣_"
+  },
+  {
+    "moduleName": "Function.Injection",
+    "name": "Injective"
+  },
+  {
+    "moduleName": "Function.Inverse",
+    "name": "_↔_"
+  },
+  {
+    "moduleName": "Function.Inverse",
+    "name": "_↔̇_"
+  },
+  {
+    "moduleName": "Function.LeftInverse",
+    "name": "_↞_"
+  },
+  {
+    "moduleName": "Function.LeftInverse",
+    "name": "_LeftInverseOf_"
+  },
+  {
+    "moduleName": "Function.LeftInverse",
+    "name": "_RightInverseOf_"
+  },
+  {
+    "moduleName": "Function.LeftInverse",
+    "name": "RightInverse"
+  },
+  {
+    "moduleName": "Function.Metric.Core",
+    "name": "DistanceFunction"
+  },
+  {
+    "moduleName": "Function.Metric.Definitions",
+    "name": "Bounded"
+  },
+  {
+    "moduleName": "Function.Metric.Definitions",
+    "name": "Congruent"
+  },
+  {
+    "moduleName": "Function.Metric.Definitions",
+    "name": "Contracting"
+  },
+  {
+    "moduleName": "Function.Metric.Definitions",
+    "name": "ContractingOnOrbits"
+  },
+  {
+    "moduleName": "Function.Metric.Definitions",
+    "name": "Definite"
+  },
+  {
+    "moduleName": "Function.Metric.Definitions",
+    "name": "Indiscernable"
+  },
+  {
+    "moduleName": "Function.Metric.Definitions",
+    "name": "NonNegative"
+  },
+  {
+    "moduleName": "Function.Metric.Definitions",
+    "name": "StrictlyContracting"
+  },
+  {
+    "moduleName": "Function.Metric.Definitions",
+    "name": "StrictlyContractingOnOrbits"
+  },
+  {
+    "moduleName": "Function.Metric.Definitions",
+    "name": "Symmetric"
+  },
+  {
+    "moduleName": "Function.Metric.Definitions",
+    "name": "TranslationInvariant"
+  },
+  {
+    "moduleName": "Function.Metric.Definitions",
+    "name": "TriangleInequality"
+  },
+  {
+    "moduleName": "Function.Metric.Nat.Core",
+    "name": "DistanceFunction"
+  },
+  {
+    "moduleName": "Function.Metric.Nat.Definitions",
+    "name": "Bounded"
+  },
+  {
+    "moduleName": "Function.Metric.Nat.Definitions",
+    "name": "Congruent"
+  },
+  {
+    "moduleName": "Function.Metric.Nat.Definitions",
+    "name": "Contracting"
+  },
+  {
+    "moduleName": "Function.Metric.Nat.Definitions",
+    "name": "ContractingOnOrbits"
+  },
+  {
+    "moduleName": "Function.Metric.Nat.Definitions",
+    "name": "Definite"
+  },
+  {
+    "moduleName": "Function.Metric.Nat.Definitions",
+    "name": "Indiscernable"
+  },
+  {
+    "moduleName": "Function.Metric.Nat.Definitions",
+    "name": "MaxTriangleInequality"
+  },
+  {
+    "moduleName": "Function.Metric.Nat.Definitions",
+    "name": "StrictlyContracting"
+  },
+  {
+    "moduleName": "Function.Metric.Nat.Definitions",
+    "name": "StrictlyContractingOnOrbits"
+  },
+  {
+    "moduleName": "Function.Metric.Nat.Definitions",
+    "name": "Symmetric"
+  },
+  {
+    "moduleName": "Function.Metric.Nat.Definitions",
+    "name": "TranslationInvariant"
+  },
+  {
+    "moduleName": "Function.Metric.Nat.Definitions",
+    "name": "TriangleInequality"
+  },
+  {
+    "moduleName": "Function.Metric.Nat.Structures",
+    "name": "IsPreMetric"
+  },
+  {
+    "moduleName": "Function.Metric.Nat.Structures",
+    "name": "IsProtoMetric"
+  },
+  {
+    "moduleName": "Function.Metric.Nat.Structures",
+    "name": "IsQuasiSemiMetric"
+  },
+  {
+    "moduleName": "Function.Metric.Nat.Structures",
+    "name": "IsSemiMetric"
+  },
+  {
+    "moduleName": "Function.Metric.Rational.Core",
+    "name": "DistanceFunction"
+  },
+  {
+    "moduleName": "Function.Metric.Rational.Definitions",
+    "name": "Bounded"
+  },
+  {
+    "moduleName": "Function.Metric.Rational.Definitions",
+    "name": "Congruent"
+  },
+  {
+    "moduleName": "Function.Metric.Rational.Definitions",
+    "name": "Contracting"
+  },
+  {
+    "moduleName": "Function.Metric.Rational.Definitions",
+    "name": "ContractingOnOrbits"
+  },
+  {
+    "moduleName": "Function.Metric.Rational.Definitions",
+    "name": "MaxTriangleInequality"
+  },
+  {
+    "moduleName": "Function.Metric.Rational.Definitions",
+    "name": "StrictlyContracting"
+  },
+  {
+    "moduleName": "Function.Metric.Rational.Definitions",
+    "name": "StrictlyContractingOnOrbits"
+  },
+  {
+    "moduleName": "Function.Metric.Rational.Definitions",
+    "name": "Symmetric"
+  },
+  {
+    "moduleName": "Function.Metric.Rational.Definitions",
+    "name": "TranslationInvariant"
+  },
+  {
+    "moduleName": "Function.Metric.Rational.Definitions",
+    "name": "TriangleInequality"
+  },
+  {
+    "moduleName": "Function.Reasoning",
+    "name": "∋-syntax"
+  },
+  {
+    "moduleName": "Function.Related",
+    "name": "InducedRelation₁"
+  },
+  {
+    "moduleName": "Function.Related",
+    "name": "InducedRelation₂"
+  },
+  {
+    "moduleName": "Function.Related.Propositional",
+    "name": "InducedRelation₁"
+  },
+  {
+    "moduleName": "Function.Related.Propositional",
+    "name": "InducedRelation₂"
+  },
+  {
+    "moduleName": "Function.Related.Propositional",
+    "name": "Related"
+  },
+  {
+    "moduleName": "Function.Related",
+    "name": "Related"
+  },
+  {
+    "moduleName": "Function.Relation.Binary.Setoid.Equality",
+    "name": "_≈_"
+  },
+  {
+    "moduleName": "Function.Strict",
+    "name": "_!|>_"
+  },
+  {
+    "moduleName": "Function.Strict",
+    "name": "_!|>′_"
+  },
+  {
+    "moduleName": "Function.Strict",
+    "name": "_$!_"
+  },
+  {
+    "moduleName": "Function.Strict",
+    "name": "_$!′_"
+  },
+  {
+    "moduleName": "Function.Strict",
+    "name": "force′"
+  },
+  {
+    "moduleName": "Function.Strict",
+    "name": "seq"
+  },
+  {
+    "moduleName": "Function.Surjection",
+    "name": "_↠_"
+  },
+  {
+    "moduleName": "Induction.InfiniteDescent",
+    "name": "Descent"
+  },
+  {
+    "moduleName": "Induction.InfiniteDescent",
+    "name": "DescentFrom"
+  },
+  {
+    "moduleName": "Induction.InfiniteDescent",
+    "name": "InfiniteDescendingSequence"
+  },
+  {
+    "moduleName": "Induction.InfiniteDescent",
+    "name": "InfiniteDescendingSequence⁺"
+  },
+  {
+    "moduleName": "Induction.InfiniteDescent",
+    "name": "InfiniteDescendingSequenceFrom"
+  },
+  {
+    "moduleName": "Induction.InfiniteDescent",
+    "name": "InfiniteDescendingSequenceFrom⁺"
+  },
+  {
+    "moduleName": "Induction.InfiniteDescent",
+    "name": "InfiniteDescent"
+  },
+  {
+    "moduleName": "Induction.InfiniteDescent",
+    "name": "InfiniteDescent⁺"
+  },
+  {
+    "moduleName": "Induction.InfiniteDescent",
+    "name": "InfiniteDescentFrom"
+  },
+  {
+    "moduleName": "Induction.InfiniteDescent",
+    "name": "InfiniteDescentFrom⁺"
+  },
+  {
+    "moduleName": "Induction.InfiniteDescent",
+    "name": "NoSmallestCounterExample"
+  },
+  {
+    "moduleName": "Induction",
+    "name": "RecStruct"
+  },
+  {
+    "moduleName": "Induction",
+    "name": "Recursor"
+  },
+  {
+    "moduleName": "Induction",
+    "name": "RecursorBuilder"
+  },
+  {
+    "moduleName": "Induction",
+    "name": "SubsetRecursor"
+  },
+  {
+    "moduleName": "Induction",
+    "name": "SubsetRecursorBuilder"
+  },
+  {
+    "moduleName": "Induction.WellFounded",
+    "name": "WellFounded"
+  },
+  {
+    "moduleName": "Induction.WellFounded",
+    "name": "WfRec"
+  },
+  {
+    "moduleName": "IO.Base",
+    "name": "Main"
+  },
+  {
+    "moduleName": "Reflection.AnnotatedAST",
+    "name": "Absₐ"
+  },
+  {
+    "moduleName": "Reflection.AnnotatedAST",
+    "name": "Annotated"
+  },
+  {
+    "moduleName": "Reflection.AnnotatedAST",
+    "name": "Annotation"
+  },
+  {
+    "moduleName": "Reflection.AnnotatedAST",
+    "name": "Argₐ"
+  },
+  {
+    "moduleName": "Reflection.AnnotatedAST",
+    "name": "Argsₐ"
+  },
+  {
+    "moduleName": "Reflection.AnnotatedAST",
+    "name": "Clauseₐ"
+  },
+  {
+    "moduleName": "Reflection.AnnotatedAST",
+    "name": "Clausesₐ"
+  },
+  {
+    "moduleName": "Reflection.AnnotatedAST.Free",
+    "name": "FVs"
+  },
+  {
+    "moduleName": "Reflection.AnnotatedAST",
+    "name": "Listₐ"
+  },
+  {
+    "moduleName": "Reflection.AnnotatedAST",
+    "name": "Namedₐ"
+  },
+  {
+    "moduleName": "Reflection.AnnotatedAST",
+    "name": "Patternₐ"
+  },
+  {
+    "moduleName": "Reflection.AnnotatedAST",
+    "name": "Sortₐ"
+  },
+  {
+    "moduleName": "Reflection.AnnotatedAST",
+    "name": "Telₐ"
+  },
+  {
+    "moduleName": "Reflection.AnnotatedAST",
+    "name": "Termₐ"
+  },
+  {
+    "moduleName": "Reflection.AnnotatedAST",
+    "name": "Typeₐ"
+  },
+  {
+    "moduleName": "Reflection",
+    "name": "Arg-info"
+  },
+  {
+    "moduleName": "Reflection.AST.Argument",
+    "name": "Args"
+  },
+  {
+    "moduleName": "Reflection.AST.Meta",
+    "name": "_≈_"
+  },
+  {
+    "moduleName": "Reflection.AST.Name",
+    "name": "_≈_"
+  },
+  {
+    "moduleName": "Reflection.AST.Name",
+    "name": "Names"
+  },
+  {
+    "moduleName": "Reflection.AST.Term",
+    "name": "Clauses"
+  },
+  {
+    "moduleName": "Reflection.AST.Term",
+    "name": "Telescope"
+  },
+  {
+    "moduleName": "Reflection.AST.Traversal",
+    "name": "Action"
+  },
+  {
+    "moduleName": "Reflection.External",
+    "name": "CmdName"
+  },
+  {
+    "moduleName": "Reflection.External",
+    "name": "StdErr"
+  },
+  {
+    "moduleName": "Reflection.External",
+    "name": "StdIn"
+  },
+  {
+    "moduleName": "Reflection.External",
+    "name": "StdOut"
+  },
+  {
+    "moduleName": "Relation.Binary.Construct.Closure.Reflexive",
+    "name": "Refl"
+  },
+  {
+    "moduleName": "Relation.Binary.Construct.Closure.Transitive",
+    "name": "Plus′"
+  },
+  {
+    "moduleName": "Relation.Binary.Construct.Constant.Core",
+    "name": "Const"
+  },
+  {
+    "moduleName": "Relation.Binary.Construct.NaturalOrder.Left",
+    "name": "_≤_"
+  },
+  {
+    "moduleName": "Relation.Binary.Construct.NaturalOrder.Right",
+    "name": "_≤_"
+  },
+  {
+    "moduleName": "Relation.Binary.Construct.Never",
+    "name": "Never"
+  },
+  {
+    "moduleName": "Relation.Binary.Construct.NonStrictToStrict",
+    "name": "_<_"
+  },
+  {
+    "moduleName": "Relation.Binary.Construct.StrictToNonStrict",
+    "name": "_≤_"
+  },
+  {
+    "moduleName": "Relation.Binary.Core",
+    "name": "_⇒_"
+  },
+  {
+    "moduleName": "Relation.Binary.Core",
+    "name": "_⇔_"
+  },
+  {
+    "moduleName": "Relation.Binary.Core",
+    "name": "_=[_]⇒_"
+  },
+  {
+    "moduleName": "Relation.Binary.Core",
+    "name": "_Preserves_⟶_"
+  },
+  {
+    "moduleName": "Relation.Binary.Core",
+    "name": "_Preserves₂_⟶_⟶_"
+  },
+  {
+    "moduleName": "Relation.Binary.Core",
+    "name": "Rel"
+  },
+  {
+    "moduleName": "Relation.Binary.Core",
+    "name": "REL"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "_⟶_Respects_"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "_Respects_"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "_Respects₂_"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "_Respectsˡ_"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "_Respectsʳ_"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Adjoint"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Antisym"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Antisymmetric"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Antitonic₁"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Antitonic₂"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "AntitonicMonotonic"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Asymmetric"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Connex"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Cotransitive"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Decidable"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "DecidableEquality"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Dense"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Empty"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Irreflexive"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Irrelevant"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "LeftMonotonic"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "LeftTrans"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Max"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Maximum"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Min"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Minimum"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Monotonic₁"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Monotonic₂"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "MonotonicAntitonic"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Recomputable"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Reflexive"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "RightMonotonic"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "RightTrans"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Stable"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Substitutive"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Sym"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Symmetric"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Tight"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Total"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Trans"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "TransFlip"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Transitive"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "Universal"
+  },
+  {
+    "moduleName": "Relation.Binary.Definitions",
+    "name": "WeaklyDecidable"
+  },
+  {
+    "moduleName": "Relation.Binary.HeterogeneousEquality",
+    "name": "_≇_"
+  },
+  {
+    "moduleName": "Relation.Binary.HeterogeneousEquality.Quotients.Examples",
+    "name": "ℕ²"
+  },
+  {
+    "moduleName": "Relation.Binary.Indexed.Heterogeneous.Core",
+    "name": "_=[_]⇒_"
+  },
+  {
+    "moduleName": "Relation.Binary.Indexed.Heterogeneous.Core",
+    "name": "IRel"
+  },
+  {
+    "moduleName": "Relation.Binary.Indexed.Heterogeneous.Core",
+    "name": "IREL"
+  },
+  {
+    "moduleName": "Relation.Binary.Indexed.Heterogeneous.Definitions",
+    "name": "Reflexive"
+  },
+  {
+    "moduleName": "Relation.Binary.Indexed.Heterogeneous.Definitions",
+    "name": "Symmetric"
+  },
+  {
+    "moduleName": "Relation.Binary.Indexed.Heterogeneous.Definitions",
+    "name": "Transitive"
+  },
+  {
+    "moduleName": "Relation.Binary.Indexed.Homogeneous.Core",
+    "name": "fromHetIndexed"
+  },
+  {
+    "moduleName": "Relation.Binary.Indexed.Homogeneous.Core",
+    "name": "IRel"
+  },
+  {
+    "moduleName": "Relation.Binary.Indexed.Homogeneous.Core",
+    "name": "IREL"
+  },
+  {
+    "moduleName": "Relation.Binary.Lattice.Definitions",
+    "name": "Exponential"
+  },
+  {
+    "moduleName": "Relation.Binary.Lattice.Definitions",
+    "name": "Infimum"
+  },
+  {
+    "moduleName": "Relation.Binary.Lattice.Definitions",
+    "name": "Supremum"
+  },
+  {
+    "moduleName": "Relation.Binary.Morphism.Definitions",
+    "name": "Homomorphic₂"
+  },
+  {
+    "moduleName": "Relation.Binary.Morphism.OrderMonomorphism",
+    "name": "antisym"
+  },
+  {
+    "moduleName": "Relation.Binary.Morphism.OrderMonomorphism",
+    "name": "reflexive"
+  },
+  {
+    "moduleName": "Relation.Binary.Morphism.OrderMonomorphism",
+    "name": "respˡ"
+  },
+  {
+    "moduleName": "Relation.Binary.Morphism.OrderMonomorphism",
+    "name": "respʳ"
+  },
+  {
+    "moduleName": "Relation.Binary.Morphism.OrderMonomorphism",
+    "name": "trans"
+  },
+  {
+    "moduleName": "Relation.Binary.Morphism.RelMonomorphism",
+    "name": "refl"
+  },
+  {
+    "moduleName": "Relation.Binary.Morphism.RelMonomorphism",
+    "name": "sym"
+  },
+  {
+    "moduleName": "Relation.Binary.Morphism.RelMonomorphism",
+    "name": "trans"
+  },
+  {
+    "moduleName": "Relation.Binary.OrderMorphism",
+    "name": "_⇒-DTO_"
+  },
+  {
+    "moduleName": "Relation.Binary.Properties.DecTotalOrder",
+    "name": "_<_"
+  },
+  {
+    "moduleName": "Relation.Binary.Properties.Poset",
+    "name": "_<_"
+  },
+  {
+    "moduleName": "Relation.Binary.Properties.TotalOrder",
+    "name": "_<_"
+  },
+  {
+    "moduleName": "Relation.Binary.PropositionalEquality.Core",
+    "name": "_≗_"
+  },
+  {
+    "moduleName": "Relation.Binary.PropositionalEquality.Core",
+    "name": "_≢_"
+  },
+  {
+    "moduleName": "Relation.Binary.PropositionalEquality",
+    "name": "isPropositional"
+  },
+  {
+    "moduleName": "Relation.Binary.Rewriting",
+    "name": "WeaklyConfluent"
+  },
+  {
+    "moduleName": "Relation.Nary",
+    "name": "∃⟨_⟩"
+  },
+  {
+    "moduleName": "Relation.Nary",
+    "name": "Π[_]"
+  },
+  {
+    "moduleName": "Relation.Nary",
+    "name": "∀[_]"
+  },
+  {
+    "moduleName": "Relation.Nary",
+    "name": "Decidable"
+  },
+  {
+    "moduleName": "Relation.Nullary.Construct.Add.Extrema",
+    "name": "_±"
+  },
+  {
+    "moduleName": "Relation.Nullary.Decidable.Core",
+    "name": "False"
+  },
+  {
+    "moduleName": "Relation.Nullary.Decidable.Core",
+    "name": "recompute"
+  },
+  {
+    "moduleName": "Relation.Nullary.Decidable.Core",
+    "name": "True"
+  },
+  {
+    "moduleName": "Relation.Nullary.Indexed",
+    "name": "¬"
+  },
+  {
+    "moduleName": "Relation.Nullary.Irrelevant",
+    "name": "Irrelevant"
+  },
+  {
+    "moduleName": "Relation.Nullary.Negation.Core",
+    "name": "¬_"
+  },
+  {
+    "moduleName": "Relation.Nullary.Negation.Core",
+    "name": "DoubleNegation"
+  },
+  {
+    "moduleName": "Relation.Nullary.Negation.Core",
+    "name": "Stable"
+  },
+  {
+    "moduleName": "Relation.Nullary",
+    "name": "WeaklyDecidable"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "∁"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "∅"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "⋂"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "⋃"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "⌊_⌋"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "｛_｝"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_⇒_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_∈_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_∉_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_∖_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_∩_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_∪_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_≐_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_≐′_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_≬_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_⊂_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_⊂′_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_⊃_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_⊃′_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_⊄_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_⊄′_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_⊅_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_⊅′_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_⊆_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_⊆′_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_⊇_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_⊇′_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_⊈_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_⊈′_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_⊉_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_⊉′_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_⊢_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_⊥_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_⊥′_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_⟨→⟩_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_⟨⊎⟩_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_\\\\_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "_~"
+  },
+  {
+    "moduleName": "Relation.Unary.Closure.Base",
+    "name": "□"
+  },
+  {
+    "moduleName": "Relation.Unary.Closure.Base",
+    "name": "◇"
+  },
+  {
+    "moduleName": "Relation.Unary.Closure.Preorder",
+    "name": "□"
+  },
+  {
+    "moduleName": "Relation.Unary.Closure.Preorder",
+    "name": "◇"
+  },
+  {
+    "moduleName": "Relation.Unary.Closure.StrictPartialOrder",
+    "name": "□"
+  },
+  {
+    "moduleName": "Relation.Unary.Closure.StrictPartialOrder",
+    "name": "◇"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "Decidable"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "Empty"
+  },
+  {
+    "moduleName": "Relation.Unary.Indexed",
+    "name": "_∉_"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "Irrelevant"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "IUniversal"
+  },
+  {
+    "moduleName": "Relation.Unary.Polymorphic",
+    "name": "∅"
+  },
+  {
+    "moduleName": "Relation.Unary.Polymorphic",
+    "name": "U"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "Pred"
+  },
+  {
+    "moduleName": "Relation.Unary.PredicateTransformer",
+    "name": "⨅"
+  },
+  {
+    "moduleName": "Relation.Unary.PredicateTransformer",
+    "name": "⨆"
+  },
+  {
+    "moduleName": "Relation.Unary.PredicateTransformer",
+    "name": "∼_"
+  },
+  {
+    "moduleName": "Relation.Unary.PredicateTransformer",
+    "name": "⟨_⟩"
+  },
+  {
+    "moduleName": "Relation.Unary.PredicateTransformer",
+    "name": "_⇛_"
+  },
+  {
+    "moduleName": "Relation.Unary.PredicateTransformer",
+    "name": "_⊑_"
+  },
+  {
+    "moduleName": "Relation.Unary.PredicateTransformer",
+    "name": "_⊑′_"
+  },
+  {
+    "moduleName": "Relation.Unary.PredicateTransformer",
+    "name": "_⊒_"
+  },
+  {
+    "moduleName": "Relation.Unary.PredicateTransformer",
+    "name": "_⊒′_"
+  },
+  {
+    "moduleName": "Relation.Unary.PredicateTransformer",
+    "name": "_⊓_"
+  },
+  {
+    "moduleName": "Relation.Unary.PredicateTransformer",
+    "name": "_⊔_"
+  },
+  {
+    "moduleName": "Relation.Unary.PredicateTransformer",
+    "name": "_⋢_"
+  },
+  {
+    "moduleName": "Relation.Unary.PredicateTransformer",
+    "name": "_⍮_"
+  },
+  {
+    "moduleName": "Relation.Unary.PredicateTransformer",
+    "name": "[_]"
+  },
+  {
+    "moduleName": "Relation.Unary.PredicateTransformer",
+    "name": "abort"
+  },
+  {
+    "moduleName": "Relation.Unary.PredicateTransformer",
+    "name": "magic"
+  },
+  {
+    "moduleName": "Relation.Unary.PredicateTransformer",
+    "name": "Pt"
+  },
+  {
+    "moduleName": "Relation.Unary.PredicateTransformer",
+    "name": "PT"
+  },
+  {
+    "moduleName": "Relation.Unary.PredicateTransformer",
+    "name": "skip"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "Recomputable"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "Satisfiable"
+  },
+  {
+    "moduleName": "Relation.Unary.Sized",
+    "name": "_⇒_"
+  },
+  {
+    "moduleName": "Relation.Unary.Sized",
+    "name": "∀[_]"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "Stable"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "U"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "Universal"
+  },
+  {
+    "moduleName": "Relation.Unary",
+    "name": "WeaklyDecidable"
+  },
+  {
+    "moduleName": "Size",
+    "name": "SizedSet"
+  },
+  {
+    "moduleName": "System.FilePath.Posix.Primitive",
+    "name": "AbsolutePath"
+  },
+  {
+    "moduleName": "System.FilePath.Posix.Primitive",
+    "name": "RelativePath"
+  },
+  {
+    "moduleName": "System.FilePath.Posix.Primitive",
+    "name": "SomePath"
+  },
+  {
+    "moduleName": "System.Random",
+    "name": "RandomRIO"
+  },
+  {
+    "moduleName": "Tactic.RingSolver.Core.NatSet",
+    "name": "NatSet"
+  },
+  {
+    "moduleName": "Tactic.RingSolver.Core.Polynomial.Base",
+    "name": "Coeff"
+  },
+  {
+    "moduleName": "Tactic.RingSolver.Core.Polynomial.Base",
+    "name": "Fold"
+  },
+  {
+    "moduleName": "Tactic.RingSolver.Core.Polynomial.Base",
+    "name": "PolyF"
+  },
+  {
+    "moduleName": "Test.Golden",
+    "name": "Result"
+  },
+  {
+    "moduleName": "Text.Pretty.Core",
+    "name": "All"
+  },
+  {
+    "moduleName": "Text.Pretty.Core",
+    "name": "All≤"
+  },
+  {
+    "moduleName": "Text.Pretty.Core",
+    "name": "Content"
+  },
+  {
+    "moduleName": "Text.Regex",
+    "name": "_∉_"
+  },
+  {
+    "moduleName": "Text.Regex",
+    "name": "_∉ᴿ_"
+  },
+  {
+    "moduleName": "Text.Regex.Base",
+    "name": "_∉_"
+  },
+  {
+    "moduleName": "Text.Regex.Base",
+    "name": "_∉ᴿ_"
+  },
+  {
+    "moduleName": "Text.Regex.String.Unsafe",
+    "name": "_∈_"
+  },
+  {
+    "moduleName": "Text.Regex.String.Unsafe",
+    "name": "_∉_"
+  }
 ]
