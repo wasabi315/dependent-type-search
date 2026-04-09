@@ -1288,14 +1288,6 @@
     "name": "Env"
   },
   {
-    "moduleName": "Data.Star.List",
-    "name": "List"
-  },
-  {
-    "moduleName": "Data.Star.Nat",
-    "name": "ℕ"
-  },
-  {
     "moduleName": "Data.String.Base",
     "name": "_≈_"
   },
