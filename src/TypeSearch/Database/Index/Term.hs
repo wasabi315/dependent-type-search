@@ -4,6 +4,7 @@ module TypeSearch.Database.Index.Term where
 
 import Agda.Compiler.Backend hiding (Args)
 import Agda.Syntax.Common
+import Agda.Syntax.Common.Pretty (prettyShow)
 import Agda.Syntax.Internal hiding (arity, termSize)
 import Agda.Syntax.Literal
 import Agda.TypeChecking.Datatypes
@@ -77,9 +78,53 @@ translateVar i ty args = do
   translateApp (TS.Var i) ty args
 
 translateDef :: QName -> Type -> [Term] -> M TS.Term
-translateDef f ty args = do
-  let name = translateQName f
-  translateApp (TS.Top name) ty args
+translateDef f ty args = case prettyShow f of
+  "Agda.Builtin.Sigma.Σ" -> translateSigma ty args
+  "Agda.Builtin.Sigma._,_" -> translatePair ty args
+  "Agda.Builtin.Sigma.fst" -> translateFst ty args
+  "Agda.Builtin.Sigma.snd" -> translateSnd ty args
+  _ -> do
+    let name = translateQName f
+    translateApp (TS.Top name) ty args
+
+translateSigma :: Type -> [Term] -> M TS.Term
+translateSigma ty args =
+  translateArgs ty args >>= \case
+    -- fully applied
+    [a, TS.Lam x b] -> pure $ TS.Sigma x a b
+    [a, b] -> pure $ TS.Sigma "x" a (b `TS.App` TS.Var 0)
+    -- partially applied
+    [a] -> pure $ TS.Lam "B" $ TS.Sigma "x" a (TS.Var 0)
+    -- unapplied
+    [] -> pure $ TS.Lam "A" $ TS.Lam "B" $ TS.Sigma "x" (TS.Var 1) (TS.Var 0)
+    _ -> translateError "Ill-formed sigma"
+
+translatePair :: Type -> [Term] -> M TS.Term
+translatePair ty args =
+  translateArgs ty args >>= \case
+    -- fully applied
+    [a, b] -> pure $ TS.Pair a b
+    -- partially applied
+    [a] -> pure $ TS.Lam "x" $ TS.Pair a (TS.Var 0)
+    -- unapplied
+    [] -> pure $ TS.Lam "x" $ TS.Lam "y" $ TS.Pair (TS.Var 1) (TS.Var 0)
+    _ -> translateError "Ill-formed pair construction"
+
+translateFst :: Type -> [Term] -> M TS.Term
+translateFst ty args =
+  translateArgs ty args >>= \case
+    -- fully applied
+    p : es -> pure $! foldl' TS.App (TS.Proj1 p) es
+    -- unapplied
+    [] -> pure $ TS.Lam "p" $ TS.Proj1 (TS.Var 0)
+
+translateSnd :: Type -> [Term] -> M TS.Term
+translateSnd ty args =
+  translateArgs ty args >>= \case
+    -- fully applied
+    p : es -> pure $! foldl' TS.App (TS.Proj2 p) es
+    -- unapplied
+    [] -> pure $ TS.Lam "p" $ TS.Proj2 (TS.Var 0)
 
 translateCon :: ConHead -> ConInfo -> Type -> Args -> [Term] -> M TS.Term
 translateCon ch i ty pars args = do
