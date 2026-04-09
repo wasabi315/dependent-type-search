@@ -1125,6 +1125,14 @@
   },
   {
     "moduleName": "Data.Product.Base",
+    "name": "_,′_"
+  },
+  {
+    "moduleName": "Data.Product.Base",
+    "name": "-,_"
+  },
+  {
+    "moduleName": "Data.Product.Base",
     "name": "_×_"
   },
   {
