@@ -1,0 +1,6428 @@
+[
+  {
+    "return_type": {
+      "name": "_≡_",
+      "moduleName": "Agda.Builtin.Equality"
+    },
+    "count": 1918
+  },
+  {
+    "return_type": {
+      "name": "Irrelevant",
+      "moduleName": "Data.Irrelevant"
+    },
+    "count": 353
+  },
+  {
+    "return_type": {
+      "name": "Dec",
+      "moduleName": "Relation.Nullary.Decidable.Core"
+    },
+    "count": 298
+  },
+  {
+    "return_type": {
+      "name": "_≤_",
+      "moduleName": "Data.Nat.Base"
+    },
+    "count": 266
+  },
+  {
+    "return_type": {
+      "name": "_⊎_",
+      "moduleName": "Data.Sum.Base"
+    },
+    "count": 188
+  },
+  {
+    "return_type": {
+      "name": "Any",
+      "moduleName": "Data.List.Relation.Unary.Any"
+    },
+    "count": 185
+  },
+  {
+    "return_type": {
+      "name": "List",
+      "moduleName": "Agda.Builtin.List"
+    },
+    "count": 181
+  },
+  {
+    "return_type": {
+      "name": "_≲_",
+      "moduleName": "Relation.Binary.Bundles.TotalPreorder"
+    },
+    "count": 173
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Relation.Binary.Bundles.Setoid"
+    },
+    "count": 155
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Relation.Binary.Bundles.TotalPreorder"
+    },
+    "count": 142
+  },
+  {
+    "return_type": {
+      "name": "_↔_",
+      "moduleName": "Function.Bundles"
+    },
+    "count": 142
+  },
+  {
+    "return_type": {
+      "name": "Sublist",
+      "moduleName": "Data.List.Relation.Binary.Sublist.Heterogeneous.Core"
+    },
+    "count": 139
+  },
+  {
+    "return_type": {
+      "name": "Maybe",
+      "moduleName": "Agda.Builtin.Maybe"
+    },
+    "count": 130
+  },
+  {
+    "return_type": {
+      "name": "Vec",
+      "moduleName": "Data.Vec.Base"
+    },
+    "count": 128
+  },
+  {
+    "return_type": {
+      "name": "IO",
+      "moduleName": "IO.Base"
+    },
+    "count": 107
+  },
+  {
+    "return_type": {
+      "name": "All",
+      "moduleName": "Data.List.Relation.Unary.All"
+    },
+    "count": 104
+  },
+  {
+    "return_type": {
+      "name": "Nat",
+      "moduleName": "Agda.Builtin.Nat"
+    },
+    "count": 102
+  },
+  {
+    "return_type": {
+      "name": "Bool",
+      "moduleName": "Agda.Builtin.Bool"
+    },
+    "count": 97
+  },
+  {
+    "return_type": {
+      "name": "_∣ʳ_",
+      "moduleName": "Algebra.Definitions.RawMagma"
+    },
+    "count": 91
+  },
+  {
+    "return_type": {
+      "name": "IO",
+      "moduleName": "Agda.Builtin.IO"
+    },
+    "count": 89
+  },
+  {
+    "return_type": {
+      "name": "Pointwise",
+      "moduleName": "Data.List.Relation.Binary.Pointwise.Base"
+    },
+    "count": 89
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Solver.Ring.AlmostCommutativeRing.AlmostCommutativeRing"
+    },
+    "count": 88
+  },
+  {
+    "return_type": {
+      "name": "Setoid",
+      "moduleName": "Relation.Binary.Bundles"
+    },
+    "count": 87
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Bundles.Group"
+    },
+    "count": 84
+  },
+  {
+    "return_type": {
+      "name": "Tree",
+      "moduleName": "Data.Tree.AVL"
+    },
+    "count": 80
+  },
+  {
+    "return_type": {
+      "name": "_≃_",
+      "moduleName": "Data.Rational.Unnormalised.Base"
+    },
+    "count": 78
+  },
+  {
+    "return_type": {
+      "name": "TC",
+      "moduleName": "Agda.Builtin.Reflection"
+    },
+    "count": 78
+  },
+  {
+    "return_type": {
+      "name": "String",
+      "moduleName": "Agda.Builtin.String"
+    },
+    "count": 78
+  },
+  {
+    "return_type": {
+      "name": "IsMagma",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 78
+  },
+  {
+    "return_type": {
+      "name": "IsPreorder",
+      "moduleName": "Relation.Binary.Structures"
+    },
+    "count": 78
+  },
+  {
+    "return_type": {
+      "name": "IsSemigroup",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 77
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Bundles.Monoid"
+    },
+    "count": 76
+  },
+  {
+    "return_type": {
+      "name": "AllPairs",
+      "moduleName": "Data.List.Relation.Unary.AllPairs.Core"
+    },
+    "count": 74
+  },
+  {
+    "return_type": {
+      "name": "Equivalence",
+      "moduleName": "Function.Bundles"
+    },
+    "count": 72
+  },
+  {
+    "return_type": {
+      "name": "IsEquivalence",
+      "moduleName": "Relation.Binary.Structures"
+    },
+    "count": 69
+  },
+  {
+    "return_type": {
+      "name": "Preorder",
+      "moduleName": "Relation.Binary.Bundles"
+    },
+    "count": 68
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Bundles.Semigroup"
+    },
+    "count": 66
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Bundles.Raw.RawMagma"
+    },
+    "count": 66
+  },
+  {
+    "return_type": {
+      "name": "IsDecEquivalence",
+      "moduleName": "Relation.Binary.Structures"
+    },
+    "count": 65
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Bundles.Semiring"
+    },
+    "count": 60
+  },
+  {
+    "return_type": {
+      "name": "_IsRelatedTo_",
+      "moduleName": "Relation.Binary.Reasoning.Base.Triple"
+    },
+    "count": 60
+  },
+  {
+    "return_type": {
+      "name": "_∣_",
+      "moduleName": "Data.Nat.Divisibility.Core"
+    },
+    "count": 59
+  },
+  {
+    "return_type": {
+      "name": "IsMonoid",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 59
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Tactic.RingSolver.Core.AlmostCommutativeRing.AlmostCommutativeRing"
+    },
+    "count": 58
+  },
+  {
+    "return_type": {
+      "name": "_≤_",
+      "moduleName": "Data.Integer.Base"
+    },
+    "count": 55
+  },
+  {
+    "return_type": {
+      "name": "IsPartialOrder",
+      "moduleName": "Relation.Binary.Structures"
+    },
+    "count": 55
+  },
+  {
+    "return_type": {
+      "name": "Pointwise",
+      "moduleName": "Data.Vec.Relation.Binary.Pointwise.Inductive"
+    },
+    "count": 54
+  },
+  {
+    "return_type": {
+      "name": "_∣ˡ_",
+      "moduleName": "Algebra.Definitions.RawMagma"
+    },
+    "count": 53
+  },
+  {
+    "return_type": {
+      "name": "Semigroup",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 52
+  },
+  {
+    "return_type": {
+      "name": "RawFunctor",
+      "moduleName": "Effect.Functor"
+    },
+    "count": 52
+  },
+  {
+    "return_type": {
+      "name": "Magma",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 52
+  },
+  {
+    "return_type": {
+      "name": "Poset",
+      "moduleName": "Relation.Binary.Bundles"
+    },
+    "count": 51
+  },
+  {
+    "return_type": {
+      "name": "RawApplicative",
+      "moduleName": "Effect.Applicative"
+    },
+    "count": 48
+  },
+  {
+    "return_type": {
+      "name": "IsCommutativeMonoid",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 47
+  },
+  {
+    "return_type": {
+      "name": "Fin",
+      "moduleName": "Data.Fin.Base"
+    },
+    "count": 46
+  },
+  {
+    "return_type": {
+      "name": "_↭_",
+      "moduleName": "Data.List.Relation.Binary.Permutation.Propositional"
+    },
+    "count": 45
+  },
+  {
+    "return_type": {
+      "name": "Permutation",
+      "moduleName": "Data.List.Relation.Binary.Permutation.Homogeneous"
+    },
+    "count": 45
+  },
+  {
+    "return_type": {
+      "name": "Normal",
+      "moduleName": "Algebra.Solver.Ring"
+    },
+    "count": 44
+  },
+  {
+    "return_type": {
+      "name": "_≤_",
+      "moduleName": "Relation.Binary.Bundles.TotalOrder"
+    },
+    "count": 44
+  },
+  {
+    "return_type": {
+      "name": "HNF",
+      "moduleName": "Algebra.Solver.Ring"
+    },
+    "count": 44
+  },
+  {
+    "return_type": {
+      "name": "Monoid",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 43
+  },
+  {
+    "return_type": {
+      "name": "RawMonad",
+      "moduleName": "Effect.Monad"
+    },
+    "count": 43
+  },
+  {
+    "return_type": {
+      "name": "_≈ᴹ_",
+      "moduleName": "Algebra.Module.Bundles.Raw.RawLeftSemimodule"
+    },
+    "count": 42
+  },
+  {
+    "return_type": {
+      "name": "_≈ᴹ_",
+      "moduleName": "Algebra.Module.Bundles.Raw.RawRightSemimodule"
+    },
+    "count": 42
+  },
+  {
+    "return_type": {
+      "name": "IsBand",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 42
+  },
+  {
+    "return_type": {
+      "name": "Star",
+      "moduleName": "Relation.Binary.Construct.Closure.ReflexiveTransitive"
+    },
+    "count": 42
+  },
+  {
+    "return_type": {
+      "name": "_<_",
+      "moduleName": "Data.Integer.Base"
+    },
+    "count": 41
+  },
+  {
+    "return_type": {
+      "name": "_≲_",
+      "moduleName": "Relation.Binary.Bundles.Preorder"
+    },
+    "count": 41
+  },
+  {
+    "return_type": {
+      "name": "_≤_",
+      "moduleName": "Data.Rational.Unnormalised.Base"
+    },
+    "count": 41
+  },
+  {
+    "return_type": {
+      "name": "Doc",
+      "moduleName": "Text.Pretty"
+    },
+    "count": 40
+  },
+  {
+    "return_type": {
+      "name": "Disjoint",
+      "moduleName": "Data.List.Relation.Binary.Sublist.Heterogeneous"
+    },
+    "count": 40
+  },
+  {
+    "return_type": {
+      "name": "IsDecTotalOrder",
+      "moduleName": "Relation.Binary.Structures"
+    },
+    "count": 40
+  },
+  {
+    "return_type": {
+      "name": "_<_",
+      "moduleName": "Data.Nat.Binary.Base"
+    },
+    "count": 39
+  },
+  {
+    "return_type": {
+      "name": "_IsRelatedTo_",
+      "moduleName": "Relation.Binary.Reasoning.Base.Single"
+    },
+    "count": 39
+  },
+  {
+    "return_type": {
+      "name": "IsStrictPartialOrder",
+      "moduleName": "Relation.Binary.Structures"
+    },
+    "count": 38
+  },
+  {
+    "return_type": {
+      "name": "_∈_",
+      "moduleName": "Text.Regex.Base"
+    },
+    "count": 37
+  },
+  {
+    "return_type": {
+      "name": "Semilattice",
+      "moduleName": "Algebra.Lattice.Bundles"
+    },
+    "count": 36
+  },
+  {
+    "return_type": {
+      "name": "Any",
+      "moduleName": "Data.Vec.Relation.Unary.Any"
+    },
+    "count": 36
+  },
+  {
+    "return_type": {
+      "name": "Polynomial",
+      "moduleName": "Algebra.Solver.Ring"
+    },
+    "count": 36
+  },
+  {
+    "return_type": {
+      "name": "IsSemilattice",
+      "moduleName": "Algebra.Lattice.Structures"
+    },
+    "count": 36
+  },
+  {
+    "return_type": {
+      "name": "DecSetoid",
+      "moduleName": "Relation.Binary.Bundles"
+    },
+    "count": 35
+  },
+  {
+    "return_type": {
+      "name": "_[_]=_",
+      "moduleName": "Data.Vec.Base"
+    },
+    "count": 35
+  },
+  {
+    "return_type": {
+      "name": "_IsRelatedTo_",
+      "moduleName": "Relation.Binary.Reasoning.Base.Double"
+    },
+    "count": 35
+  },
+  {
+    "return_type": {
+      "name": "DisjointUnion",
+      "moduleName": "Data.List.Relation.Binary.Sublist.Heterogeneous"
+    },
+    "count": 35
+  },
+  {
+    "return_type": {
+      "name": "NonZero",
+      "moduleName": "Data.Nat.Base"
+    },
+    "count": 34
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Bundles.CommutativeMonoid"
+    },
+    "count": 34
+  },
+  {
+    "return_type": {
+      "name": "_≤_",
+      "moduleName": "Relation.Binary.Lattice.Bundles.HeytingAlgebra"
+    },
+    "count": 34
+  },
+  {
+    "return_type": {
+      "name": "Int",
+      "moduleName": "Agda.Builtin.Int"
+    },
+    "count": 33
+  },
+  {
+    "return_type": {
+      "name": "Term",
+      "moduleName": "Agda.Builtin.Reflection"
+    },
+    "count": 33
+  },
+  {
+    "return_type": {
+      "name": "CommutativeMonoid",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 32
+  },
+  {
+    "return_type": {
+      "name": "IsTotalOrder",
+      "moduleName": "Relation.Binary.Structures"
+    },
+    "count": 32
+  },
+  {
+    "return_type": {
+      "name": "Acc",
+      "moduleName": "Induction.WellFounded"
+    },
+    "count": 32
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Bundles.Raw.RawMonoid"
+    },
+    "count": 32
+  },
+  {
+    "return_type": {
+      "name": "StrictPartialOrder",
+      "moduleName": "Relation.Binary.Bundles"
+    },
+    "count": 31
+  },
+  {
+    "return_type": {
+      "name": "Injective",
+      "moduleName": "Function.Definitions"
+    },
+    "count": 31
+  },
+  {
+    "return_type": {
+      "name": "All",
+      "moduleName": "Data.Maybe.Relation.Unary.All"
+    },
+    "count": 30
+  },
+  {
+    "return_type": {
+      "name": "List⁺",
+      "moduleName": "Data.List.NonEmpty.Base"
+    },
+    "count": 30
+  },
+  {
+    "return_type": {
+      "name": "_*",
+      "moduleName": "Data.List.Kleene.Base"
+    },
+    "count": 30
+  },
+  {
+    "return_type": {
+      "name": "_<_",
+      "moduleName": "Data.Rational.Unnormalised.Base"
+    },
+    "count": 30
+  },
+  {
+    "return_type": {
+      "name": "Func",
+      "moduleName": "Function.Bundles"
+    },
+    "count": 30
+  },
+  {
+    "return_type": {
+      "name": "_≈∙_",
+      "moduleName": "Relation.Binary.Construct.Add.Point.Equality"
+    },
+    "count": 29
+  },
+  {
+    "return_type": {
+      "name": "IsStrictTotalOrder",
+      "moduleName": "Relation.Binary.Structures"
+    },
+    "count": 29
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Codata.Guarded.Stream.Relation.Binary.Pointwise"
+    },
+    "count": 29
+  },
+  {
+    "return_type": {
+      "name": "Exp",
+      "moduleName": "Text.Regex.Base"
+    },
+    "count": 28
+  },
+  {
+    "return_type": {
+      "name": "IsDecPartialOrder",
+      "moduleName": "Relation.Binary.Structures"
+    },
+    "count": 28
+  },
+  {
+    "return_type": {
+      "name": "_IsRelatedTo_",
+      "moduleName": "Relation.Binary.Reasoning.Base.Partial"
+    },
+    "count": 28
+  },
+  {
+    "return_type": {
+      "name": "All",
+      "moduleName": "Data.Vec.Relation.Unary.All"
+    },
+    "count": 28
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Lattice.Bundles.BooleanAlgebra"
+    },
+    "count": 28
+  },
+  {
+    "return_type": {
+      "name": "AllPairs",
+      "moduleName": "Data.Vec.Relation.Unary.AllPairs.Core"
+    },
+    "count": 27
+  },
+  {
+    "return_type": {
+      "name": "CommutativeSemigroup",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 27
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Bundles.Loop"
+    },
+    "count": 26
+  },
+  {
+    "return_type": {
+      "name": "Trichotomous",
+      "moduleName": "Relation.Binary.Definitions"
+    },
+    "count": 26
+  },
+  {
+    "return_type": {
+      "name": "Vec≤",
+      "moduleName": "Data.Vec.Bounded.Base"
+    },
+    "count": 26
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Bundles.CommutativeSemigroup"
+    },
+    "count": 26
+  },
+  {
+    "return_type": {
+      "name": "_≤_",
+      "moduleName": "Data.Rational.Base"
+    },
+    "count": 26
+  },
+  {
+    "return_type": {
+      "name": "StrictTotalOrder",
+      "moduleName": "Relation.Binary.Bundles"
+    },
+    "count": 26
+  },
+  {
+    "return_type": {
+      "name": "Band",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 26
+  },
+  {
+    "return_type": {
+      "name": "Stream",
+      "moduleName": "Codata.Guarded.Stream"
+    },
+    "count": 26
+  },
+  {
+    "return_type": {
+      "name": "_⊢_≈_",
+      "moduleName": "Codata.Sized.Colist.Bisimilarity"
+    },
+    "count": 26
+  },
+  {
+    "return_type": {
+      "name": "Float",
+      "moduleName": "Agda.Builtin.Float"
+    },
+    "count": 25
+  },
+  {
+    "return_type": {
+      "name": "IsLattice",
+      "moduleName": "Algebra.Lattice.Structures"
+    },
+    "count": 25
+  },
+  {
+    "return_type": {
+      "name": "_<_",
+      "moduleName": "Data.Rational.Base"
+    },
+    "count": 25
+  },
+  {
+    "return_type": {
+      "name": "Carrier",
+      "moduleName": "Algebra.Bundles.Raw.RawMonoid"
+    },
+    "count": 25
+  },
+  {
+    "return_type": {
+      "name": "IsCommutativeSemigroup",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 24
+  },
+  {
+    "return_type": {
+      "name": "DecTotalOrder",
+      "moduleName": "Relation.Binary.Bundles"
+    },
+    "count": 24
+  },
+  {
+    "return_type": {
+      "name": "UpperBound",
+      "moduleName": "Data.List.Relation.Binary.Sublist.Setoid"
+    },
+    "count": 24
+  },
+  {
+    "return_type": {
+      "name": "Tree⁺",
+      "moduleName": "Data.Tree.AVL.NonEmpty"
+    },
+    "count": 24
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Bundles.Raw.RawGroup"
+    },
+    "count": 24
+  },
+  {
+    "return_type": {
+      "name": "Prefix",
+      "moduleName": "Data.List.Relation.Binary.Prefix.Heterogeneous"
+    },
+    "count": 23
+  },
+  {
+    "return_type": {
+      "name": "_≅_",
+      "moduleName": "Relation.Binary.HeterogeneousEquality.Core"
+    },
+    "count": 23
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Relation.Binary.Lattice.Bundles.HeytingAlgebra"
+    },
+    "count": 22
+  },
+  {
+    "return_type": {
+      "name": "_<⁺_",
+      "moduleName": "Relation.Binary.Construct.Add.Supremum.Strict"
+    },
+    "count": 22
+  },
+  {
+    "return_type": {
+      "name": "Lattice",
+      "moduleName": "Algebra.Lattice.Bundles"
+    },
+    "count": 22
+  },
+  {
+    "return_type": {
+      "name": "Infix",
+      "moduleName": "Data.List.Relation.Binary.Infix.Heterogeneous"
+    },
+    "count": 22
+  },
+  {
+    "return_type": {
+      "name": "IsSelectiveMagma",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 22
+  },
+  {
+    "return_type": {
+      "name": "_⊢_≈_",
+      "moduleName": "Codata.Sized.Conat.Bisimilarity"
+    },
+    "count": 22
+  },
+  {
+    "return_type": {
+      "name": "Colist",
+      "moduleName": "Codata.Sized.Colist"
+    },
+    "count": 22
+  },
+  {
+    "return_type": {
+      "name": "FilePath",
+      "moduleName": "System.FilePath.Posix.Primitive"
+    },
+    "count": 22
+  },
+  {
+    "return_type": {
+      "name": "RawMagma",
+      "moduleName": "Algebra.Bundles.Raw"
+    },
+    "count": 22
+  },
+  {
+    "return_type": {
+      "name": "IsDistributiveLattice",
+      "moduleName": "Algebra.Lattice.Structures"
+    },
+    "count": 21
+  },
+  {
+    "return_type": {
+      "name": "Expr",
+      "moduleName": "Algebra.Solver.Monoid.Expression"
+    },
+    "count": 21
+  },
+  {
+    "return_type": {
+      "name": "_IsRelatedTo_",
+      "moduleName": "Relation.Binary.Reasoning.Base.Apartness"
+    },
+    "count": 21
+  },
+  {
+    "return_type": {
+      "name": "Any",
+      "moduleName": "Data.Tree.AVL.Indexed.Relation.Unary.Any"
+    },
+    "count": 21
+  },
+  {
+    "return_type": {
+      "name": "ℕᵇ",
+      "moduleName": "Data.Nat.Binary.Base"
+    },
+    "count": 21
+  },
+  {
+    "return_type": {
+      "name": "Stream",
+      "moduleName": "Codata.Sized.Stream"
+    },
+    "count": 21
+  },
+  {
+    "return_type": {
+      "name": "Interleaving",
+      "moduleName": "Data.List.Relation.Ternary.Interleaving"
+    },
+    "count": 21
+  },
+  {
+    "return_type": {
+      "name": "ℚ",
+      "moduleName": "Data.Rational.Base"
+    },
+    "count": 20
+  },
+  {
+    "return_type": {
+      "name": "Carrier",
+      "moduleName": "Algebra.Solver.Ring.AlmostCommutativeRing.AlmostCommutativeRing"
+    },
+    "count": 20
+  },
+  {
+    "return_type": {
+      "name": "Bijection",
+      "moduleName": "Function.Bundles"
+    },
+    "count": 20
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Relation.Binary.Lattice.Bundles.JoinSemilattice"
+    },
+    "count": 20
+  },
+  {
+    "return_type": {
+      "name": "Surjection",
+      "moduleName": "Function.Bundles"
+    },
+    "count": 20
+  },
+  {
+    "return_type": {
+      "name": "Positive",
+      "moduleName": "Data.Integer.Base"
+    },
+    "count": 20
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Bundles.Quasigroup"
+    },
+    "count": 20
+  },
+  {
+    "return_type": {
+      "name": "Poly",
+      "moduleName": "Tactic.RingSolver.Core.Polynomial.Base"
+    },
+    "count": 20
+  },
+  {
+    "return_type": {
+      "name": "TotalOrder",
+      "moduleName": "Relation.Binary.Bundles"
+    },
+    "count": 19
+  },
+  {
+    "return_type": {
+      "name": "Injection",
+      "moduleName": "Function.Bundles"
+    },
+    "count": 19
+  },
+  {
+    "return_type": {
+      "name": "AlphaEquality",
+      "moduleName": "Reflection.AST.AlphaEquality"
+    },
+    "count": 19
+  },
+  {
+    "return_type": {
+      "name": "RightInverse",
+      "moduleName": "Function.Bundles"
+    },
+    "count": 18
+  },
+  {
+    "return_type": {
+      "name": "DistributiveLattice",
+      "moduleName": "Algebra.Lattice.Bundles"
+    },
+    "count": 18
+  },
+  {
+    "return_type": {
+      "name": "Surjective",
+      "moduleName": "Function.Definitions"
+    },
+    "count": 18
+  },
+  {
+    "return_type": {
+      "name": "Linked",
+      "moduleName": "Data.List.Relation.Unary.Linked"
+    },
+    "count": 18
+  },
+  {
+    "return_type": {
+      "name": "Kind",
+      "moduleName": "Function.Related.Propositional"
+    },
+    "count": 18
+  },
+  {
+    "return_type": {
+      "name": "_∣_",
+      "moduleName": "Data.Integer.Divisibility.Signed"
+    },
+    "count": 18
+  },
+  {
+    "return_type": {
+      "name": "T",
+      "moduleName": "Data.Bool.Base"
+    },
+    "count": 17
+  },
+  {
+    "return_type": {
+      "name": "List#",
+      "moduleName": "Data.List.Fresh"
+    },
+    "count": 17
+  },
+  {
+    "return_type": {
+      "name": "Pointwise",
+      "moduleName": "Data.Vec.Functional.Relation.Binary.Pointwise"
+    },
+    "count": 17
+  },
+  {
+    "return_type": {
+      "name": "_≤′_",
+      "moduleName": "Data.Nat.Base"
+    },
+    "count": 17
+  },
+  {
+    "return_type": {
+      "name": "ℚᵘ",
+      "moduleName": "Data.Rational.Unnormalised.Base"
+    },
+    "count": 17
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Bundles.KleeneAlgebra"
+    },
+    "count": 17
+  },
+  {
+    "return_type": {
+      "name": "_+",
+      "moduleName": "Data.List.Kleene.Base"
+    },
+    "count": 17
+  },
+  {
+    "return_type": {
+      "name": "RawMonoid",
+      "moduleName": "Algebra.Bundles.Raw"
+    },
+    "count": 17
+  },
+  {
+    "return_type": {
+      "name": "IsCommutativeSemiring",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 17
+  },
+  {
+    "return_type": {
+      "name": "RawAlternative",
+      "moduleName": "Effect.Applicative"
+    },
+    "count": 17
+  },
+  {
+    "return_type": {
+      "name": "_∼[_]_",
+      "moduleName": "Function.Related.Propositional"
+    },
+    "count": 17
+  },
+  {
+    "return_type": {
+      "name": "RawApplicativeZero",
+      "moduleName": "Effect.Applicative"
+    },
+    "count": 17
+  },
+  {
+    "return_type": {
+      "name": "RawMonadTd",
+      "moduleName": "Effect.Monad"
+    },
+    "count": 17
+  },
+  {
+    "return_type": {
+      "name": "Cowriter",
+      "moduleName": "Codata.Sized.Cowriter"
+    },
+    "count": 16
+  },
+  {
+    "return_type": {
+      "name": "JoinSemilattice",
+      "moduleName": "Relation.Binary.Lattice.Bundles"
+    },
+    "count": 16
+  },
+  {
+    "return_type": {
+      "name": "Reflects",
+      "moduleName": "Relation.Nullary.Reflects"
+    },
+    "count": 16
+  },
+  {
+    "return_type": {
+      "name": "LeftInverse",
+      "moduleName": "Function.Bundles"
+    },
+    "count": 16
+  },
+  {
+    "return_type": {
+      "name": "CommutativeSemiring",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 16
+  },
+  {
+    "return_type": {
+      "name": "IsMeetSemilattice",
+      "moduleName": "Relation.Binary.Lattice.Structures"
+    },
+    "count": 16
+  },
+  {
+    "return_type": {
+      "name": "NonNegative",
+      "moduleName": "Data.Integer.Base"
+    },
+    "count": 16
+  },
+  {
+    "return_type": {
+      "name": "_≉_",
+      "moduleName": "Relation.Binary.Bundles.Raw.RawSetoid"
+    },
+    "count": 16
+  },
+  {
+    "return_type": {
+      "name": "RawPushout",
+      "moduleName": "Data.List.Relation.Binary.Sublist.Setoid"
+    },
+    "count": 16
+  },
+  {
+    "return_type": {
+      "name": "MeetSemilattice",
+      "moduleName": "Relation.Binary.Lattice.Bundles"
+    },
+    "count": 16
+  },
+  {
+    "return_type": {
+      "name": "Suffix",
+      "moduleName": "Data.List.Relation.Binary.Suffix.Heterogeneous"
+    },
+    "count": 16
+  },
+  {
+    "return_type": {
+      "name": "IsJoinSemilattice",
+      "moduleName": "Relation.Binary.Lattice.Structures"
+    },
+    "count": 16
+  },
+  {
+    "return_type": {
+      "name": "Sorted",
+      "moduleName": "Data.List.Relation.Unary.Sorted.TotalOrder"
+    },
+    "count": 16
+  },
+  {
+    "return_type": {
+      "name": "∀ⁿ",
+      "moduleName": "Data.Vec.N-ary"
+    },
+    "count": 15
+  },
+  {
+    "return_type": {
+      "name": "Conat",
+      "moduleName": "Codata.Sized.Conat"
+    },
+    "count": 15
+  },
+  {
+    "return_type": {
+      "name": "SelectiveMagma",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 15
+  },
+  {
+    "return_type": {
+      "name": "DisjointUnion³",
+      "moduleName": "Data.List.Relation.Binary.Sublist.Heterogeneous.Properties.Disjointness"
+    },
+    "count": 15
+  },
+  {
+    "return_type": {
+      "name": "IsMagmaHomomorphism",
+      "moduleName": "Algebra.Morphism.Structures.MagmaMorphisms"
+    },
+    "count": 14
+  },
+  {
+    "return_type": {
+      "name": "IsGroup",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 14
+  },
+  {
+    "return_type": {
+      "name": "Value",
+      "moduleName": "Data.Tree.AVL.Value"
+    },
+    "count": 14
+  },
+  {
+    "return_type": {
+      "name": "Tree",
+      "moduleName": "Data.Tree.AVL.Indexed"
+    },
+    "count": 14
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Bundles.Magma"
+    },
+    "count": 14
+  },
+  {
+    "return_type": {
+      "name": "These",
+      "moduleName": "Data.These.Base"
+    },
+    "count": 14
+  },
+  {
+    "return_type": {
+      "name": "_⊢_≈_",
+      "moduleName": "Codata.Sized.Stream.Bisimilarity"
+    },
+    "count": 14
+  },
+  {
+    "return_type": {
+      "name": "Any",
+      "moduleName": "Data.Tree.AVL.Relation.Unary.Any"
+    },
+    "count": 14
+  },
+  {
+    "return_type": {
+      "name": "RawEmpty",
+      "moduleName": "Effect.Empty"
+    },
+    "count": 14
+  },
+  {
+    "return_type": {
+      "name": "RawChoice",
+      "moduleName": "Effect.Choice"
+    },
+    "count": 14
+  },
+  {
+    "return_type": {
+      "name": "Carrier",
+      "moduleName": "Algebra.Bundles.Semiring"
+    },
+    "count": 14
+  },
+  {
+    "return_type": {
+      "name": "Container",
+      "moduleName": "Data.Container.Indexed.Core"
+    },
+    "count": 14
+  },
+  {
+    "return_type": {
+      "name": "First",
+      "moduleName": "Data.List.Relation.Unary.First"
+    },
+    "count": 14
+  },
+  {
+    "return_type": {
+      "name": "K&_",
+      "moduleName": "Data.Tree.AVL.Value"
+    },
+    "count": 14
+  },
+  {
+    "return_type": {
+      "name": "IsSemiring",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 14
+  },
+  {
+    "return_type": {
+      "name": "IsMonoidHomomorphism",
+      "moduleName": "Algebra.Morphism.Structures.MonoidMorphisms"
+    },
+    "count": 14
+  },
+  {
+    "return_type": {
+      "name": "IsAbelianGroup",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 14
+  },
+  {
+    "return_type": {
+      "name": "DecPoset",
+      "moduleName": "Relation.Binary.Bundles"
+    },
+    "count": 13
+  },
+  {
+    "return_type": {
+      "name": "Covec",
+      "moduleName": "Codata.Sized.Covec"
+    },
+    "count": 13
+  },
+  {
+    "return_type": {
+      "name": "Coercible",
+      "moduleName": "Foreign.Haskell.Coerce"
+    },
+    "count": 13
+  },
+  {
+    "return_type": {
+      "name": "RawMonadPlus",
+      "moduleName": "Effect.Monad"
+    },
+    "count": 13
+  },
+  {
+    "return_type": {
+      "name": "RawMonadZero",
+      "moduleName": "Effect.Monad"
+    },
+    "count": 13
+  },
+  {
+    "return_type": {
+      "name": "_⇉_",
+      "moduleName": "Function.Nary.NonDependent.Base"
+    },
+    "count": 13
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Relation.Binary.Bundles.PartialSetoid"
+    },
+    "count": 13
+  },
+  {
+    "return_type": {
+      "name": "Delay",
+      "moduleName": "Codata.Sized.Delay"
+    },
+    "count": 13
+  },
+  {
+    "return_type": {
+      "name": "_≤⁺_",
+      "moduleName": "Relation.Binary.Construct.Add.Supremum.NonStrict"
+    },
+    "count": 13
+  },
+  {
+    "return_type": {
+      "name": "Negative",
+      "moduleName": "Data.Integer.Base"
+    },
+    "count": 13
+  },
+  {
+    "return_type": {
+      "name": "⟦_⟧",
+      "moduleName": "Data.Container.Core"
+    },
+    "count": 13
+  },
+  {
+    "return_type": {
+      "name": "SubRelation",
+      "moduleName": "Relation.Binary.Reasoning.Syntax"
+    },
+    "count": 12
+  },
+  {
+    "return_type": {
+      "name": "_≁_",
+      "moduleName": "Relation.Binary.Bundles.Raw.RawRelation"
+    },
+    "count": 12
+  },
+  {
+    "return_type": {
+      "name": "Separation",
+      "moduleName": "Data.List.Relation.Binary.Sublist.Propositional"
+    },
+    "count": 12
+  },
+  {
+    "return_type": {
+      "name": "Colist",
+      "moduleName": "Codata.Musical.Colist.Base"
+    },
+    "count": 12
+  },
+  {
+    "return_type": {
+      "name": "Inverse",
+      "moduleName": "Function.Bundles"
+    },
+    "count": 12
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Relation.Binary.Bundles.TotalOrder"
+    },
+    "count": 12
+  },
+  {
+    "return_type": {
+      "name": "Graph",
+      "moduleName": "Data.Graph.Acyclic"
+    },
+    "count": 12
+  },
+  {
+    "return_type": {
+      "name": "S",
+      "moduleName": "Relation.Binary.Reasoning.Syntax.SubRelation"
+    },
+    "count": 12
+  },
+  {
+    "return_type": {
+      "name": "Pointwise",
+      "moduleName": "Data.Sum.Relation.Binary.Pointwise"
+    },
+    "count": 12
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Relation.Binary.Lattice.Bundles.Lattice"
+    },
+    "count": 12
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Lattice.Bundles.Lattice"
+    },
+    "count": 12
+  },
+  {
+    "return_type": {
+      "name": "_#_",
+      "moduleName": "Data.List.Fresh"
+    },
+    "count": 11
+  },
+  {
+    "return_type": {
+      "name": "Ring",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 11
+  },
+  {
+    "return_type": {
+      "name": "_<_",
+      "moduleName": "Relation.Binary.Bundles.StrictPartialOrder"
+    },
+    "count": 11
+  },
+  {
+    "return_type": {
+      "name": "Trie",
+      "moduleName": "Data.Trie"
+    },
+    "count": 11
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Bundles.IdempotentCommutativeMonoid"
+    },
+    "count": 11
+  },
+  {
+    "return_type": {
+      "name": "All",
+      "moduleName": "Data.Vec.Functional.Relation.Unary.All"
+    },
+    "count": 11
+  },
+  {
+    "return_type": {
+      "name": "Stream",
+      "moduleName": "Codata.Musical.Stream"
+    },
+    "count": 11
+  },
+  {
+    "return_type": {
+      "name": "Recomputable",
+      "moduleName": "Relation.Nullary.Recomputable.Core"
+    },
+    "count": 11
+  },
+  {
+    "return_type": {
+      "name": "Pointwise",
+      "moduleName": "Codata.Guarded.Stream.Relation.Binary.Pointwise"
+    },
+    "count": 11
+  },
+  {
+    "return_type": {
+      "name": "Carrier",
+      "moduleName": "Algebra.Bundles.Raw.RawSemiring"
+    },
+    "count": 11
+  },
+  {
+    "return_type": {
+      "name": "Carrier",
+      "moduleName": "Algebra.Bundles.Monoid"
+    },
+    "count": 11
+  },
+  {
+    "return_type": {
+      "name": "_^_",
+      "moduleName": "Data.Vec.Recursive"
+    },
+    "count": 11
+  },
+  {
+    "return_type": {
+      "name": "AbelianGroup",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 10
+  },
+  {
+    "return_type": {
+      "name": "Any",
+      "moduleName": "Data.List.Fresh.Relation.Unary.Any"
+    },
+    "count": 10
+  },
+  {
+    "return_type": {
+      "name": "Appending",
+      "moduleName": "Data.List.Relation.Ternary.Appending"
+    },
+    "count": 10
+  },
+  {
+    "return_type": {
+      "name": "Product",
+      "moduleName": "Data.Product.Nary.NonDependent"
+    },
+    "count": 10
+  },
+  {
+    "return_type": {
+      "name": "Bijective",
+      "moduleName": "Function.Definitions"
+    },
+    "count": 10
+  },
+  {
+    "return_type": {
+      "name": "Rel",
+      "moduleName": "Effect.Monad.Partiality.Equality"
+    },
+    "count": 10
+  },
+  {
+    "return_type": {
+      "name": "Pointwise",
+      "moduleName": "Data.Vec.Relation.Binary.Pointwise.Extensional"
+    },
+    "count": 10
+  },
+  {
+    "return_type": {
+      "name": "Pointwise",
+      "moduleName": "Data.Product.Relation.Binary.Pointwise.NonDependent"
+    },
+    "count": 10
+  },
+  {
+    "return_type": {
+      "name": "Semiring",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 10
+  },
+  {
+    "return_type": {
+      "name": "Congruent",
+      "moduleName": "Function.Definitions"
+    },
+    "count": 10
+  },
+  {
+    "return_type": {
+      "name": "Connected",
+      "moduleName": "Data.Maybe.Relation.Binary.Connected"
+    },
+    "count": 10
+  },
+  {
+    "return_type": {
+      "name": "Container",
+      "moduleName": "Data.Container.Core"
+    },
+    "count": 10
+  },
+  {
+    "return_type": {
+      "name": "Covec",
+      "moduleName": "Codata.Musical.Covec"
+    },
+    "count": 10
+  },
+  {
+    "return_type": {
+      "name": "Sets",
+      "moduleName": "Function.Nary.NonDependent.Base"
+    },
+    "count": 10
+  },
+  {
+    "return_type": {
+      "name": "NonPositive",
+      "moduleName": "Data.Integer.Base"
+    },
+    "count": 10
+  },
+  {
+    "return_type": {
+      "name": "Map",
+      "moduleName": "Data.Tree.AVL.IndexedMap"
+    },
+    "count": 10
+  },
+  {
+    "return_type": {
+      "name": "Termₐ′",
+      "moduleName": "Reflection.AnnotatedAST"
+    },
+    "count": 10
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Bundles.RingWithoutOne"
+    },
+    "count": 10
+  },
+  {
+    "return_type": {
+      "name": "IdempotentCommutativeMonoid",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 10
+  },
+  {
+    "return_type": {
+      "name": "IsDecStrictPartialOrder",
+      "moduleName": "Relation.Binary.Structures"
+    },
+    "count": 10
+  },
+  {
+    "return_type": {
+      "name": "Number",
+      "moduleName": "Agda.Builtin.FromNat"
+    },
+    "count": 9
+  },
+  {
+    "return_type": {
+      "name": "Char",
+      "moduleName": "Agda.Builtin.Char"
+    },
+    "count": 9
+  },
+  {
+    "return_type": {
+      "name": "IsRelatedTo",
+      "moduleName": "Relation.Binary.Reasoning.MultiSetoid"
+    },
+    "count": 9
+  },
+  {
+    "return_type": {
+      "name": "_<₋_",
+      "moduleName": "Relation.Binary.Construct.Add.Infimum.Strict"
+    },
+    "count": 9
+  },
+  {
+    "return_type": {
+      "name": "Tree",
+      "moduleName": "Data.Tree.Binary"
+    },
+    "count": 9
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Bundles.AbelianGroup"
+    },
+    "count": 9
+  },
+  {
+    "return_type": {
+      "name": "Group",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 9
+  },
+  {
+    "return_type": {
+      "name": "Linked",
+      "moduleName": "Data.Vec.Relation.Unary.Linked"
+    },
+    "count": 9
+  },
+  {
+    "return_type": {
+      "name": "Any",
+      "moduleName": "Codata.Musical.Colist.Relation.Unary.Any"
+    },
+    "count": 9
+  },
+  {
+    "return_type": {
+      "name": "_∼[_]_",
+      "moduleName": "Function.Related"
+    },
+    "count": 9
+  },
+  {
+    "return_type": {
+      "name": "_HasNonTrivialDivisorLessThan_",
+      "moduleName": "Data.Nat.Divisibility.Core"
+    },
+    "count": 9
+  },
+  {
+    "return_type": {
+      "name": "RawComonad",
+      "moduleName": "Effect.Comonad"
+    },
+    "count": 9
+  },
+  {
+    "return_type": {
+      "name": "_;_",
+      "moduleName": "Relation.Binary.Construct.Composition"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "Zipper",
+      "moduleName": "Data.List.Zipper"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "_⊎-<_",
+      "moduleName": "Data.Sum.Relation.Binary.LeftOrder"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "Plus⇔",
+      "moduleName": "Relation.Binary.Construct.Closure.SymmetricTransitive"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "Clock",
+      "moduleName": "System.Clock.Primitive"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "RawSemiring",
+      "moduleName": "Algebra.Bundles.Raw"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "_≈H_",
+      "moduleName": "Algebra.Solver.Ring"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "Colour",
+      "moduleName": "System.Console.ANSI"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "CommutativeRing",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "Inverseˡ",
+      "moduleName": "Function.Definitions"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "Op",
+      "moduleName": "Algebra.Solver.Ring"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "RawMonadState",
+      "moduleName": "Effect.Monad.State.Transformer.Base"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "IsIdempotentCommutativeMonoid",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "RawMonadReader",
+      "moduleName": "Effect.Monad.Reader.Transformer.Base"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "RawMonadWriter",
+      "moduleName": "Effect.Monad.Writer.Transformer.Base"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "Inverseʳ",
+      "moduleName": "Function.Definitions"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "_≈ᴹ_",
+      "moduleName": "Algebra.Module.Bundles.Bimodule"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "_≋_",
+      "moduleName": "Algebra.Construct.LexProduct"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "EqClosure",
+      "moduleName": "Relation.Binary.Construct.Closure.Equivalence"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "RawMonadIO",
+      "moduleName": "Effect.Monad.IO"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Relation.Binary.Lattice.Bundles.BoundedLattice"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Relation.Binary.Lattice.Bundles.BoundedJoinSemilattice"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "SymClosure",
+      "moduleName": "Relation.Binary.Construct.Closure.Symmetric"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Relation.Binary.Bundles.Poset"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "Word64",
+      "moduleName": "Agda.Builtin.Word"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "RawGroup",
+      "moduleName": "Algebra.Bundles.Raw"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "Lattice",
+      "moduleName": "Relation.Binary.Lattice.Bundles"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "From-just",
+      "moduleName": "Data.Maybe.Base"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "IsLattice",
+      "moduleName": "Relation.Binary.Lattice.Structures"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "All",
+      "moduleName": "Data.Tree.Binary.Relation.Unary.All"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "_≈N_",
+      "moduleName": "Algebra.Solver.Ring"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "IsRing",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "IsRelHomomorphism",
+      "moduleName": "Relation.Binary.Morphism.Structures"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "_∩_",
+      "moduleName": "Relation.Binary.Construct.Intersection"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "Univ",
+      "moduleName": "Reflection.AST.Universe"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "IsCospan",
+      "moduleName": "Data.List.Relation.Binary.Sublist.Propositional.Slice"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "Bisim",
+      "moduleName": "Codata.Sized.M.Bisimilarity"
+    },
+    "count": 8
+  },
+  {
+    "return_type": {
+      "name": "IsMonoidMonomorphism",
+      "moduleName": "Algebra.Morphism.Structures.MonoidMorphisms"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "_∪_",
+      "moduleName": "Relation.Binary.Construct.Union"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "IsSemiringWithoutAnnihilatingZero",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "TotalPreorder",
+      "moduleName": "Relation.Binary.Bundles"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "Backward-kind",
+      "moduleName": "Function.Related"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "_≤‴_",
+      "moduleName": "Data.Nat.Base"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "IsTotalPreorder",
+      "moduleName": "Relation.Binary.Structures"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "BackwardKind",
+      "moduleName": "Function.Related.Propositional"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "ForwardKind",
+      "moduleName": "Function.Related.Propositional"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "Builder",
+      "moduleName": "Data.Bytestring.Builder.Primitive"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "IsCommutativeRing",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "Forward-kind",
+      "moduleName": "Function.Related"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "Literal",
+      "moduleName": "Agda.Builtin.Reflection"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "RawNearSemiring",
+      "moduleName": "Algebra.Bundles.Raw"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "Word8",
+      "moduleName": "Data.Word8.Primitive"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "_≈ᴹ_",
+      "moduleName": "Algebra.Module.Bundles.Module"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "Parity",
+      "moduleName": "Data.Parity.Base"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "Coℕ",
+      "moduleName": "Codata.Musical.Conat.Base"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "Shape",
+      "moduleName": "Data.Container.Core.Container"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "_≤_",
+      "moduleName": "Data.Bool.Base"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "ReflClosure",
+      "moduleName": "Relation.Binary.Construct.Closure.Reflexive"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "Levels",
+      "moduleName": "Function.Nary.NonDependent.Base"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "IsOrderHomomorphism",
+      "moduleName": "Relation.Binary.Morphism.Structures"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "IsBooleanAlgebra",
+      "moduleName": "Algebra.Lattice.Structures"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "_⋆_",
+      "moduleName": "Data.Container.FreeMonad"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "Lift",
+      "moduleName": "Level"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "Bisim",
+      "moduleName": "Codata.Sized.Colist.Bisimilarity"
+    },
+    "count": 7
+  },
+  {
+    "return_type": {
+      "name": "_⊥",
+      "moduleName": "Effect.Monad.Partiality"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "Trie⁺",
+      "moduleName": "Data.Trie.NonEmpty"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "IsLeftSemimodule",
+      "moduleName": "Algebra.Module.Structures"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "All",
+      "moduleName": "Data.List.Fresh.Relation.Unary.All"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "Appending",
+      "moduleName": "Data.List.Relation.Ternary.Appending.Setoid"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "NonTrivial",
+      "moduleName": "Data.Nat.Base"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "Sign",
+      "moduleName": "Data.Sign.Base"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "PropF",
+      "moduleName": "Relation.Nullary.Universe"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "_≤₋_",
+      "moduleName": "Relation.Binary.Construct.Add.Infimum.NonStrict"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "Definition",
+      "moduleName": "Agda.Builtin.Reflection"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "Sort",
+      "moduleName": "Agda.Builtin.Reflection"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "Sortₐ′",
+      "moduleName": "Reflection.AnnotatedAST"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "RawRing",
+      "moduleName": "Algebra.Bundles.Raw"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "BooleanAlgebra",
+      "moduleName": "Algebra.Lattice.Bundles"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "MinOperator",
+      "moduleName": "Algebra.Construct.NaturalChoice.Base"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "Zipper",
+      "moduleName": "Data.Tree.Binary.Zipper"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "Any",
+      "moduleName": "Data.Maybe.Relation.Unary.Any"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Relation.Binary.Lattice.Bundles.DistributiveLattice"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "MaxOperator",
+      "moduleName": "Algebra.Construct.NaturalChoice.Base"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "IsOrderMonomorphism",
+      "moduleName": "Relation.Binary.Morphism.Structures"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "Expr",
+      "moduleName": "Algebra.Lattice.Properties.BooleanAlgebra.Expression"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "SymInterior",
+      "moduleName": "Relation.Binary.Construct.Interior.Symmetric"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "Expr",
+      "moduleName": "Tactic.RingSolver.Core.Expression"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "TabularConfig",
+      "moduleName": "Text.Tabular.Base"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "Prime",
+      "moduleName": "Data.Nat.Primality"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "_∈ᴿ_",
+      "moduleName": "Text.Regex.Base"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "Tm",
+      "moduleName": "Data.Fin.Substitution.Example"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Bundles.Raw.RawRing"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Bundles.MoufangLoop"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Bundles.MiddleBolLoop"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "_≈ᴹ_",
+      "moduleName": "Algebra.Module.Bundles.Raw.RawBisemimodule"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "_[_]=_",
+      "moduleName": "Data.List.Relation.Unary.All"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "Grouped",
+      "moduleName": "Data.List.Relation.Unary.Grouped"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "Carrier",
+      "moduleName": "Algebra.Bundles.CommutativeMonoid"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "Range",
+      "moduleName": "Text.Regex.Base"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "Pointwise",
+      "moduleName": "Data.Maybe.Relation.Binary.Pointwise"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "Carrier",
+      "moduleName": "Relation.Binary.Bundles.TotalOrder"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "_#_",
+      "moduleName": "Algebra.Apartness.Bundles.HeytingCommutativeRing"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "Carrier",
+      "moduleName": "Tactic.RingSolver.Core.AlmostCommutativeRing.AlmostCommutativeRing"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "I",
+      "moduleName": "Agda.Primitive.Cubical"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "Bisim",
+      "moduleName": "Codata.Sized.Stream.Bisimilarity"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "_⇓",
+      "moduleName": "Codata.Sized.Delay"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "_⊢_≈_",
+      "moduleName": "Codata.Sized.Delay.Bisimilarity"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "Patternₐ′",
+      "moduleName": "Reflection.AnnotatedAST"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "Command",
+      "moduleName": "System.Console.ANSI"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "Pattern",
+      "moduleName": "Agda.Builtin.Reflection"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "⊤",
+      "moduleName": "Agda.Builtin.Unit"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "IsRightSemimodule",
+      "moduleName": "Algebra.Module.Structures"
+    },
+    "count": 6
+  },
+  {
+    "return_type": {
+      "name": "_≅_",
+      "moduleName": "Effect.Monad.Partiality.Equality"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "Eq",
+      "moduleName": "Data.Container.Relation.Binary.Equality.Setoid"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "IsSemiringHomomorphism",
+      "moduleName": "Algebra.Morphism.Structures.SemiringMorphisms"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "⟦_⟧",
+      "moduleName": "Data.Container.Indexed.Core"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "_<_",
+      "moduleName": "Data.Vec.Relation.Binary.Lex.Strict"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "Carrier",
+      "moduleName": "Relation.Binary.Bundles.Setoid"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "IsNearSemiringHomomorphism",
+      "moduleName": "Algebra.Morphism.Structures.NearSemiringMorphisms"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "Pair",
+      "moduleName": "Foreign.Haskell.Pair"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "IsGroupHomomorphism",
+      "moduleName": "Algebra.Morphism.Structures.GroupMorphisms"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "Pointwise",
+      "moduleName": "Data.Container.Relation.Binary.Pointwise"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "_⊢_≈_",
+      "moduleName": "Codata.Sized.Cowriter.Bisimilarity"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "W",
+      "moduleName": "Data.W.Indexed"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "Quasigroup",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "ArgChunk",
+      "moduleName": "Text.Format"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "_∼⁺_",
+      "moduleName": "Relation.Binary.Construct.Closure.Transitive"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "Plus",
+      "moduleName": "Relation.Binary.Construct.Closure.Transitive"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "_∼_⊔_",
+      "moduleName": "Data.Tree.AVL.Height"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "Lex",
+      "moduleName": "Data.Vec.Relation.Binary.Lex.Core"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "Lex",
+      "moduleName": "Data.List.Relation.Binary.Lex.Core"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Codata.Musical.Stream"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "Bisim",
+      "moduleName": "Codata.Sized.Covec.Bisimilarity"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "Printf",
+      "moduleName": "Text.Printf.Generic.Type"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "Bisim",
+      "moduleName": "Codata.Sized.Cowriter.Bisimilarity"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "Loop",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "All",
+      "moduleName": "Effect.Monad.Partiality.All"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "_⊢_~_▷_",
+      "moduleName": "Data.List.Relation.Binary.Sublist.Propositional.Example.UniqueBoundVariables"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "SortingAlgorithm",
+      "moduleName": "Data.List.Sort.Base"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "Bisim",
+      "moduleName": "Codata.Sized.Delay.Bisimilarity"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "EquivalenceKind",
+      "moduleName": "Function.Related.Propositional"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "IsBijection",
+      "moduleName": "Function.Structures"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "RawIMonad",
+      "moduleName": "Effect.Monad.Indexed"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "Equivalence-kind",
+      "moduleName": "Function.Related"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "GCD",
+      "moduleName": "Data.Nat.GCD.GCD"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "Vec",
+      "moduleName": "Data.Star.Vec"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "_⊢_≲_",
+      "moduleName": "Codata.Sized.Conat.Bisimilarity"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "Cofin",
+      "moduleName": "Codata.Sized.Cofin"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "_,_⊢_≈_",
+      "moduleName": "Codata.Sized.Covec.Bisimilarity"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "Signature",
+      "moduleName": "Data.Record"
+    },
+    "count": 5
+  },
+  {
+    "return_type": {
+      "name": "Π",
+      "moduleName": "Function.Equality"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "□",
+      "moduleName": "Data.Container.Relation.Unary.All"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "◇",
+      "moduleName": "Data.Container.Relation.Unary.Any"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "⟪_⟫",
+      "moduleName": "Reflection.AnnotatedAST"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "_ℕ≤_",
+      "moduleName": "Codata.Sized.Conat"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "_≈∙_",
+      "moduleName": "Algebra.Construct.Add.Identity"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "_≤_",
+      "moduleName": "Relation.Binary.Lattice.Bundles.JoinSemilattice"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "_<_",
+      "moduleName": "Data.Bool.Base"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "_≈ᴹ_",
+      "moduleName": "Algebra.Module.Bundles.Semimodule"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "All",
+      "moduleName": "Codata.Guarded.Stream.Relation.Unary.All"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "All",
+      "moduleName": "Data.Tree.AVL.Indexed.Relation.Unary.All"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "AlmostCommutativeRing",
+      "moduleName": "Tactic.RingSolver.Core.AlmostCommutativeRing"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "Any",
+      "moduleName": "Codata.Guarded.Stream.Relation.Unary.Any"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "Block",
+      "moduleName": "Text.Pretty.Core"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "BoundedVec",
+      "moduleName": "Data.Star.BoundedVec"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "Bytestring",
+      "moduleName": "Data.Bytestring.Primitive"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "Carrierᴹ",
+      "moduleName": "Algebra.Module.Bundles.Bimodule"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "Cofin",
+      "moduleName": "Codata.Musical.Cofin"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "ErrorPart",
+      "moduleName": "Agda.Builtin.Reflection"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "family",
+      "moduleName": "Data.Tree.AVL.Value.Value"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "IndexedSetoid",
+      "moduleName": "Relation.Binary.Indexed.Heterogeneous.Bundles"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "InjectionOrdering",
+      "moduleName": "Tactic.RingSolver.Core.Polynomial.Base"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "IsBisemimodule",
+      "moduleName": "Algebra.Module.Structures"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "IsCongruent",
+      "moduleName": "Function.Structures"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "IsGroupMonomorphism",
+      "moduleName": "Algebra.Morphism.Structures.GroupMorphisms"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "IsInverse",
+      "moduleName": "Function.Structures"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "IsLeftInverse",
+      "moduleName": "Function.Structures"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "IsLoop",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "IsMagmaMonomorphism",
+      "moduleName": "Algebra.Morphism.Structures.MagmaMorphisms"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "IsQuasigroup",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "IsRightInverse",
+      "moduleName": "Function.Structures"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "IsRingHomomorphism",
+      "moduleName": "Algebra.Morphism.Structures.RingMorphisms"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "IsSemiringWithoutOne",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "M",
+      "moduleName": "Codata.Guarded.M"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "M",
+      "moduleName": "Codata.Musical.M"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "M",
+      "moduleName": "Codata.Sized.M"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "Match",
+      "moduleName": "Text.Regex.Search"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "Ordering",
+      "moduleName": "Data.Fin.Base"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "Ordering",
+      "moduleName": "Data.Nat.Base"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "Pointwise",
+      "moduleName": "Data.Container.Indexed.Relation.Binary.Pointwise"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "Reverse",
+      "moduleName": "Data.List.Reverse"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "Rose",
+      "moduleName": "Data.Tree.Rose"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "SemiringWithoutAnnihilatingZero",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "TransClosure",
+      "moduleName": "Relation.Binary.Construct.Closure.Transitive"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "uncurry⊤ₙ",
+      "moduleName": "Data.Product.Nary.NonDependent"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "Visibility",
+      "moduleName": "Agda.Builtin.Reflection"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "W",
+      "moduleName": "Data.W"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "XdgDirectory",
+      "moduleName": "System.Directory.Primitive"
+    },
+    "count": 4
+  },
+  {
+    "return_type": {
+      "name": "_≤_",
+      "moduleName": "Data.Vec.Relation.Binary.Lex.NonStrict"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "M",
+      "moduleName": "Codata.Musical.M.Indexed"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "NonEmpty",
+      "moduleName": "Relation.Binary.Definitions"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Tri",
+      "moduleName": "Relation.Binary.Definitions"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "_≃_",
+      "moduleName": "Data.Rational.Base"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "R×S",
+      "moduleName": "Data.Product.Relation.Binary.Pointwise.Dependent"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Crumb",
+      "moduleName": "Data.Tree.Binary.Zipper"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "_<ₗₑₓ_",
+      "moduleName": "Data.Product.Relation.Binary.Lex.Strict"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "IsMonoidIsomorphism",
+      "moduleName": "Algebra.Morphism.Structures.MonoidMorphisms"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "IsRelMonomorphism",
+      "moduleName": "Relation.Binary.Morphism.Structures"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "_<_",
+      "moduleName": "Data.Vec.Relation.Binary.Lex.NonStrict"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Context",
+      "moduleName": "Data.Graph.Acyclic"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "_↔_",
+      "moduleName": "Relation.Binary.Construct.Closure.Equivalence.Properties"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "RawModule",
+      "moduleName": "Algebra.Module.Bundles.Raw"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "W",
+      "moduleName": "Data.W.Sized"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Weight",
+      "moduleName": "System.Console.ANSI"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "IsNearSemiringMonomorphism",
+      "moduleName": "Algebra.Morphism.Structures.NearSemiringMorphisms"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Confluent",
+      "moduleName": "Relation.Binary.Rewriting"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "FlatPoly",
+      "moduleName": "Tactic.RingSolver.Core.Polynomial.Base"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Alignment",
+      "moduleName": "Data.String.Base"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Relevance",
+      "moduleName": "Agda.Builtin.Reflection"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "RawRightModule",
+      "moduleName": "Algebra.Module.Bundles.Raw"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Command",
+      "moduleName": "Data.Container.Indexed.Core.Container"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "IsOne",
+      "moduleName": "Agda.Primitive.Cubical"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "IsCommutativeSemiringWithoutOne",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Semimodule",
+      "moduleName": "Algebra.Module.Bundles"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "RawRightSemimodule",
+      "moduleName": "Algebra.Module.Bundles.Raw"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Eq",
+      "moduleName": "Data.Container.Indexed.Relation.Binary.Equality.Setoid"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "IsStrict",
+      "moduleName": "Relation.Binary.Reasoning.Base.Triple"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "LeftModule",
+      "moduleName": "Algebra.Module.Bundles"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "IsMonoidMorphism",
+      "moduleName": "Algebra.Morphism"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Carrier",
+      "moduleName": "Relation.Binary.Bundles.StrictTotalOrder"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "IsEquality",
+      "moduleName": "Relation.Binary.Reasoning.Base.Triple"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "LeftSemimodule",
+      "moduleName": "Algebra.Module.Bundles"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "_⊕_",
+      "moduleName": "Data.List.Countdown"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Finite",
+      "moduleName": "Codata.Sized.Conat"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Handle",
+      "moduleName": "IO.Primitive.Handle"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "IsGroupIsomorphism",
+      "moduleName": "Algebra.Morphism.Structures.GroupMorphisms"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "SetoidHomomorphism",
+      "moduleName": "Relation.Binary.Morphism.Bundles"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "RawSemimodule",
+      "moduleName": "Algebra.Module.Bundles.Raw"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "BufferMode",
+      "moduleName": "IO.Primitive.Handle"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Extension",
+      "moduleName": "System.FilePath.Posix.Primitive"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "PosetHomomorphism",
+      "moduleName": "Relation.Binary.Morphism.Bundles"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Expr",
+      "moduleName": "Tactic.MonoidSolver"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "_~ᵒ_",
+      "moduleName": "Relation.Binary.Construct.Closure.Reflexive.Properties"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "_⊑_",
+      "moduleName": "Codata.Musical.Covec"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "_⊑_",
+      "moduleName": "Codata.Musical.Colist"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Blocker",
+      "moduleName": "Agda.Builtin.Reflection"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Always",
+      "moduleName": "Relation.Binary.Construct.Always"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "IsRingMonomorphism",
+      "moduleName": "Algebra.Morphism.Structures.RingMorphisms"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "RightModule",
+      "moduleName": "Algebra.Module.Bundles"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "PreorderHomomorphism",
+      "moduleName": "Relation.Binary.Morphism.Bundles"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Codata.Musical.Covec"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Bisemimodule",
+      "moduleName": "Algebra.Module.Bundles"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "PrimeFactorisation",
+      "moduleName": "Data.Nat.Primality.Factorisation"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "_⇒_",
+      "moduleName": "Data.Container.Core"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "RightSemimodule",
+      "moduleName": "Algebra.Module.Bundles"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Either",
+      "moduleName": "Foreign.Haskell.Either"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Bimodule",
+      "moduleName": "Algebra.Module.Bundles"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "IsNearSemiring",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Module",
+      "moduleName": "Algebra.Module.Bundles"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "IsSemiringMonomorphism",
+      "moduleName": "Algebra.Morphism.Structures.SemiringMorphisms"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "IsSemigroupMorphism",
+      "moduleName": "Algebra.Morphism"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "IdempotentSemiring",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Associativity",
+      "moduleName": "Agda.Builtin.Reflection"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Quantity",
+      "moduleName": "Agda.Builtin.Reflection"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "DivMod",
+      "moduleName": "Data.Nat.DivMod"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Arrows",
+      "moduleName": "Function.Nary.NonDependent.Base"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "View",
+      "moduleName": "Data.Fin.Relation.Unary.Top"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Quasiring",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Inverse",
+      "moduleName": "Function.Inverse"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "InitLast",
+      "moduleName": "Data.List.Base"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Codata.Musical.Colist.Bisimilarity"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Thunk",
+      "moduleName": "Codata.Sized.Thunk"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "IsMagmaIsomorphism",
+      "moduleName": "Algebra.Morphism.Structures.MagmaMorphisms"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "RawBimodule",
+      "moduleName": "Algebra.Module.Bundles.Raw"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "RawBisemimodule",
+      "moduleName": "Algebra.Module.Bundles.Raw"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "_<ₗₑₓ_",
+      "moduleName": "Data.Vec.Relation.Binary.Lex.Core"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "TList",
+      "moduleName": "Data.List.Relation.Binary.Sublist.Heterogeneous.Solver"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Any",
+      "moduleName": "Data.Vec.Functional.Relation.Unary.Any"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Lattice.Bundles.Raw.RawLattice"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "ExitCode",
+      "moduleName": "Reflection.External"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Bundles.CommutativeSemiring"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "AnnotationFun",
+      "moduleName": "Reflection.AnnotatedAST"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "RawIAlternative",
+      "moduleName": "Effect.Applicative.Indexed"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "RawIApplicative",
+      "moduleName": "Effect.Applicative.Indexed"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "RawIApplicativeZero",
+      "moduleName": "Effect.Applicative.Indexed"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "NearSemiring",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "Record",
+      "moduleName": "Data.Record"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "RawIMonadPlus",
+      "moduleName": "Effect.Monad.Indexed"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "IsString",
+      "moduleName": "Agda.Builtin.FromString"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "DecStrictPartialOrder",
+      "moduleName": "Relation.Binary.Bundles"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "_≤_",
+      "moduleName": "Data.Vec.Relation.Binary.Lex.Strict"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "RawIMonadZero",
+      "moduleName": "Effect.Monad.Indexed"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "IsSurjection",
+      "moduleName": "Function.Structures"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "RawLeftModule",
+      "moduleName": "Algebra.Module.Bundles.Raw"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "RawLeftSemimodule",
+      "moduleName": "Algebra.Module.Bundles.Raw"
+    },
+    "count": 3
+  },
+  {
+    "return_type": {
+      "name": "IsBisemimoduleMonomorphism",
+      "moduleName": "Algebra.Module.Morphism.Structures.BisemimoduleMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "_∈_",
+      "moduleName": "Codata.Musical.Stream"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsHeytingCommutativeRing",
+      "moduleName": "Algebra.Apartness.Structures"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsHeytingField",
+      "moduleName": "Algebra.Apartness.Structures"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsBisemimoduleIsomorphism",
+      "moduleName": "Algebra.Module.Morphism.Structures.BisemimoduleMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsIdempotentSemiring",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsIndexedEquivalence",
+      "moduleName": "Relation.Binary.Indexed.Heterogeneous.Structures"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsOrderIsomorphism",
+      "moduleName": "Relation.Binary.Morphism.Structures"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsInjection",
+      "moduleName": "Function.Structures"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "_∈_",
+      "moduleName": "Codata.Musical.Covec"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsLatticeMonomorphism",
+      "moduleName": "Algebra.Lattice.Morphism.Structures.LatticeMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsBisemimoduleHomomorphism",
+      "moduleName": "Algebra.Module.Morphism.Structures.BisemimoduleMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Modality",
+      "moduleName": "Agda.Builtin.Reflection"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "MonoidHomomorphism",
+      "moduleName": "Algebra.Morphism.Bundles"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsLeftModuleHomomorphism",
+      "moduleName": "Algebra.Module.Morphism.Structures.LeftModuleMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsLeftModuleIsomorphism",
+      "moduleName": "Algebra.Module.Morphism.Structures.LeftModuleMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "DistributiveLattice",
+      "moduleName": "Relation.Binary.Lattice.Bundles"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsLeftModuleMonomorphism",
+      "moduleName": "Algebra.Module.Morphism.Structures.LeftModuleMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsQuasigroupHomomorphism",
+      "moduleName": "Algebra.Morphism.Structures.QuasigroupMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "NamedOf",
+      "moduleName": "Data.List.Relation.Binary.Sublist.Propositional.Example.UniqueBoundVariables"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "DenseLinearOrder",
+      "moduleName": "Relation.Binary.Bundles"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsQuasigroupIsomorphism",
+      "moduleName": "Algebra.Morphism.Structures.QuasigroupMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Nearring",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "NearSemiringHomomorphism",
+      "moduleName": "Algebra.Morphism.Bundles"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Negative",
+      "moduleName": "Agda.Builtin.FromNeg"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsQuasigroupMonomorphism",
+      "moduleName": "Algebra.Morphism.Structures.QuasigroupMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "NonAssociativeRing",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "NonEmpty",
+      "moduleName": "Data.List.Fresh"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsQuasiring",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "NonEmptyEdgePred",
+      "moduleName": "Data.Star.Decoration"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsBimoduleHomomorphism",
+      "moduleName": "Algebra.Module.Morphism.Structures.BimoduleMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Infinite",
+      "moduleName": "Codata.Musical.Colist"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsLeftSemimoduleHomomorphism",
+      "moduleName": "Algebra.Module.Morphism.Structures.LeftSemimoduleMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsRelIsomorphism",
+      "moduleName": "Relation.Binary.Morphism.Structures"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsRelTo",
+      "moduleName": "Relation.Binary.Reasoning.Base.Partial"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsLeftSemimoduleIsomorphism",
+      "moduleName": "Algebra.Module.Morphism.Structures.LeftSemimoduleMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "OtherKind",
+      "moduleName": "Effect.Monad.Partiality"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "CommutativeSemiringWithoutOne",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "PartialP",
+      "moduleName": "Agda.Primitive.Cubical"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsRightModuleHomomorphism",
+      "moduleName": "Algebra.Module.Morphism.Structures.RightModuleMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsRightModuleIsomorphism",
+      "moduleName": "Algebra.Module.Morphism.Structures.RightModuleMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsRightModuleMonomorphism",
+      "moduleName": "Algebra.Module.Morphism.Structures.RightModuleMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Clauseₐ′",
+      "moduleName": "Reflection.AnnotatedAST"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Clause",
+      "moduleName": "Agda.Builtin.Reflection"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Pointer",
+      "moduleName": "Data.Star.Pointer"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Chunk",
+      "moduleName": "Text.Format.Generic.Format"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "WithDefault",
+      "moduleName": "Data.Default"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Carrier",
+      "moduleName": "Relation.Binary.Lattice.Bundles.HeytingAlgebra"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsLeftSemimoduleMonomorphism",
+      "moduleName": "Algebra.Module.Morphism.Structures.LeftSemimoduleMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsRightSemimoduleHomomorphism",
+      "moduleName": "Algebra.Module.Morphism.Structures.RightSemimoduleMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Carrier",
+      "moduleName": "Algebra.Lattice.Bundles.BooleanAlgebra"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsRightSemimoduleIsomorphism",
+      "moduleName": "Algebra.Module.Morphism.Structures.RightSemimoduleMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Carrier",
+      "moduleName": "Algebra.Bundles.Raw.RawRing"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Carrier",
+      "moduleName": "Algebra.Bundles.Magma"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Carrier",
+      "moduleName": "Algebra.Bundles.IdempotentCommutativeMonoid"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsRightSemimoduleMonomorphism",
+      "moduleName": "Algebra.Module.Morphism.Structures.RightSemimoduleMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsKleeneAlgebraHomomorphism",
+      "moduleName": "Algebra.Morphism.Structures.KleeneAlgebraMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "BoundedMeetSemilattice",
+      "moduleName": "Relation.Binary.Lattice.Bundles"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsLoopHomomorphism",
+      "moduleName": "Algebra.Morphism.Structures.LoopMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "BoundedJoinSemilattice",
+      "moduleName": "Relation.Binary.Lattice.Bundles"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsRingIsomorphism",
+      "moduleName": "Algebra.Morphism.Structures.RingMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Precedence",
+      "moduleName": "Agda.Builtin.Reflection"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "PrefixView",
+      "moduleName": "Data.List.Relation.Binary.Prefix.Heterogeneous"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Blinking",
+      "moduleName": "System.Console.ANSI"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Prime",
+      "moduleName": "Algebra.Definitions.RawSemiring"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsLoopIsomorphism",
+      "moduleName": "Algebra.Morphism.Structures.LoopMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsRingWithoutOneHomomorphism",
+      "moduleName": "Algebra.Morphism.Structures.RingWithoutOneMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsRingWithoutOneIsoMorphism",
+      "moduleName": "Algebra.Morphism.Structures.RingWithoutOneMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsRingWithoutOneMonomorphism",
+      "moduleName": "Algebra.Morphism.Structures.RingWithoutOneMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Identity",
+      "moduleName": "Effect.Monad.Identity"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "quantₙ",
+      "moduleName": "Relation.Nary"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "QuasigroupHomomorphism",
+      "moduleName": "Algebra.Morphism.Bundles"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsBimodule",
+      "moduleName": "Algebra.Module.Structures"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsSemimodule",
+      "moduleName": "Algebra.Module.Structures"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsSemimoduleHomomorphism",
+      "moduleName": "Algebra.Module.Morphism.Structures.SemimoduleMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Arg",
+      "moduleName": "Agda.Builtin.Reflection"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Application",
+      "moduleName": "Data.Fin.Substitution"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "AppLemmas",
+      "moduleName": "Data.Fin.Substitution.Lemmas"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsSemimoduleIsomorphism",
+      "moduleName": "Algebra.Module.Morphism.Structures.SemimoduleMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "RawFoldable",
+      "moduleName": "Effect.Foldable"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "RawFoldableWithDefaults",
+      "moduleName": "Effect.Foldable"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Any",
+      "moduleName": "Data.Star.Pointer"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Annotated′",
+      "moduleName": "Reflection.AnnotatedAST"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "RawIMonadDCont",
+      "moduleName": "Effect.Monad.Continuation"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsSemimoduleMonomorphism",
+      "moduleName": "Algebra.Module.Morphism.Structures.SemimoduleMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsApartnessRelation",
+      "moduleName": "Relation.Binary.Structures"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "HeytingField",
+      "moduleName": "Algebra.Apartness.Bundles"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsSemiringIsomorphism",
+      "moduleName": "Algebra.Morphism.Structures.SemiringMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsLoopMonomorphism",
+      "moduleName": "Algebra.Morphism.Structures.LoopMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "HeytingCommutativeRing",
+      "moduleName": "Algebra.Apartness.Bundles"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "AlmostCommutativeRing",
+      "moduleName": "Algebra.Solver.Ring.AlmostCommutativeRing"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "All",
+      "moduleName": "Data.Sum.Relation.Unary.All"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "All",
+      "moduleName": "Codata.Musical.Colist.Relation.Unary.All"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Abs",
+      "moduleName": "Agda.Builtin.Reflection"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "GroupHomomorphism",
+      "moduleName": "Algebra.Morphism.Bundles"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Generator",
+      "moduleName": "Data.Nat.PseudoRandom.LCG"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "RawRelation",
+      "moduleName": "Relation.Binary.Bundles.Raw"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "_⊆I_",
+      "moduleName": "Data.List.Relation.Binary.Sublist.Heterogeneous.Solver"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Func",
+      "moduleName": "Function.Dependent.Bundles"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "RawSetoid",
+      "moduleName": "Relation.Binary.Bundles.Raw"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "ReaderT",
+      "moduleName": "Effect.Monad.Reader.Transformer.Base"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsKleeneAlgebraIsomorphism",
+      "moduleName": "Algebra.Morphism.Structures.KleeneAlgebraMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Refinement-syntax",
+      "moduleName": "Data.Refinement.Base"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Item",
+      "moduleName": "Data.List.Relation.Binary.Sublist.Heterogeneous.Solver"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsKleeneAlgebraMonomorphism",
+      "moduleName": "Algebra.Morphism.Structures.KleeneAlgebraMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Result",
+      "moduleName": "Data.Star.Pointer"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsBimoduleMonomorphism",
+      "moduleName": "Algebra.Module.Morphism.Structures.BimoduleMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Reveal_·_is_",
+      "moduleName": "Relation.Binary.HeterogeneousEquality"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Reveal_·_is_",
+      "moduleName": "Relation.Binary.PropositionalEquality"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Kind",
+      "moduleName": "Effect.Monad.Partiality"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsBimoduleIsomorphism",
+      "moduleName": "Algebra.Module.Morphism.Structures.BimoduleMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "KleeneAlgebra",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsModuleHomomorphism",
+      "moduleName": "Algebra.Module.Morphism.Structures.ModuleMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "RingHomomorphism",
+      "moduleName": "Algebra.Morphism.Bundles"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "KnownNature",
+      "moduleName": "System.FilePath.Posix"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "RingWithoutOne",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "RingWithoutOneHomomorphism",
+      "moduleName": "Algebra.Morphism.Bundles"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsModuleIsomorphism",
+      "moduleName": "Algebra.Module.Morphism.Structures.ModuleMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "FormatSpec",
+      "moduleName": "Text.Format.Generic"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Layer",
+      "moduleName": "System.Console.ANSI"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "_-⊎-_",
+      "moduleName": "Data.Sum.Base"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "⟨_⟩_≈_",
+      "moduleName": "Relation.Nullary.Universe"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsModuleMonomorphism",
+      "moduleName": "Algebra.Module.Morphism.Structures.ModuleMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Irreducible",
+      "moduleName": "Algebra.Definitions.RawSemiring"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "InvertibleUnitalMagma",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "SemiringHomomorphism",
+      "moduleName": "Algebra.Morphism.Bundles"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "_⊑_",
+      "moduleName": "Codata.Musical.Stream"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "SetoidIsomorphism",
+      "moduleName": "Relation.Binary.Morphism.Bundles"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "SetoidMonomorphism",
+      "moduleName": "Relation.Binary.Morphism.Bundles"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Lemmas₀",
+      "moduleName": "Data.Fin.Substitution.Lemmas"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "SignAbs",
+      "moduleName": "Data.Integer.Base"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Lemmas₁",
+      "moduleName": "Data.Fin.Substitution.Lemmas"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Simple",
+      "moduleName": "Data.Fin.Substitution"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "SnocView",
+      "moduleName": "Data.List.NonEmpty.Base"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "_≤_",
+      "moduleName": "Relation.Binary.Lattice.Bundles.Lattice"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "_≤_",
+      "moduleName": "Relation.Binary.Bundles.Poset"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Lemmas₂",
+      "moduleName": "Data.Fin.Substitution.Lemmas"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Lemmas₃",
+      "moduleName": "Data.Fin.Substitution.Lemmas"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "StateT",
+      "moduleName": "Effect.Monad.State.Transformer.Base"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Lemmas₄",
+      "moduleName": "Data.Fin.Substitution.Lemmas"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "_≋_",
+      "moduleName": "Data.Vec.Relation.Binary.Lex.Strict"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "_≋_",
+      "moduleName": "Data.Vec.Relation.Binary.Lex.NonStrict"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "InvertibleMagma",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Style",
+      "moduleName": "System.Console.ANSI"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Sub",
+      "moduleName": "Agda.Builtin.Cubical.Sub"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Fixity",
+      "moduleName": "Agda.Builtin.Reflection"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "_≋_",
+      "moduleName": "Data.List.Relation.Binary.Lex.Strict"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Subst",
+      "moduleName": "Data.Fin.Substitution"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "FirstView",
+      "moduleName": "Data.List.Relation.Unary.First"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "_≋_",
+      "moduleName": "Data.List.Relation.Binary.Lex.NonStrict"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "SuffixView",
+      "moduleName": "Data.List.Relation.Binary.Suffix.Heterogeneous"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Finite",
+      "moduleName": "Codata.Musical.Colist"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Fin",
+      "moduleName": "Data.Star.Fin"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsLatticeHomomorphism",
+      "moduleName": "Algebra.Lattice.Morphism.Structures.LatticeMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Symmetric-kind",
+      "moduleName": "Function.Related"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "SymmetricKind",
+      "moduleName": "Function.Related.Propositional"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "List#⁺",
+      "moduleName": "Data.List.Fresh.NonEmpty"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "ListT",
+      "moduleName": "Data.Fin.Substitution.List"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Effect.Monad.Partiality.Equality"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Codata.Musical.Conat"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "TermSubst",
+      "moduleName": "Data.Fin.Substitution"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Time",
+      "moduleName": "System.Clock"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "ExitCode",
+      "moduleName": "System.Exit.Primitive"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "WriterT",
+      "moduleName": "Effect.Monad.Writer.Transformer.Base"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Tree",
+      "moduleName": "Data.Graph.Acyclic"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "LoopHomomorphism",
+      "moduleName": "Algebra.Morphism.Bundles"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "View",
+      "moduleName": "Data.List.Relation.Binary.Infix.Heterogeneous"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "XdgDirectoryList",
+      "moduleName": "System.Directory.Primitive"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsNearSemiringIsomorphism",
+      "moduleName": "Algebra.Morphism.Structures.NearSemiringMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Error",
+      "moduleName": "Text.Format.Generic.Format"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Ty",
+      "moduleName": "Data.List.Relation.Binary.Sublist.Propositional.Example.UniqueBoundVariables"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "_∋_",
+      "moduleName": "Data.Star.Environment"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "MagmaHomomorphism",
+      "moduleName": "Algebra.Morphism.Bundles"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Underlining",
+      "moduleName": "System.Console.ANSI"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Error",
+      "moduleName": "Test.Golden"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsLatticeIsomorphism",
+      "moduleName": "Algebra.Lattice.Morphism.Structures.LatticeMorphisms"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "UnitalMagma",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Equivalence",
+      "moduleName": "Function.Equivalence"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsDenseLinearOrder",
+      "moduleName": "Relation.Binary.Structures"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsDistributiveLattice",
+      "moduleName": "Relation.Binary.Lattice.Structures"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Maybe",
+      "moduleName": "Foreign.Haskell.Maybe"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsEquality",
+      "moduleName": "Relation.Binary.Reasoning.Base.Double"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "Intensity",
+      "moduleName": "System.Console.ANSI"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsBoundedMeetSemilattice",
+      "moduleName": "Relation.Binary.Lattice.Structures"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsBoundedJoinSemilattice",
+      "moduleName": "Relation.Binary.Lattice.Structures"
+    },
+    "count": 2
+  },
+  {
+    "return_type": {
+      "name": "IsInvertibleMagma",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "IsKleeneAlgebra",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "IsLeftModule",
+      "moduleName": "Algebra.Module.Structures"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "VarMap",
+      "moduleName": "Tactic.RingSolver"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_↭_",
+      "moduleName": "Data.List.Relation.Binary.Permutation.Setoid"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "IsApartness",
+      "moduleName": "Relation.Binary.Reasoning.Base.Apartness"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "IsMetric",
+      "moduleName": "Function.Metric.Nat.Structures"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "IsModule",
+      "moduleName": "Algebra.Module.Structures"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "IsNearring",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "IsNonAssociativeRing",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Injectiveₙ",
+      "moduleName": "Function.Nary.NonDependent"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "IsPartialEquivalence",
+      "moduleName": "Relation.Binary.Structures"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Injection",
+      "moduleName": "Function.Injection"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "IsPreMetric",
+      "moduleName": "Function.Metric.Structures"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "IsProtoMetric",
+      "moduleName": "Function.Metric.Structures"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_↢_",
+      "moduleName": "Function.Related"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "IsQuasiSemiMetric",
+      "moduleName": "Function.Metric.Structures"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "IndexedPreorder",
+      "moduleName": "Relation.Binary.Indexed.Heterogeneous.Bundles"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "IsRightModule",
+      "moduleName": "Algebra.Module.Structures"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "InBounds",
+      "moduleName": "System.Random"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "if_then_else_",
+      "moduleName": "Data.Bool.Base"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "VecT",
+      "moduleName": "Data.Vec.Effectful.Transformer"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "IsRingWithoutOne",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Identity",
+      "moduleName": "Data.Nat.GCD.Bézout.Identity"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "IsSemiMetric",
+      "moduleName": "Function.Metric.Structures"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "IdempotentMagma",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "IsUnitalMagma",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "IsWeakPushout",
+      "moduleName": "Data.List.Relation.Binary.Sublist.Propositional.Properties"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "From-yes",
+      "moduleName": "Relation.Nullary.Decidable.Core"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "From-no",
+      "moduleName": "Relation.Nullary.Decidable.Core"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "From-inj₂",
+      "moduleName": "Data.Sum"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "KleeneAlgebraHomomorphism",
+      "moduleName": "Algebra.Morphism.Bundles"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "From-inj₁",
+      "moduleName": "Data.Sum"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "LCM",
+      "moduleName": "Data.Nat.LCM.LCM"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "LeftBolLoop",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "FlexibleMagma",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Lemmas₅",
+      "moduleName": "Data.Fin.Substitution.Lemmas"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "LevelUniv",
+      "moduleName": "Agda.Primitive"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Lex-≤",
+      "moduleName": "Data.List.Relation.Binary.Lex.NonStrict"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "fiber",
+      "moduleName": "Agda.Builtin.Cubical.HCompU.Helpers"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "ListT",
+      "moduleName": "Data.List.Effectful.Transformer"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "List⁺T",
+      "moduleName": "Data.List.NonEmpty.Effectful.Transformer"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "□",
+      "moduleName": "Data.Container.Indexed.Core"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Manifest-Σ",
+      "moduleName": "Data.Record"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_←_",
+      "moduleName": "Function.Related"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Match",
+      "moduleName": "Text.Regex.String.Unsafe"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "MaybeT",
+      "moduleName": "Data.Maybe.Effectful.Transformer"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "MedialMagma",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Empty",
+      "moduleName": "Data.List.Fresh"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Metric",
+      "moduleName": "Function.Metric.Nat.Bundles"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "MiddleBolLoop",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Morphism",
+      "moduleName": "Effect.Applicative"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Morphism",
+      "moduleName": "Effect.Functor"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "MoufangLoop",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "N-ary",
+      "moduleName": "Data.Vec.N-ary"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Namedₐ′",
+      "moduleName": "Reflection.AnnotatedAST"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Natural",
+      "moduleName": "Data.Container.Morphism.Properties"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "∀ⁿʰ",
+      "moduleName": "Data.Vec.N-ary"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "NonEmpty",
+      "moduleName": "Foreign.Haskell.List.NonEmpty"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "DecoratedWith",
+      "moduleName": "Data.Star.Decoration"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Cxt",
+      "moduleName": "Reflection.AST.Traversal"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "CRec",
+      "moduleName": "Data.Nat.Induction"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "NonZero",
+      "moduleName": "Tactic.RingSolver.Core.Polynomial.Base"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Cospan",
+      "moduleName": "Data.List.Relation.Binary.Sublist.Propositional.Slice"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "NormalForm",
+      "moduleName": "Relation.Binary.Rewriting"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Congruentₙ",
+      "moduleName": "Function.Nary.NonDependent"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Options",
+      "moduleName": "Test.Golden"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "PartialSetoid",
+      "moduleName": "Relation.Binary.Bundles"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "CommutativeMagma",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "CmdSpec",
+      "moduleName": "Reflection.External"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Carrier",
+      "moduleName": "Relation.Binary.Indexed.Heterogeneous.Bundles.IndexedSetoid"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Pointwise",
+      "moduleName": "Data.Product.Relation.Binary.Pointwise.Dependent"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Carrier",
+      "moduleName": "Algebra.Construct.Terminal.𝕆ne"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "POINTWISE",
+      "moduleName": "Data.Product.Relation.Binary.Pointwise.Dependent"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "CancellativeCommutativeSemiring",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Position",
+      "moduleName": "Data.Container.Core.Container"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "PowInd",
+      "moduleName": "Tactic.RingSolver.Core.Polynomial.Base"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "PreMetric",
+      "moduleName": "Function.Metric.Nat.Bundles"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "primGlue",
+      "moduleName": "Agda.Builtin.Cubical.Glue"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "primHComp",
+      "moduleName": "Agda.Primitive.Cubical"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "primSubOut",
+      "moduleName": "Agda.Builtin.Cubical.Sub"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "PrintfSpec",
+      "moduleName": "Text.Printf.Generic"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "BiInverse",
+      "moduleName": "Function.Bundles"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Product⊤",
+      "moduleName": "Data.Product.Nary.NonDependent"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Proj",
+      "moduleName": "Data.Record"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Projₙ",
+      "moduleName": "Data.Product.Nary.NonDependent"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "QuasiSemiMetric",
+      "moduleName": "Function.Metric.Nat.Bundles"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "ArgInfo",
+      "moduleName": "Agda.Builtin.Reflection"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Argₐ′",
+      "moduleName": "Reflection.AnnotatedAST"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "ApartnessRelation",
+      "moduleName": "Relation.Binary.Bundles"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "RawIMonadReader",
+      "moduleName": "Effect.Monad.Reader.Indexed"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "RawIMonadState",
+      "moduleName": "Effect.Monad.State.Indexed"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "RawIMonadWriter",
+      "moduleName": "Effect.Monad.Writer.Indexed"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "RawLattice",
+      "moduleName": "Algebra.Lattice.Bundles.Raw"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "RawLoop",
+      "moduleName": "Algebra.Bundles.Raw"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "AlternativeMagma",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "All",
+      "moduleName": "Data.List.NonEmpty.Relation.Unary.All"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Actions",
+      "moduleName": "Reflection.AST.Traversal"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Absₐ′",
+      "moduleName": "Reflection.AnnotatedAST"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Σ-Rec",
+      "moduleName": "Induction.Lexicographic"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "RawPMonad",
+      "moduleName": "Effect.Monad.Predicate"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_≤ₗₑₓ_",
+      "moduleName": "Data.Product.Relation.Binary.Lex.NonStrict"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "RawQuasigroup",
+      "moduleName": "Algebra.Bundles.Raw"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "RawRingWithoutOne",
+      "moduleName": "Algebra.Bundles.Raw"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Rec",
+      "moduleName": "Data.Nat.Induction"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Refinement",
+      "moduleName": "Data.Refinement.Base"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Regex",
+      "moduleName": "Text.Regex.Base"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_<_",
+      "moduleName": "Data.List.Relation.Binary.Lex.Strict"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Result",
+      "moduleName": "Reflection.External"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "⟦_⟧",
+      "moduleName": "Relation.Nullary.Universe"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "RightBolLoop",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_<_",
+      "moduleName": "Data.List.Relation.Binary.Lex.NonStrict"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_<_",
+      "moduleName": "Data.List.Relation.Binary.Lex"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "RingOperatorTerms",
+      "moduleName": "Tactic.RingSolver"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "◇",
+      "moduleName": "Data.Container.Indexed.Core"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_-Raw-AlmostCommutative⟶_",
+      "moduleName": "Tactic.RingSolver.Core.AlmostCommutativeRing"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_-Raw-AlmostCommutative⟶_",
+      "moduleName": "Algebra.Solver.Ring.AlmostCommutativeRing"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "SemimedialMagma",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "SemiMetric",
+      "moduleName": "Function.Metric.Nat.Bundles"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_⊗_",
+      "moduleName": "Induction.Lexicographic"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Wrap′",
+      "moduleName": "Data.Wrap"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "SemiringWithoutOne",
+      "moduleName": "Algebra.Bundles"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_⊆_",
+      "moduleName": "Data.List.Relation.Binary.Sublist.Setoid"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_≳_",
+      "moduleName": "Effect.Monad.Partiality.Equality"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_≤_",
+      "moduleName": "Relation.Binary.Bundles.DecTotalOrder"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Span",
+      "moduleName": "Text.Regex.String.Unsafe"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_≤_",
+      "moduleName": "Data.List.Relation.Binary.Lex.Strict"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_≤_",
+      "moduleName": "Data.List.Relation.Binary.Lex.NonStrict"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_≋_",
+      "moduleName": "Data.Vec.Relation.Binary.Lex.Core"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_≋_",
+      "moduleName": "Data.Product.Relation.Binary.Lex.Strict"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_≋_",
+      "moduleName": "Data.Product.Relation.Binary.Lex.NonStrict"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Substitutionₙ",
+      "moduleName": "Relation.Nary"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Sufficient",
+      "moduleName": "Data.List.Relation.Unary.Sufficient"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "SumₗT",
+      "moduleName": "Data.Sum.Effectful.Left.Transformer"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "SumᵣT",
+      "moduleName": "Data.Sum.Effectful.Right.Transformer"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_≋_",
+      "moduleName": "Data.List.Relation.Binary.Lex"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_≉_",
+      "moduleName": "Relation.Binary.Construct.NonStrictToStrict"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Relation.Binary.Indexed.Heterogeneous.Bundles.IndexedSetoid"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Relation.Binary.Bundles.StrictTotalOrder"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Relation.Binary.Bundles.StrictPartialOrder"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Relation.Binary.Bundles.Preorder"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "TermLemmas",
+      "moduleName": "Data.Fin.Substitution.Lemmas"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "TestPool",
+      "moduleName": "Test.Golden"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Timed",
+      "moduleName": "System.Clock"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Bundles.Ring"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Bundles.CancellativeCommutativeSemiring"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_≈_",
+      "moduleName": "Algebra.Apartness.Bundles.HeytingCommutativeRing"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_≃_",
+      "moduleName": "Function.Properties.Inverse.HalfAdjointEquivalence"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_≃_",
+      "moduleName": "Function.HalfAdjointEquivalence"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_≃_",
+      "moduleName": "Agda.Builtin.Cubical.Equiv"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "_∼_",
+      "moduleName": "Relation.Binary.HeterogeneousEquality.Quotients.Examples"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "uncurryₙ",
+      "moduleName": "Data.Product.Nary.NonDependent"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "∞",
+      "moduleName": "Agda.Builtin.Coinduction"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "UniqueNormalForm",
+      "moduleName": "Relation.Binary.Rewriting"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "Unit",
+      "moduleName": "Data.Unit.NonEta"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "isContr",
+      "moduleName": "Agda.Builtin.Cubical.HCompU.Helpers"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "IsCommutativeMagma",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "IsCancellativeCommutativeSemiring",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "IsEquality",
+      "moduleName": "Relation.Binary.Reasoning.Base.Apartness"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "isEquiv",
+      "moduleName": "Agda.Builtin.Cubical.Equiv"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "IsIndexedPreorder",
+      "moduleName": "Relation.Binary.Indexed.Heterogeneous.Structures"
+    },
+    "count": 1
+  },
+  {
+    "return_type": {
+      "name": "IsInvertibleUnitalMagma",
+      "moduleName": "Algebra.Structures"
+    },
+    "count": 1
+  }
+]

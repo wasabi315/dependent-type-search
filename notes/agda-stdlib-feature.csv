@@ -1,0 +1,12 @@
+return_type_kind,polymorphic,arity_has_var,count
+RHSigma,0,false,433
+RHSigma,1,false,317
+RHSigma,1,true,73
+RHTop,0,false,8253
+RHTop,1,false,4076
+RHTop,1,true,1506
+RHU,0,false,810
+RHU,1,false,877
+RHU,1,true,229
+RHVar,1,false,237
+RHVar,1,true,364
