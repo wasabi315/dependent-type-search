@@ -6,7 +6,6 @@ import TypeSearch.Common
 import TypeSearch.Evaluation
 import TypeSearch.Term
 import TypeSearch.Unification
-import Prelude hiding (curry)
 
 --------------------------------------------------------------------------------
 
@@ -29,8 +28,8 @@ bind (Ctx tenv l env idRen cs) =
 -- Rewriting types
 
 -- | Curry until the first domain becomes non-sigma.
-curry :: MetaCtx -> ConvState -> Quant -> (Quant, Iso)
-curry mctx cs = go Refl
+curryCS :: MetaCtx -> ConvState -> Quant -> (Quant, Iso)
+curryCS mctx cs = go Refl
   where
     go i (Quant x a b) = case forceCS mctx cs a of
       VSigma y a1 a2 ->
@@ -38,8 +37,8 @@ curry mctx cs = go Refl
       a -> (Quant x a b, i)
 
 -- | Right-nest until the first projection becomes non-sigma.
-assoc :: MetaCtx -> ConvState -> Quant -> (Quant, Iso)
-assoc mctx cs = go Refl
+assocCS :: MetaCtx -> ConvState -> Quant -> (Quant, Iso)
+assocCS mctx cs = go Refl
   where
     go i (Quant x a b) = case forceCS mctx cs a of
       VSigma y a1 a2 ->
@@ -205,7 +204,7 @@ unifySpineRefl mctx ctx sp sp' = do
 
 unifyPi :: MetaCtx -> Ctx -> Quant -> Quant -> [(Iso, Iso, MetaCtx)]
 unifyPi mctx ctx q q' = do
-  let (Quant _ a b, i) = curry mctx ctx.convState q
+  let (Quant _ a b, i) = curryCS mctx ctx.convState q
   flip foldMapA (currySwap mctx ctx q') \(Quant _ a' b', i', mctx) -> do
     (ia, ia', mctx) <- unifyIso mctx ctx a a'
     let v = transportInv ia (VVar ctx.level)
@@ -217,7 +216,7 @@ unifyPi mctx ctx q q' = do
 
 unifySigma :: MetaCtx -> Ctx -> Quant -> Quant -> [(Iso, Iso, MetaCtx)]
 unifySigma mctx ctx q q' = do
-  let (Quant _ a b, i) = assoc mctx ctx.convState q
+  let (Quant _ a b, i) = assocCS mctx ctx.convState q
   flip foldMapA (assocSwap mctx ctx q') \(Quant _ a' b', i', mctx) -> do
     (ia, ia', mctx) <- unifyIso mctx ctx a a'
     let v = transportInv ia (VVar ctx.level)

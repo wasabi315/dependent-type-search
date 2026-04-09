@@ -37,6 +37,7 @@ import TypeSearch.Database.Index.Common
 import TypeSearch.Database.Index.Name
 import TypeSearch.Database.Index.Term
 import TypeSearch.Database.PostgreSQL qualified as TS
+import TypeSearch.Evaluation qualified as TS
 import TypeSearch.Term qualified as TS
 
 --------------------------------------------------------------------------------
@@ -47,9 +48,10 @@ dbItem name_qual sig body = TS.DbItem {..}
   where
     name_unqual = name_qual.name
     modul = name_qual.moduleName
-    return_type_head = TS.computeReturnTypeHead sig
-    polymorphic = TS.computePolymorphic sig
-    TS.Arity arity_has_var arity = TS.computeArity sig
+    (sig', _) = TS.normalise0 TS.emptyMetaCtx mempty sig
+    return_type_head = TS.computeReturnTypeHead sig'
+    polymorphic = TS.computePolymorphic sig'
+    TS.Arity arity_has_var arity = TS.computeArity sig'
 
 --------------------------------------------------------------------------------
 -- Entrypoint
