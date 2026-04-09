@@ -10,6 +10,7 @@ import Agda.Interaction.Library
 import Agda.Interaction.Options
 import Agda.Syntax.Common
 import Agda.Syntax.Common.Pretty (prettyShow)
+import Agda.Syntax.Concrete.Name qualified as C
 import Agda.Syntax.Internal hiding (arity)
 import Agda.Syntax.Position
 import Agda.Syntax.Scope.Base
@@ -24,12 +25,13 @@ import Agda.Utils.Maybe (ifJustM)
 import Agda.Utils.Monad
 import Control.Monad.Except (throwError)
 import Control.Monad.Reader
+import Data.Bifunctor
 import Data.Functor.Compose
 import Data.List (partition, sort)
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map.Strict qualified as Map
 import Data.Maybe
-import Data.Set qualified as S
+import Data.Set qualified as Set
 import Data.String
 import System.Directory
 import System.FilePath.Find qualified as Find
@@ -102,9 +104,9 @@ translateLibrary config = do
                       resolveDefinedName (show x.name) >>= \case
                         Nothing -> translateError $ vcat [text "Couldn't find definition", text $ show x]
                         Just x -> pure x
-                    pure (foldr S.insert resolved resolved', unresolved')
+                    pure (foldr Set.insert resolved resolved', unresolved')
         )
-        (mempty, S.toList config.aliasNames)
+        (mempty, Set.toList config.aliasNames)
         files
 
     unless (null unresolved) do
@@ -133,7 +135,8 @@ translateLibrary config = do
 translateInterface :: Interface -> M [TS.DbItem]
 translateInterface intf =
   ifJustM (useTC (stPragmaOptions . lensOptCubical)) (\_ -> pure []) do
-    let go scope =
+    let go :: Scope -> TCM [(C.QName, QName)]
+        go scope =
           isDatatypeModule scope.scopeName >>= \case
             Just IsDataModule -> pure mempty
             _ -> do
@@ -143,11 +146,11 @@ translateInterface intf =
                   (go <=< getNamedScope . amodName)
                   (Compose ns.nsModules)
               let xns =
-                    [ (x, n.anameName)
+                    [ (C.QName x, n.anameName)
                     | (x, ns) <- Map.toList ns.nsNames,
                       n <- NonEmpty.toList ns
                     ]
-                  xns' = foldMap concat sub
+                  xns' = Map.foldMapWithKey (foldMap . map . first . C.Qual) sub
               pure $ xns <> xns'
 
     names <- lift $ go =<< getCurrentScope
@@ -155,8 +158,7 @@ translateInterface intf =
       getConstInfo' origQName >>= \case
         Left _ -> pure []
         Right def -> do
-          let outMod = translateModuleName intf.iModuleName
-              outName = TS.QName outMod (translateName cname)
+          let outName = translateConcreteQName (translateModuleName intf.iModuleName) cname
           translateDefinition outName def
 
 --------------------------------------------------------------------------------
