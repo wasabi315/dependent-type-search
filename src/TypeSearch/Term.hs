@@ -41,6 +41,33 @@ revPruning = RevPruning . reverse
 
 --------------------------------------------------------------------------------
 
+subst :: (Index -> Term) -> Term -> Term
+subst s = \case
+  Var i -> s i
+  t@Meta {} -> t
+  t@Top {} -> t
+  U -> U
+  Pi x a b -> Pi x (subst s a) (substBind s b)
+  Lam x t -> Lam x (substBind s t)
+  App t u -> App (subst s t) (subst s u)
+  Sigma x a b -> Sigma x (subst s a) (substBind s b)
+  Pair t u -> Pair (subst s t) (subst s u)
+  Proj1 t -> Proj1 (subst s t)
+  Proj2 t -> Proj2 (subst s t)
+  AppPruning {} -> error "subst: substitution on AppPruning is not supported yet"
+  where
+    substBind s = subst \case
+      0 -> Var 0
+      i -> weakenBy 1 $ s (i - 1)
+
+rename :: (Index -> Index) -> Term -> Term
+rename r = subst (Var . r)
+
+weakenBy :: Int -> Term -> Term
+weakenBy n = rename (coerce n +)
+
+--------------------------------------------------------------------------------
+
 data TeleView = TeleView
   { tele :: [Type],
     cod :: Type

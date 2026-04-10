@@ -92,7 +92,7 @@ translateSigma ty args =
   translateArgs ty args >>= \case
     -- fully applied
     [a, TS.Lam x b] -> pure $ TS.Sigma x a b
-    [a, b] -> pure $ TS.Sigma "x" a (b `TS.App` TS.Var 0)
+    [a, b] -> pure $ TS.Sigma "x" a (TS.weakenBy 1 b `TS.App` TS.Var 0)
     -- partially applied
     [a] -> pure $ TS.Lam "B" $ TS.Sigma "x" a (TS.Var 0)
     -- unapplied

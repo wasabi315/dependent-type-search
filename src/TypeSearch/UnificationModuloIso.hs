@@ -4,7 +4,7 @@ import Control.Applicative
 import Data.Maybe
 import TypeSearch.Common
 import TypeSearch.Evaluation
-import TypeSearch.Term
+import TypeSearch.Term hiding (rename)
 import TypeSearch.Unification
 
 --------------------------------------------------------------------------------
