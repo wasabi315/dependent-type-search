@@ -4,6 +4,7 @@ import Control.Monad.State.Strict
 import Data.List (elemIndex)
 import Data.Map.Strict qualified as M
 import Data.Maybe
+import Data.Set qualified as S
 import Database.PostgreSQL.Simple.FromField
 import Database.PostgreSQL.Simple.ToField
 import GHC.Generics
@@ -40,6 +41,23 @@ revPruning :: Pruning -> RevPruning
 revPruning = RevPruning . reverse
 
 --------------------------------------------------------------------------------
+
+freeVar :: Term -> S.Set Index
+freeVar = \case
+  Var i -> S.singleton i
+  Meta {} -> S.empty
+  Top {} -> S.empty
+  U -> S.empty
+  Pi _ a b -> freeVar a <> freeVarBind b
+  Lam _ t -> freeVarBind t
+  App t u -> freeVar t <> freeVar u
+  Sigma _ a b -> freeVar a <> freeVarBind b
+  Pair t u -> freeVar t <> freeVar u
+  Proj1 t -> freeVar t
+  Proj2 t -> freeVar t
+  AppPruning {} -> error "freeVar: AppPruning is not supported yet"
+  where
+    freeVarBind t = S.mapMonotonic (subtract 1) $ S.filter (> 0) $ freeVar t
 
 subst :: (Index -> Term) -> Term -> Term
 subst s = \case
