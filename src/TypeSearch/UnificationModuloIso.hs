@@ -42,7 +42,7 @@ assocCS mctx cs = go Refl
   where
     go i (Quant x a b) = case forceCS mctx cs a of
       VSigma y a1 a2 ->
-        go (i <> Assoc) $ Quant y a1 \ ~u -> VPi x (a2 u) \ ~v -> b (VPair u v)
+        go (i <> Assoc) $ Quant y a1 \ ~u -> VSigma x (a2 u) \ ~v -> b (VPair u v)
       a -> (Quant x a b, i)
 
 -- | Pick up a domain without breaking dependencies.
