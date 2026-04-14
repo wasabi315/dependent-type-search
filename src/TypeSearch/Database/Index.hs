@@ -33,6 +33,7 @@ import Data.Map.Strict qualified as Map
 import Data.Maybe
 import Data.Set qualified as Set
 import Data.String
+import Data.Text qualified as T
 import System.Directory
 import System.FilePath.Find qualified as Find
 import TypeSearch.Common qualified as TS
@@ -42,16 +43,19 @@ import TypeSearch.Database.Index.Name
 import TypeSearch.Database.Index.Term
 import TypeSearch.Database.PostgreSQL qualified as TS
 import TypeSearch.Evaluation qualified as TS
+import TypeSearch.Pretty qualified as TS
 import TypeSearch.Term qualified as TS
 
 --------------------------------------------------------------------------------
 -- Utils
 
-dbItem :: TS.QName -> TS.Term -> Maybe TS.Term -> TS.DbItem
-dbItem name_qual sig body = TS.DbItem {..}
+dbItem :: TS.QName -> TS.Type -> TS.Type -> Maybe TS.Term -> TS.DbItem
+dbItem name_qual sig origSig body = TS.DbItem {..}
   where
     name_unqual = name_qual.name
     modul = name_qual.moduleName
+    sig_text = T.pack $ TS.prettyTerm0 TS.Qualify sig ""
+    original_sig_text = T.pack $ TS.prettyTerm0 TS.Unqualify origSig ""
     (sig', _) = TS.normalise0 TS.emptyMetaCtx mempty sig
     return_type_head = TS.computeReturnTypeHead sig'
     polymorphic = TS.computePolymorphic sig'
@@ -112,7 +116,7 @@ translateLibrary config = do
     unless (null unresolved) do
       translateError $ vcat [text "Couldn't find definitions", text $ show unresolved]
 
-    let env = IndexEnv aliasNames 0 mempty
+    let env = IndexEnv aliasNames 0 mempty False
 
     forM_ files \inputFile -> do
       path <- liftIO (absolute inputFile)
@@ -183,8 +187,9 @@ translateDefinition qname def = setCurrentRangeQ def.defName do
 
 translateToAxiom :: TS.QName -> Type -> M TS.DbItem
 translateToAxiom x ty = do
-  ty <- translateType ty
-  pure $! dbItem x ty Nothing
+  origTy <- translateType ty
+  ty <- locallyReduceAlias $ translateType ty
+  pure $! dbItem x ty origTy Nothing
 
 translateFunDef :: TS.QName -> Definition -> M [TS.DbItem]
 translateFunDef qname def = do
@@ -227,10 +232,11 @@ translateTransparent qname def = do
     [cl] -> pure cl
     _ -> bad "Not supported: transparent definition with several clauses"
 
-  funTy <- translateType def.defType
-  fun <- translatePatternArgs def.defType namedClausePats \ty ->
+  origFunTy <- translateType def.defType
+  funTy <- locallyReduceAlias $ translateType def.defType
+  fun <- locallyReduceAlias $ translatePatternArgs def.defType namedClausePats \ty ->
     translateTerm ty (fromMaybe __IMPOSSIBLE__ clauseBody)
-  let item = dbItem qname funTy (Just fun)
+  let item = dbItem qname funTy origFunTy (Just fun)
   pure [item]
 
 translatePatternArgs :: Type -> NAPs -> (Type -> M TS.Term) -> M TS.Term

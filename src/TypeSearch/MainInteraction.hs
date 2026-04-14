@@ -5,6 +5,7 @@ import Control.Exception (displayException)
 import Control.Monad
 import Control.Monad.IO.Class
 import Data.Foldable
+import Data.List (sortOn)
 import Data.Map.Strict qualified as M
 import Data.Maybe
 import Data.Set qualified as S
@@ -86,7 +87,8 @@ mainLoop conn aliasSet = runInputT defaultSettings go
                 resol1 <- liftIO $ fetchResolution conn typ
                 (tenv, resol2) <- liftIO $ fetchTopEnv conn $ map (.name_qual) cands
                 (result, time) <- liftIO $ timed $ typeSearch tenv (M.unionWith (++) resol1 resol2) typ cands
-                displayTypeSearchResults cands result time
+                let sorted = sortOn (\(TypeSearchResult _ _ _ _ sol) -> termSize sol) result
+                displayTypeSearchResults cands sorted time
                 go
 
 timed :: IO a -> IO (a, NominalDiffTime)
@@ -97,7 +99,7 @@ timed a = do
   let diff = diffUTCTime t2 t1
   pure (res, diff)
 
-data TypeSearchResult = TypeSearchResult QName Term Iso Term
+data TypeSearchResult = TypeSearchResult QName Type T.Text Iso Term
 
 typeSearch :: TopEnv -> M.Map Name [QName] -> Raw -> [DbItem] -> IO [TypeSearchResult]
 typeSearch tenv resol query items = do
@@ -113,9 +115,9 @@ typeSearch tenv resol query items = do
     $ Streamly.fromList items
 
 typeSearchOne :: TopEnv -> Term -> DbItem -> Stream TypeSearchResult
-typeSearchOne tenv query DbItem {sig = sig, name_qual = name} = do
+typeSearchOne tenv query DbItem {sig, original_sig_text, name_qual = name} = do
   (i, inst) <- check name (initCtx tenv, Here) (eval emptyMetaCtx tenv [] query) (eval emptyMetaCtx tenv [] sig)
-  pure (TypeSearchResult name sig i inst)
+  pure (TypeSearchResult name sig original_sig_text i inst)
 
 data Locals
   = Here
@@ -168,17 +170,18 @@ displayTypeSearchResults :: [DbItem] -> [TypeSearchResult] -> NominalDiffTime ->
 displayTypeSearchResults cands matches time = do
   outputStrLn $ shows (length matches) $ showString " item(s) matched in " $ shows (length cands) " candidate(s)"
   outputStrLn $ showString "Took " $ shows time "\n"
-  for_ matches \(TypeSearchResult (QName m x) a i sol) -> do
+  for_ matches \(TypeSearchResult (QName m x) a origA i sol) -> do
     outputStrLn $
       unlines $
         concat
           [ [ showString "- " $ shows x $ showString " : " $ prettyTerm0 Unqualify a "",
-              showString "  - module       : " $ shows m ""
+              showString "  - module        : " $ shows m "",
+              showString "  - original type : " $ T.unpack origA
             ],
             case i of
               Refl -> []
-              i -> [showString "  - isomorphism  : " $ prettyIso 0 i ""],
-            [ showString "  - solution     : " $ prettyTerm0 Unqualify sol ""
+              i -> [showString "  - isomorphism   : " $ prettyIso 0 i ""],
+            [ showString "  - solution      : " $ prettyTerm0 Unqualify sol ""
             ]
           ]
 

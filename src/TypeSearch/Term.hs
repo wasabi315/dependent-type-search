@@ -84,8 +84,6 @@ rename r = subst (Var . r)
 weakenBy :: Int -> Term -> Term
 weakenBy n = rename (coerce n +)
 
---------------------------------------------------------------------------------
-
 data TeleView = TeleView
   { tele :: [Type],
     cod :: Type
@@ -113,6 +111,21 @@ headTerm :: Term -> Term
 headTerm = \case
   App t _ -> headTerm t
   t -> t
+
+termSize :: Term -> Int
+termSize = \case
+  Var {} -> 1
+  U -> 1
+  Meta {} -> 1
+  Top {} -> 1
+  Pi _ a b -> 1 + termSize a + termSize b
+  Lam _ t -> 1 + termSize t
+  App t u -> 1 + termSize t + termSize u
+  AppPruning t pr -> termSize t + length (filter id pr)
+  Sigma _ a b -> 1 + termSize a + termSize b
+  Pair t u -> 1 + termSize t + termSize u
+  Proj1 t -> 1 + termSize t
+  Proj2 t -> 1 + termSize t
 
 --------------------------------------------------------------------------------
 

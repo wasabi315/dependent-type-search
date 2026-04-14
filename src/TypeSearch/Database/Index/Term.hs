@@ -34,8 +34,7 @@ translateType ty = translateTerm (sort $ getSort ty) ty.unEl
 -- | Translate a @Term@ of a given @Type@. Reduce aliases.
 translateTerm :: Type -> Term -> M TS.Term
 translateTerm ty v = do
-  v <- instantiate v
-  v <- locallyReduceAliases $ reduce v
+  v <- reduceAlias =<< instantiate v
 
   let bad s t =
         translateError $

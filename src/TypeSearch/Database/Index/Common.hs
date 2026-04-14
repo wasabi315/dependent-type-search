@@ -42,7 +42,9 @@ data IndexEnv = IndexEnv
     -- | Context size after erasure
     contextSizeAfterErasure :: Int,
     -- | De Bruijn level → De Bruijn level after erasure
-    renaming :: IM.IntMap Int
+    renaming :: IM.IntMap Int,
+    -- | Alias expansion enabled?
+    reduceAlias :: Bool
   }
 
 -- | Index monad.
@@ -90,10 +92,14 @@ isErasable a = do
 isAlias :: QName -> M Bool
 isAlias x = asks \env -> x `S.member` env.aliasNames
 
-locallyReduceAliases :: M a -> M a
-locallyReduceAliases m = do
-  ds <- asks \env -> OnlyReduceDefs env.aliasNames
-  locallyReduceDefs ds m
+locallyReduceAlias :: M a -> M a
+locallyReduceAlias = local \env -> env {reduceAlias = True}
+
+reduceAlias :: Term -> M Term
+reduceAlias t =
+  ifNotM (asks \env -> env.reduceAlias) (pure t) do
+    ds <- asks \env -> OnlyReduceDefs env.aliasNames
+    locallyReduceDefs ds $ reduce t
 
 --------------------------------------------------------------------------------
 -- Agda utils

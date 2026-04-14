@@ -6,6 +6,8 @@ CREATE TABLE library_items (
     name_unqual          text      NOT NULL,
     module               text      NOT NULL,
     sig                  bytea     NOT NULL,
+    sig_text             text      NOT NULL,
+    original_sig_text    text      NOT NULL,
     body                 bytea,                     -- NULL for axioms
 
     -- Features
