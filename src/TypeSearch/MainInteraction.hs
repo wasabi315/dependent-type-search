@@ -170,13 +170,12 @@ displayTypeSearchResults :: [DbItem] -> [TypeSearchResult] -> NominalDiffTime ->
 displayTypeSearchResults cands matches time = do
   outputStrLn $ shows (length matches) $ showString " item(s) matched in " $ shows (length cands) " candidate(s)"
   outputStrLn $ showString "Took " $ shows time "\n"
-  for_ matches \(TypeSearchResult (QName m x) a origA i sol) -> do
+  for_ matches \(TypeSearchResult (QName m x) _ origA i sol) -> do
     outputStrLn $
       unlines $
         concat
-          [ [ showString "- " $ shows x $ showString " : " $ prettyTerm0 Unqualify a "",
-              showString "  - module        : " $ shows m "",
-              showString "  - original type : " $ T.unpack origA
+          [ [ showString "- " $ shows x $ showString " : " $ T.unpack origA,
+              showString "  - module        : " $ shows m ""
             ],
             case i of
               Refl -> []

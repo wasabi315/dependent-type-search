@@ -47,21 +47,6 @@ import TypeSearch.Pretty qualified as TS
 import TypeSearch.Term qualified as TS
 
 --------------------------------------------------------------------------------
--- Utils
-
-dbItem :: TS.QName -> TS.Type -> TS.Type -> Maybe TS.Term -> TS.DbItem
-dbItem name_qual sig origSig body = TS.DbItem {..}
-  where
-    name_unqual = name_qual.name
-    modul = name_qual.moduleName
-    sig_text = T.pack $ TS.prettyTerm0 TS.Qualify sig ""
-    original_sig_text = T.pack $ TS.prettyTerm0 TS.Unqualify origSig ""
-    (sig', _) = TS.normalise0 TS.emptyMetaCtx mempty sig
-    return_type_head = TS.computeReturnTypeHead sig'
-    polymorphic = TS.computePolymorphic sig'
-    TS.Arity arity_has_var arity = TS.computeArity sig'
-
---------------------------------------------------------------------------------
 -- Entrypoint
 
 translateLibrary :: IndexConfig -> IO ()
@@ -187,9 +172,8 @@ translateDefinition qname def = setCurrentRangeQ def.defName do
 
 translateToAxiom :: TS.QName -> Type -> M TS.DbItem
 translateToAxiom x ty = do
-  origTy <- translateType ty
-  ty <- locallyReduceAlias $ translateType ty
-  pure $! dbItem x ty origTy Nothing
+  ty' <- locallyReduceAlias $ translateType ty
+  constructDbItem x ty' ty Nothing
 
 translateFunDef :: TS.QName -> Definition -> M [TS.DbItem]
 translateFunDef qname def = do
@@ -197,6 +181,20 @@ translateFunDef qname def = do
     (isAlias def.defName)
     do translateTransparent qname def
     do pure <$> translateToAxiom qname def.defType
+
+constructDbItem :: TS.QName -> TS.Type -> Type -> Maybe TS.Term -> M TS.DbItem
+constructDbItem name_qual sig origSig body = do
+  -- FIXME: unqualify all top-level names
+  original_sig_text <- T.show <$> inTopContext (prettyTCM origSig)
+  pure TS.DbItem {..}
+  where
+    name_unqual = name_qual.name
+    modul = name_qual.moduleName
+    sig_text = T.pack $ TS.prettyTerm0 TS.Qualify sig ""
+    (sig', _) = TS.normalise0 TS.emptyMetaCtx mempty sig
+    return_type_head = TS.computeReturnTypeHead sig'
+    polymorphic = TS.computePolymorphic sig'
+    TS.Arity arity_has_var arity = TS.computeArity sig'
 
 --------------------------------------------------------------------------------
 -- Translate transparent functions
@@ -232,11 +230,10 @@ translateTransparent qname def = do
     [cl] -> pure cl
     _ -> bad "Not supported: transparent definition with several clauses"
 
-  origFunTy <- translateType def.defType
   funTy <- locallyReduceAlias $ translateType def.defType
   fun <- locallyReduceAlias $ translatePatternArgs def.defType namedClausePats \ty ->
     translateTerm ty (fromMaybe __IMPOSSIBLE__ clauseBody)
-  let item = dbItem qname funTy origFunTy (Just fun)
+  item <- constructDbItem qname funTy def.defType (Just fun)
   pure [item]
 
 translatePatternArgs :: Type -> NAPs -> (Type -> M TS.Term) -> M TS.Term
