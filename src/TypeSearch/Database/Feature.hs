@@ -23,7 +23,7 @@ data ReturnTypeHead n
   deriving anyclass (ToJSON, FromJSON)
   deriving (ToField, FromField) via Aeson (ReturnTypeHead n)
 
--- | Doesn't perform any reduction.
+-- | The input type must be closed. Doesn't perform any reduction.
 computeReturnTypeHead :: Type -> ReturnTypeHead QName
 computeReturnTypeHead t = case headTerm (returnType t) of
   U -> RHU
@@ -34,6 +34,7 @@ computeReturnTypeHead t = case headTerm (returnType t) of
   Proj2 {} -> RHProj2
   _ -> impossible
 
+-- | The input type must be closed.
 computeReturnTypeHeadRaw :: S.Set QName -> Raw -> Maybe (ReturnTypeHead PQName)
 computeReturnTypeHeadRaw aliasSet (rteleView -> RTeleView tele cod) =
   case unRPos (rawHeadTerm cod) of
@@ -58,13 +59,14 @@ data Polymorphic = NoPolymorphic | YesPolymorphic
   deriving stock (Eq, Ord, Show, Enum)
   deriving (ToField, FromField) via ViaEnum Polymorphic
 
--- | Doesn't perform any reduction.
+-- | The input type must be closed. Doesn't perform any reduction.
 computePolymorphic :: Type -> Polymorphic
 computePolymorphic = \case
   Pi _ a _ | endsInSort a -> YesPolymorphic
   Pi _ _ b -> computePolymorphic b
   _ -> NoPolymorphic
 
+-- | The input type must be closed.
 computePolymorphicRaw :: Raw -> Polymorphic
 computePolymorphicRaw = \case
   RPos t _ -> computePolymorphicRaw t
@@ -83,6 +85,7 @@ data Arity = Arity
   deriving anyclass (ToJSON, FromJSON)
   deriving (ToField, FromField) via Aeson Arity
 
+-- | The input type must be closed. Doesn't perform any reduction.
 computeArity :: Type -> Arity
 computeArity = go [] False 0
   where
@@ -95,6 +98,7 @@ computeArity = go [] False 0
           go (a : ctx) hasVar (arity + 1) b
       _ -> Arity {..}
 
+-- | The input type must be closed.
 computeArityRaw :: Raw -> Arity
 computeArityRaw = go [] False 0
   where
