@@ -179,7 +179,7 @@ translateFunDef :: TS.QName -> Definition -> M [TS.DbItem]
 translateFunDef qname def = do
   ifM
     (isAlias def.defName)
-    do translateTransparent qname def
+    do translateAlias qname def
     do pure <$> translateToAxiom qname def.defType
 
 constructDbItem :: TS.QName -> TS.Type -> Type -> Maybe TS.Term -> M TS.DbItem
@@ -197,7 +197,7 @@ constructDbItem name_qual sig origSig body = do
     TS.Arity arity_has_var arity = TS.computeArity sig'
 
 --------------------------------------------------------------------------------
--- Translate transparent functions
+-- Translate aliases
 
 hasLocalDefs :: Definition -> M Bool
 hasLocalDefs def = do
@@ -216,19 +216,19 @@ isProjectionLike def = do
     Left {} -> pure False
     Right {} -> pure True
 
-translateTransparent :: TS.QName -> Definition -> M [TS.DbItem]
-translateTransparent qname def = do
+translateAlias :: TS.QName -> Definition -> M [TS.DbItem]
+translateAlias qname def = do
   let Function {..} = def.theDef
 
   -- validation
   let bad x = translateError $ vcat [prettyTCM def.defName, x]
   whenM (hasLocalDefs def) do
-    void $ bad "Not supported: transparent definition with where clause"
+    void $ bad "Not supported: alias with where clause"
   whenM (isProjectionLike def) do
     void $ bad "Work-in-progress: translate projection-like definition"
   Clause {..} <- case funClauses of
     [cl] -> pure cl
-    _ -> bad "Not supported: transparent definition with several clauses"
+    _ -> bad "Not supported: alias with several clauses"
 
   funTy <- locallyReduceAlias $ translateType def.defType
   fun <- locallyReduceAlias $ translatePatternArgs def.defType namedClausePats \ty ->
@@ -249,4 +249,4 @@ translatePatternArgs = \cases
       do
         addContextAndRenaming ctxElt $
           TS.Lam (fromString varName) <$> translatePatternArgs (absBody cod) ps k
-  _ _ _ -> translateError "Not supported: transparent definition by pattern-matching"
+  _ _ _ -> translateError "Not supported: alias definition by pattern-matching"
