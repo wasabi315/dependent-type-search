@@ -1,6 +1,10 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
-module TypeSearch.Database.Index.Term where
+module TypeSearch.Database.Index.Term
+  ( translateTerm,
+    translateType,
+  )
+where
 
 import Agda.Compiler.Backend hiding (Args)
 import Agda.Syntax.Common
@@ -31,10 +35,10 @@ import TypeSearch.Term qualified as TS
 translateType :: Type -> M TS.Term
 translateType ty = translateTerm (sort $ getSort ty) ty.unEl
 
--- | Translate a @Term@ of a given @Type@. Reduce aliases.
+-- | Translate a @Term@ of a given @Type@. Reduce transparent definitions.
 translateTerm :: Type -> Term -> M TS.Term
 translateTerm ty v = do
-  v <- reduceAlias =<< instantiate v
+  v <- reduceTransparentDef =<< instantiate v
 
   let bad s t =
         translateError $

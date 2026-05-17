@@ -59,7 +59,7 @@ helpText =
     ]
 
 mainLoop :: Connection -> S.Set QName -> IO ()
-mainLoop conn aliasSet = runInputT defaultSettings go
+mainLoop conn transparentDefSet = runInputT defaultSettings go
   where
     go = do
       input <- getInputLine ">> "
@@ -79,7 +79,7 @@ mainLoop conn aliasSet = runInputT defaultSettings go
         Right (SearchByType typ) -> case parseRaw "interactive" (T.pack typ) of
           Left err -> outputStrLn (displayException err) >> go
           Right typ -> do
-            cands <- liftIO $ filterByFeatures conn aliasSet typ
+            cands <- liftIO $ filterByFeatures conn transparentDefSet typ
             case cands of
               Nothing -> outputStrLn "Ill-formed type" >> go
               Just cands -> do

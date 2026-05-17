@@ -35,6 +35,7 @@ library
       TypeSearch.Database.Index.Common
       TypeSearch.Database.Index.Name
       TypeSearch.Database.Index.Term
+      TypeSearch.Database.Index.TransparentDef
       TypeSearch.Database.PostgreSQL
       TypeSearch.Evaluation
       TypeSearch.MainInteraction

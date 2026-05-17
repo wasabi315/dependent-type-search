@@ -33,6 +33,10 @@ module TypeSearch.Common
     Generic,
     ToJSON,
     FromJSON,
+    mapMaybe,
+    catMaybes,
+    wither,
+    forMaybe,
   )
 where
 
@@ -53,6 +57,7 @@ import Database.PostgreSQL.Simple.ToField
 import Flat
 import GHC.Stack
 import Text.Megaparsec
+import Witherable
 
 --------------------------------------------------------------------------------
 -- Utils

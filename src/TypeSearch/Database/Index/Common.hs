@@ -1,4 +1,7 @@
-module TypeSearch.Database.Index.Common where
+module TypeSearch.Database.Index.Common
+  ( module TypeSearch.Database.Index.Common,
+  )
+where
 
 import Agda.Compiler.Backend hiding (Args, initEnv)
 import Agda.Interaction.BasicOps
@@ -30,7 +33,7 @@ import TypeSearch.Common qualified as TS
 
 data IndexConfig = IndexConfig
   { -- | Set of fully-qualified definition names subject to definition unfolding during search.
-    aliasNames :: S.Set TS.QName,
+    transparentDefNames :: S.Set TS.QName,
     -- | Path to Agda library.
     libraryDirectory :: FilePath,
     -- | Connection to database.
@@ -38,13 +41,13 @@ data IndexConfig = IndexConfig
   }
 
 data IndexEnv = IndexEnv
-  { aliasNames :: S.Set QName,
+  { transparentDefNames :: S.Set QName,
     -- | Context size after erasure
     contextSizeAfterErasure :: Int,
     -- | De Bruijn level → De Bruijn level after erasure
     renaming :: IM.IntMap Int,
-    -- | Alias expansion enabled?
-    reduceAlias :: Bool
+    -- | TransparentDef expansion enabled?
+    reduceTransparentDef :: Bool
   }
 
 -- | Index monad.
@@ -89,16 +92,16 @@ isErasable a = do
         isJust <$> isSizeType b
       ]
 
-isAlias :: QName -> M Bool
-isAlias x = asks \env -> x `S.member` env.aliasNames
+isTransparentDef :: QName -> M Bool
+isTransparentDef x = asks \env -> x `S.member` env.transparentDefNames
 
-locallyReduceAlias :: M a -> M a
-locallyReduceAlias = local \env -> env {reduceAlias = True}
+locallyReduceTransparentDef :: M a -> M a
+locallyReduceTransparentDef = local \env -> env {reduceTransparentDef = True}
 
-reduceAlias :: Term -> M Term
-reduceAlias t =
-  ifNotM (asks \env -> env.reduceAlias) (pure t) do
-    ds <- asks \env -> OnlyReduceDefs env.aliasNames
+reduceTransparentDef :: Term -> M Term
+reduceTransparentDef t =
+  ifNotM (asks \env -> env.reduceTransparentDef) (pure t) do
+    ds <- asks \env -> OnlyReduceDefs env.transparentDefNames
     locallyReduceDefs ds $ reduce t
 
 --------------------------------------------------------------------------------

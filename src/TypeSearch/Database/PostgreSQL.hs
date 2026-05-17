@@ -62,7 +62,7 @@ fetchResolution conn a = do
     (quals, unquals) = partitionEithers $ map (\case Unqual x -> Right x; Qual m x -> Left (QName m x)) $ S.toList (rawFreeVars a)
 
 filterByFeatures :: Connection -> S.Set QName -> Raw -> IO (Maybe [DbItem])
-filterByFeatures conn aliasSet a = case computeReturnTypeHeadRaw aliasSet a of
+filterByFeatures conn transparentDefSet a = case computeReturnTypeHeadRaw transparentDefSet a of
   Nothing -> pure Nothing
   Just retType -> do
     let poly = case computePolymorphicRaw a of

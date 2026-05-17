@@ -36,21 +36,21 @@ computeReturnTypeHead t = case headTerm (returnType t) of
 
 -- | The input type must be closed.
 computeReturnTypeHeadRaw :: S.Set QName -> Raw -> Maybe (ReturnTypeHead PQName)
-computeReturnTypeHeadRaw aliasSet (rteleView -> RTeleView tele cod) =
+computeReturnTypeHeadRaw transparentDefSet (rteleView -> RTeleView tele cod) =
   case unRPos (rawHeadTerm cod) of
     RU -> Just RHU
     RVar (Unqual x)
       | Just {} <- lookup x tele -> Just RHVar
-    RVar x | maybeAlias x -> Just RHUnknown
+    RVar x | maybeTransparentDef x -> Just RHUnknown
     RVar x -> Just $ RHTop x
     RSigma {} -> Just RHSigma
     RProj1 {} -> Just RHProj1
     RProj2 {} -> Just RHProj2
     _ -> Nothing
   where
-    maybeAlias = \case
-      Unqual x -> any (\y -> x == y.name) aliasSet
-      Qual m x -> S.member (QName m x) aliasSet
+    maybeTransparentDef = \case
+      Unqual x -> any (\y -> x == y.name) transparentDefSet
+      Qual m x -> S.member (QName m x) transparentDefSet
 
 --------------------------------------------------------------------------------
 

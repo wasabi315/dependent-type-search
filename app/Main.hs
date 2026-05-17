@@ -39,9 +39,9 @@ main = do
   command <- execParser (info opts idm)
   connInfo <- getConnectInfo
   case command of
-    Index libDir aliasFile -> do
-      alias <-
-        eitherDecodeFileStrict aliasFile >>= \case
+    Index libDir transparentDefFile -> do
+      transparentDef <-
+        eitherDecodeFileStrict transparentDefFile >>= \case
           Right transp -> pure transp
           Left err -> hPutStrLn stderr err >> exitFailure
       withConnect connInfo \conn -> do
@@ -52,10 +52,10 @@ main = do
             conn
             defaultOptions
             [MigrationInitialization, MigrationDirectory migrationDir]
-        translateLibrary (IndexConfig alias libDir conn)
-    Main.Search aliasFile -> do
-      alias <-
-        eitherDecodeFileStrict aliasFile >>= \case
+        indexLibrary (IndexConfig transparentDef libDir conn)
+    Main.Search transparentDefFile -> do
+      transparentDef <-
+        eitherDecodeFileStrict transparentDefFile >>= \case
           Right transp -> pure transp
           Left err -> hPutStrLn stderr err >> exitFailure
-      withConnect connInfo (flip mainLoop alias)
+      withConnect connInfo (flip mainLoop transparentDef)

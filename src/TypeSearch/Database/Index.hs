@@ -1,6 +1,9 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
-module TypeSearch.Database.Index where
+module TypeSearch.Database.Index
+  ( indexLibrary,
+  )
+where
 
 import Agda.Compiler.Backend
 import Agda.Compiler.Common
@@ -8,7 +11,6 @@ import Agda.Interaction.FindFile
 import Agda.Interaction.Imports
 import Agda.Interaction.Library
 import Agda.Interaction.Options
-import Agda.Syntax.Common
 import Agda.Syntax.Common.Pretty (prettyShow)
 import Agda.Syntax.Concrete.Name qualified as C
 import Agda.Syntax.Internal hiding (arity)
@@ -16,8 +18,6 @@ import Agda.Syntax.Position
 import Agda.Syntax.Scope.Base
 import Agda.Syntax.Scope.Monad (getCurrentScope, getNamedScope, isDatatypeModule)
 import Agda.TypeChecking.Pretty
-import Agda.TypeChecking.Substitute as Agda
-import Agda.TypeChecking.Telescope
 import Agda.Utils.FileName
 import Agda.Utils.IO.Directory
 import Agda.Utils.Impossible (__IMPOSSIBLE__)
@@ -30,9 +30,7 @@ import Data.Functor.Compose
 import Data.List (partition, sort)
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map.Strict qualified as Map
-import Data.Maybe
 import Data.Set qualified as Set
-import Data.String
 import Data.Text qualified as T
 import System.Directory
 import System.FilePath.Find qualified as Find
@@ -41,6 +39,7 @@ import TypeSearch.Database.Feature qualified as TS
 import TypeSearch.Database.Index.Common
 import TypeSearch.Database.Index.Name
 import TypeSearch.Database.Index.Term
+import TypeSearch.Database.Index.TransparentDef
 import TypeSearch.Database.PostgreSQL qualified as TS
 import TypeSearch.Evaluation qualified as TS
 import TypeSearch.Pretty qualified as TS
@@ -49,8 +48,10 @@ import TypeSearch.Term qualified as TS
 --------------------------------------------------------------------------------
 -- Entrypoint
 
-translateLibrary :: IndexConfig -> IO ()
-translateLibrary config = do
+-- TODO: make indexer an Agda backend
+
+indexLibrary :: IndexConfig -> IO ()
+indexLibrary config = do
   setCurrentDirectory config.libraryDirectory
   (Right (_, opts), _) <- pure $ runOptM $ parseBackendOptions [] [] defaultOptions
   runTCMTop' do
@@ -72,8 +73,9 @@ translateLibrary config = do
       liftIO $
         Data.List.sort . map Find.infoPath . concat <$> forM (filePath libDirPrim : paths) (findWithInfo (pure True) (hasAgdaExtension <$> Find.filePath))
 
-    -- alias resolution
-    (aliasNames, unresolved) <-
+    -- resolve transparent definition names
+    -- FIXME: make this more sensible. traversing entire library twice currently.
+    (transparentDefNames, unresolved) <-
       foldM
         ( \(resolved, unresolved) inputFile -> do
             path <- liftIO (absolute inputFile)
@@ -95,13 +97,13 @@ translateLibrary config = do
                         Just x -> pure x
                     pure (foldr Set.insert resolved resolved', unresolved')
         )
-        (mempty, Set.toList config.aliasNames)
+        (mempty, Set.toList config.transparentDefNames)
         files
 
     unless (null unresolved) do
       translateError $ vcat [text "Couldn't find definitions", text $ show unresolved]
 
-    let env = IndexEnv aliasNames 0 mempty False
+    let env = IndexEnv transparentDefNames 0 mempty False
 
     forM_ files \inputFile -> do
       path <- liftIO (absolute inputFile)
@@ -143,9 +145,9 @@ translateInterface intf =
               pure $ xns <> xns'
 
     names <- lift $ go =<< getCurrentScope
-    concat <$> forM names \(cname, origQName) ->
+    TS.forMaybe names \(cname, origQName) ->
       getConstInfo' origQName >>= \case
-        Left _ -> pure []
+        Left _ -> pure Nothing
         Right def -> do
           let outName = translateConcreteQName (translateModuleName intf.iModuleName) cname
           translateDefinition outName def
@@ -153,34 +155,36 @@ translateInterface intf =
 --------------------------------------------------------------------------------
 -- Definition translation
 
-translateDefinition :: TS.QName -> Definition -> M [TS.DbItem]
+translateDefinition :: TS.QName -> Definition -> M (Maybe TS.DbItem)
 translateDefinition qname def = setCurrentRangeQ def.defName do
   ifM
     (orM [isErasable def.defType, isDeprecated def.defName])
-    do pure []
+    do pure Nothing
     case def.theDef of
-      AxiomDefn {} -> pure <$> translateToAxiom qname def.defType
-      AbstractDefn {} -> pure <$> translateToAxiom qname def.defType
-      FunctionDefn {} -> translateFunDef qname def
-      DatatypeDefn {} -> pure <$> translateToAxiom qname def.defType
-      RecordDefn {} -> pure <$> translateToAxiom qname def.defType
-      ConstructorDefn {} -> pure <$> translateToAxiom qname def.defType
-      PrimitiveDefn {} -> pure <$> translateToAxiom qname def.defType
-      DataOrRecSigDefn {} -> pure []
-      GeneralizableVar {} -> pure []
-      PrimitiveSortDefn {} -> pure []
+      AxiomDefn {} -> Just <$> translateToAxiom qname def.defType
+      AbstractDefn {} -> Just <$> translateToAxiom qname def.defType
+      FunctionDefn {} -> Just <$> translateFunDef qname def
+      DatatypeDefn {} -> Just <$> translateToAxiom qname def.defType
+      RecordDefn {} -> Just <$> translateToAxiom qname def.defType
+      ConstructorDefn {} -> Just <$> translateToAxiom qname def.defType
+      PrimitiveDefn {} -> Just <$> translateToAxiom qname def.defType
+      DataOrRecSigDefn {} -> pure Nothing
+      GeneralizableVar {} -> pure Nothing
+      PrimitiveSortDefn {} -> pure Nothing
 
 translateToAxiom :: TS.QName -> Type -> M TS.DbItem
 translateToAxiom x ty = do
-  ty' <- locallyReduceAlias $ translateType ty
+  ty' <- locallyReduceTransparentDef $ translateType ty
   constructDbItem x ty' ty Nothing
 
-translateFunDef :: TS.QName -> Definition -> M [TS.DbItem]
+translateFunDef :: TS.QName -> Definition -> M TS.DbItem
 translateFunDef qname def = do
-  ifM
-    (isAlias def.defName)
-    do translateAlias qname def
-    do pure <$> translateToAxiom qname def.defType
+  ty <- locallyReduceTransparentDef $ translateType def.defType
+  body <- ifM
+    (isTransparentDef def.defName)
+    do Just <$> translateTransparentDefBody def
+    do pure Nothing
+  constructDbItem qname ty def.defType body
 
 constructDbItem :: TS.QName -> TS.Type -> Type -> Maybe TS.Term -> M TS.DbItem
 constructDbItem name_qual sig origSig body = do
@@ -195,58 +199,3 @@ constructDbItem name_qual sig origSig body = do
     return_type_head = TS.computeReturnTypeHead sig'
     polymorphic = TS.computePolymorphic sig'
     TS.Arity arity_has_var arity = TS.computeArity sig'
-
---------------------------------------------------------------------------------
--- Translate aliases
-
-hasLocalDefs :: Definition -> M Bool
-hasLocalDefs def = do
-  defs <- curDefs
-  let locals =
-        takeWhile (isAnonymousModuleName . qnameModule) $
-          dropWhile (<= def.defName) $
-            map fst $
-              sortDefs defs
-  pure $! not (null locals)
-
-isProjectionLike :: Definition -> M Bool
-isProjectionLike def = do
-  let Function {..} = def.theDef
-  case funProjection of
-    Left {} -> pure False
-    Right {} -> pure True
-
-translateAlias :: TS.QName -> Definition -> M [TS.DbItem]
-translateAlias qname def = do
-  let Function {..} = def.theDef
-
-  -- validation
-  let bad x = translateError $ vcat [prettyTCM def.defName, x]
-  whenM (hasLocalDefs def) do
-    void $ bad "Not supported: alias with where clause"
-  whenM (isProjectionLike def) do
-    void $ bad "Work-in-progress: translate projection-like definition"
-  Clause {..} <- case funClauses of
-    [cl] -> pure cl
-    _ -> bad "Not supported: alias with several clauses"
-
-  funTy <- locallyReduceAlias $ translateType def.defType
-  fun <- locallyReduceAlias $ translatePatternArgs def.defType namedClausePats \ty ->
-    translateTerm ty (fromMaybe __IMPOSSIBLE__ clauseBody)
-  item <- constructDbItem qname funTy def.defType (Just fun)
-  pure [item]
-
-translatePatternArgs :: Type -> NAPs -> (Type -> M TS.Term) -> M TS.Term
-translatePatternArgs = \cases
-  ty [] k -> k ty
-  ty ((namedArg -> (VarP _ x)) : ps) k -> do
-    (dom, cod) <- mustBePi ty
-    let varName = realName x.dbPatVarName
-        ctxElt = (KeepNames varName, dom)
-    ifM
-      (isErasable dom.unDom)
-      do addContext ctxElt $ translatePatternArgs (absBody cod) ps k
-      do
-        addContextAndRenaming ctxElt $
-          TS.Lam (fromString varName) <$> translatePatternArgs (absBody cod) ps k
-  _ _ _ -> translateError "Not supported: alias definition by pattern-matching"

@@ -1,4 +1,11 @@
-module TypeSearch.Database.Index.Name where
+module TypeSearch.Database.Index.Name
+  ( translateModuleName,
+    translateTopLevelModuleName,
+    translateQName,
+    translateConcreteQName,
+    translateName,
+  )
+where
 
 import Agda.Compiler.Backend
 import Agda.Syntax.Common
