@@ -135,11 +135,11 @@ newtype Level = Level Int
   deriving newtype (Eq, Ord, Num, Show, Hashable, Flat)
 
 -- | Metavariables
-newtype MetaVar = GenMetaVar Int
+newtype MetaVar = MetaVar Int
   deriving newtype (Num, Eq, Ord, Hashable, Enum, Flat)
 
 instance Show MetaVar where
-  showsPrec _ (GenMetaVar m) = showString "?G%" . shows m
+  showsPrec _ (MetaVar m) = showString "?G%" . shows m
 
 -- | Names
 newtype Name = Name T.Text
