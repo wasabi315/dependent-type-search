@@ -32,17 +32,18 @@ import Data.Text qualified as T
 import Database.PostgreSQL.Simple
 import System.Directory
 import System.FilePath.Find qualified as Find
-import TypeSearch.Common qualified as TS
+import TypeSearch.Core.Evaluation qualified as TS
+import TypeSearch.Core.Isomorphism qualified as TS
+import TypeSearch.Core.Name qualified as TS
+import TypeSearch.Core.Term qualified as TS
 import TypeSearch.Database.Feature qualified as TS
 import TypeSearch.Database.Index.Common
 import TypeSearch.Database.Index.Name
 import TypeSearch.Database.Index.Term
 import TypeSearch.Database.Index.TransparentDef
 import TypeSearch.Database.PostgreSQL qualified as TS
-import TypeSearch.Evaluation qualified as TS
 import TypeSearch.Prelude
 import TypeSearch.Pretty qualified as TS
-import TypeSearch.Term qualified as TS
 
 --------------------------------------------------------------------------------
 -- Entrypoint

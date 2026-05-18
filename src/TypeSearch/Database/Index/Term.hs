@@ -23,10 +23,10 @@ import Agda.Utils.Function
 import Agda.Utils.Impossible (__IMPOSSIBLE__)
 import Agda.Utils.Monad
 import Data.Set qualified as S
+import TypeSearch.Core.Term qualified as TS
 import TypeSearch.Database.Index.Common
 import TypeSearch.Database.Index.Name
 import TypeSearch.Prelude
-import TypeSearch.Term qualified as TS
 
 --------------------------------------------------------------------------------
 -- Agda Internal term/type to our Term

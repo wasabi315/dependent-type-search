@@ -12,7 +12,7 @@ import Agda.Syntax.Common
 import Agda.Syntax.Concrete qualified as C
 import Data.List.NonEmpty qualified as NE
 import Data.Text qualified as T
-import TypeSearch.Common qualified as TS
+import TypeSearch.Core.Name qualified as TS
 import TypeSearch.Prelude
 
 --------------------------------------------------------------------------------

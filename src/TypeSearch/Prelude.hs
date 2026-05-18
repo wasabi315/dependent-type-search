@@ -46,6 +46,7 @@ module TypeSearch.Prelude
     foldMapA,
     applyN,
     (//),
+    timed,
   )
 where
 
@@ -74,12 +75,14 @@ import Data.Maybe (fromJust, fromMaybe, isJust, isNothing, listToMaybe, maybe, m
 import Data.Monoid hiding (First (..), Last (..))
 import Data.Semigroup
 import Data.String
+import Data.Time.Clock
 import Data.Traversable
 import Data.Typeable (Typeable)
 import Data.Void
 import Flat (Flat)
 import GHC.Generics (Generic, Generically)
 import GHC.Stack
+import System.Exit
 import Witherable
 import Prelude hiding (curry, filter, foldl1, foldr1, head, last, maximum, minimum, unzip)
 
@@ -88,9 +91,9 @@ import Prelude hiding (curry, filter, foldl1, foldr1, head, last, maximum, minim
 impossible :: (HasCallStack) => a
 impossible = error "impossible"
 
--- | @[x, x - 1, ..., y]@
-down :: (Enum a, Num a) => a -> a -> [a]
-down x y = [x, x - 1 .. y]
+-- | @[x, pred x, ..., y]@
+down :: (Enum a) => a -> a -> [a]
+down x y = [x, pred x .. y]
 {-# INLINE down #-}
 
 foldMapA :: (Alternative f, Foldable t) => (a -> f b) -> t a -> f b
@@ -112,3 +115,11 @@ infix 2 //
 -- | strict pair construction
 (//) :: a -> b -> (a, b)
 a // b = (a, b)
+
+timed :: IO a -> IO (a, NominalDiffTime)
+timed a = do
+  t1 <- getCurrentTime
+  res <- a
+  t2 <- getCurrentTime
+  let diff = diffUTCTime t2 t1
+  pure (res, diff)

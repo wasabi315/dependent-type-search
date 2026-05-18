@@ -9,10 +9,9 @@ import Paths_dependent_type_search
 import System.Environment (getEnv, lookupEnv)
 import System.Exit
 import System.FilePath
-import System.IO
 import TypeSearch.Database.Index qualified as Index
+import TypeSearch.Database.Search qualified as Search
 import TypeSearch.Prelude
-import TypeSearch.Search qualified as Search
 
 --------------------------------------------------------------------------------
 -- Options
@@ -52,42 +51,43 @@ optSearchCommand =
 
 opts :: Parser Command
 opts =
-  hsubparser $
-    mconcat
+  hsubparser
+    $ mconcat
       [ command "index" (info (Index <$> optIndexCommand) (progDesc "Index an Agda library")),
         command "search" (info (Search <$> optSearchCommand) (progDesc "Search within indexed library"))
       ]
 
 --------------------------------------------------------------------------------
 
+orDie :: IO (Either String a) -> IO a
+orDie m = m >>= either die pure
+
 dispatchCommand :: Command -> ConnectInfo -> IO ()
 dispatchCommand = \cases
   (Index cmd) connInfo -> index cmd connInfo
   (Search cmd) connInfo -> search cmd connInfo
 
+migrate :: Connection -> IO ()
+migrate conn = do
+  migrationDir <- getDataDir <&> (</> "migration")
+  void do
+    runMigrations
+      conn
+      defaultOptions
+      [MigrationInitialization, MigrationDirectory migrationDir]
+
 index :: IndexCommand -> ConnectInfo -> IO ()
 index (IndexCommand {..}) connInfo = do
-  transparentDef <-
-    eitherDecodeFileStrict transparentDefsFile >>= \case
-      Right transp -> pure transp
-      Left err -> hPutStrLn stderr err >> exitFailure
+  transparentDefNames <- orDie $ eitherDecodeFileStrict transparentDefsFile
   withConnect connInfo \conn -> do
-    dataDir <- getDataDir
-    let migrationDir = dataDir </> "migration"
-    _ <-
-      runMigrations
-        conn
-        defaultOptions
-        [MigrationInitialization, MigrationDirectory migrationDir]
-    Index.indexLibrary (Index.IndexConfig transparentDef libraryDir conn)
+    migrate conn
+    Index.indexLibrary (Index.IndexConfig transparentDefNames libraryDir conn)
 
 search :: SearchCommand -> ConnectInfo -> IO ()
 search (SearchCommand {..}) connInfo = do
-  transparentDef <-
-    eitherDecodeFileStrict transparentDefsFile >>= \case
-      Right transp -> pure transp
-      Left err -> hPutStrLn stderr err >> exitFailure
-  withConnect connInfo (flip Search.search transparentDef)
+  transparentDefNames <- orDie $ eitherDecodeFileStrict transparentDefsFile
+  withConnect connInfo \conn -> do
+    Search.search conn transparentDefNames
 
 main :: IO ()
 main = do

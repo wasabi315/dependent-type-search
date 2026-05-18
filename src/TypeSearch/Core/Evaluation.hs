@@ -1,9 +1,9 @@
-module TypeSearch.Evaluation where
+module TypeSearch.Core.Evaluation where
 
 import Data.HashMap.Lazy qualified as HML
-import TypeSearch.Common
+import TypeSearch.Core.Name
+import TypeSearch.Core.Term
 import TypeSearch.Prelude
-import TypeSearch.Term
 
 infixr 6 -->
 
@@ -233,28 +233,6 @@ forceAll mctx = \case
   t -> t
 
 --------------------------------------------------------------------------------
-
-hasFreeVar :: MetaCtx -> Level -> Value -> Bool
-hasFreeVar mctx l = go l
-  where
-    go l' t = case force mctx t of
-      VRigid x sp -> x >= l || goSpine mctx l' sp
-      VFlex _ sp -> goSpine mctx l' sp
-      VTop _ sp _ -> goSpine mctx l' sp
-      VU -> False
-      VPi _ a b -> hasFreeVar mctx l' a || hasFreeVar mctx (l' + 1) (b $ VVar l')
-      VLam _ t -> hasFreeVar mctx (l' + 1) (t $ VVar l')
-      VSigma _ a b -> hasFreeVar mctx l' a || hasFreeVar mctx (l' + 1) (b $ VVar l')
-      VPair t u -> hasFreeVar mctx l' t || hasFreeVar mctx l' u
-      VBrave t sp -> hasFreeVar mctx l' t || goSpine mctx l' sp
-
-    goSpine mctx l' = \case
-      SNil -> False
-      SApp sp u -> goSpine mctx l' sp || hasFreeVar mctx l' u
-      SProj1 sp -> goSpine mctx l' sp
-      SProj2 sp -> goSpine mctx l' sp
-
---------------------------------------------------------------------------------
 -- Quotation
 
 levelToIndex :: Level -> Level -> Index
@@ -281,81 +259,3 @@ quoteSpine mctx l h = \case
   SApp sp u -> quoteSpine mctx l h sp `App` quote mctx l u
   SProj1 sp -> Proj1 $ quoteSpine mctx l h sp
   SProj2 sp -> Proj2 $ quoteSpine mctx l h sp
-
---------------------------------------------------------------------------------
--- Transport
-
--- transport along an isomorphism
-transport :: Iso -> Value -> Value
-transport i v = case i of
-  Refl -> v
-  Sym i -> transportInv i v
-  Trans i j -> transport j (transport i v)
-  Assoc -> vProj1 (vProj1 v) `VPair` (vProj2 (vProj1 v) `VPair` vProj2 v)
-  Comm -> vProj2 v `VPair` vProj1 v
-  SigmaSwap -> vProj1 (vProj2 v) `VPair` (vProj1 v `VPair` vProj2 (vProj2 v))
-  Curry -> VLam "x" \x -> VLam "y" \y -> v $$ VPair x y
-  PiSwap -> VLam "y" \y -> VLam "x" \x -> v $$ x $$ y
-  PiCongL i -> VLam "x" \x -> v $$ transportInv i x
-  PiCongR i -> VLam "x" \x -> transport i (v $$ x)
-  SigmaCongL i -> transport i (vProj1 v) `VPair` vProj2 v
-  SigmaCongR i -> vProj1 v `VPair` transport i (vProj2 v)
-
--- transport back
-transportInv :: Iso -> Value -> Value
-transportInv i v = case i of
-  Refl -> v
-  Sym i -> transport i v
-  Trans i j -> transportInv i (transportInv j v)
-  Assoc -> (vProj1 v `VPair` vProj1 (vProj2 v)) `VPair` vProj2 (vProj2 v)
-  Comm -> vProj2 v `VPair` vProj1 v
-  SigmaSwap -> vProj1 (vProj2 v) `VPair` (vProj1 v `VPair` vProj2 (vProj2 v))
-  Curry -> VLam "p" \p -> v $$ vProj1 p $$ vProj2 p
-  PiSwap -> VLam "x" \x -> VLam "y" \y -> v $$ y $$ x
-  PiCongL i -> VLam "x" \x -> v $$ transport i x
-  PiCongR i -> VLam "x" \x -> transportInv i (v $$ x)
-  SigmaCongL i -> transportInv i (vProj1 v) `VPair` vProj2 v
-  SigmaCongR i -> vProj1 v `VPair` transportInv i (vProj2 v)
-
---------------------------------------------------------------------------------
-
--- | Curry until the first domain becomes non-sigma.
-curry :: MetaCtx -> Quant -> (Quant, Iso)
-curry mctx = go Refl
-  where
-    go i (Quant x a b) = case force mctx a of
-      VSigma y a1 a2 ->
-        go (i <> Curry) $ Quant y a1 \ ~u -> VPi x (a2 u) \ ~v -> b (VPair u v)
-      a -> (Quant x a b, i)
-
--- | Right-nest until the first projection becomes non-sigma.
-assoc :: MetaCtx -> Quant -> (Quant, Iso)
-assoc mctx = go Refl
-  where
-    go i (Quant x a b) = case force mctx a of
-      VSigma y a1 a2 ->
-        go (i <> Assoc) $ Quant y a1 \ ~u -> VSigma x (a2 u) \ ~v -> b (VPair u v)
-      a -> (Quant x a b, i)
-
-normalise0 :: MetaCtx -> TopEnv -> Term -> (Term, Iso)
-normalise0 mctx tenv t = normalise mctx 0 (eval mctx tenv [] t)
-
-normalise :: MetaCtx -> Level -> Value -> (Term, Iso)
-normalise mctx l = \case
-  VPi x a b -> normalisePi mctx l (Quant x a b)
-  VSigma x a b -> normaliseSigma mctx l (Quant x a b)
-  v -> quote mctx l v // mempty
-
-normalisePi :: MetaCtx -> Level -> Quant -> (Term, Iso)
-normalisePi mctx l q = do
-  let (Quant x a b, i) = curry mctx q
-      (ta, ia) = normalise mctx l a
-      (tb, ib) = normalise mctx (l + 1) $ b (transportInv ia (VVar l))
-  Pi x ta tb // i <> piCongL ia <> piCongR ib
-
-normaliseSigma :: MetaCtx -> Level -> Quant -> (Term, Iso)
-normaliseSigma mctx l q = do
-  let (Quant x a b, i) = assoc mctx q
-      (ta, ia) = normalise mctx l a
-      (tb, ib) = normalise mctx (l + 1) $ b (transportInv ia (VVar l))
-  Sigma x ta tb // i <> sigmaCongL ia <> sigmaCongR ib

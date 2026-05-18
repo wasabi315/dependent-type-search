@@ -22,7 +22,7 @@ import Data.IntMap qualified as IM
 import Data.Map.Strict qualified as M
 import Data.Set qualified as S
 import Data.Text qualified as T
-import TypeSearch.Common qualified as TS
+import TypeSearch.Core.Name qualified as TS
 import TypeSearch.Prelude
 
 --------------------------------------------------------------------------------
@@ -34,7 +34,7 @@ data IndexEnv = IndexEnv
     contextSizeAfterErasure :: Int,
     -- | De Bruijn level → De Bruijn level after erasure
     renaming :: IM.IntMap Int,
-    -- | TransparentDef expansion enabled?
+    -- | Transparent def expansion enabled?
     reduceTransparentDef :: Bool
   }
 

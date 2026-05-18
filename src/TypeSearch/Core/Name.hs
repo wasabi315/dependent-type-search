@@ -1,6 +1,5 @@
-module TypeSearch.Common
-  ( -- * Names
-    Index (..),
+module TypeSearch.Core.Name
+  ( Index (..),
     Level (..),
     MetaVar (..),
     Name (..),

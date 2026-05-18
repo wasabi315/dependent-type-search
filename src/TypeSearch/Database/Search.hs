@@ -1,4 +1,7 @@
-module TypeSearch.Search (search) where
+module TypeSearch.Database.Search
+  ( search,
+  )
+where
 
 import Data.ImmatureStream qualified as ImS
 import Data.Map.Strict qualified as M
@@ -8,14 +11,15 @@ import Data.Time.Clock
 import Database.PostgreSQL.Simple
 import Streamly.Data.Stream.Prelude qualified as Streamly
 import System.Console.Haskeline
-import TypeSearch.Common
+import TypeSearch.Core.Evaluation
+import TypeSearch.Core.Isomorphism
+import TypeSearch.Core.Name
+import TypeSearch.Core.Term
 import TypeSearch.Database.PostgreSQL
-import TypeSearch.Evaluation
-import TypeSearch.Parser
+import TypeSearch.Database.Search.Parser
+import TypeSearch.Database.Search.Query qualified as Q
 import TypeSearch.Prelude
 import TypeSearch.Pretty
-import TypeSearch.Raw
-import TypeSearch.Term
 import TypeSearch.Unification
 
 --------------------------------------------------------------------------------
@@ -62,7 +66,7 @@ search conn transparentDefSet = runInputT defaultSettings go
           outputStrLn helpText
           go
         Right Quit -> outputStrLn "Bye!"
-        Right (Search typ) -> case parseRaw "interactive" (T.pack typ) of
+        Right (Search typ) -> case parseQuery "interactive" (T.pack typ) of
           Left err -> outputStrLn (displayException err) >> go
           Right typ -> do
             cands <- liftIO $ filterByFeatures conn transparentDefSet typ
@@ -76,19 +80,11 @@ search conn transparentDefSet = runInputT defaultSettings go
                 displayTypeSearchResults cands sorted time
                 go
 
-timed :: IO a -> IO (a, NominalDiffTime)
-timed a = do
-  t1 <- getCurrentTime
-  res <- a
-  t2 <- getCurrentTime
-  let diff = diffUTCTime t2 t1
-  pure (res, diff)
-
 data TypeSearchResult = TypeSearchResult QName Type T.Text Iso Term
 
-typeSearch :: TopEnv -> M.Map Name [QName] -> Raw -> [DbItem] -> IO [TypeSearchResult]
+typeSearch :: TopEnv -> M.Map Name [QName] -> Q.Type -> [DbItem] -> IO [TypeSearchResult]
 typeSearch tenv resol query items = do
-  let queries = possibleResolutions resol query
+  let queries = Q.possibleResolutions resol query
   Streamly.toList
     $ Streamly.parConcatMap
       id

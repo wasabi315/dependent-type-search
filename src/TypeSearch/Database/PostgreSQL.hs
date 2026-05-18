@@ -5,12 +5,12 @@ import Data.Map.Strict qualified as M
 import Data.Set qualified as S
 import Data.Text qualified as T
 import Database.PostgreSQL.Simple as PSQL
-import TypeSearch.Common
+import TypeSearch.Core.Evaluation
+import TypeSearch.Core.Name
+import TypeSearch.Core.Term
 import TypeSearch.Database.Feature
-import TypeSearch.Evaluation
+import TypeSearch.Database.Search.Query qualified as Q
 import TypeSearch.Prelude
-import TypeSearch.Raw
-import TypeSearch.Term
 
 --------------------------------------------------------------------------------
 
@@ -38,7 +38,7 @@ saveManyItems conn items =
       "INSERT INTO library_items(name_qual,name_unqual,module,sig,sig_text,original_sig_text,body,return_type_head,polymorphic,arity,arity_has_var) VALUES (?,?,?,?,?,?,?,?,?,?,?)"
       items
 
-fetchResolution :: Connection -> Raw -> IO (M.Map Name [QName])
+fetchResolution :: Connection -> Q.Term -> IO (M.Map Name [QName])
 fetchResolution conn a = do
   res :: [(QName, Name)] <-
     query
@@ -52,9 +52,9 @@ fetchResolution conn a = do
             res
   pure resol
   where
-    (quals, unquals) = partitionEithers $ map (\case Unqual x -> Right x; Qual m x -> Left (QName m x)) $ S.toList (rawFreeVars a)
+    (quals, unquals) = partitionEithers $ map (\case Unqual x -> Right x; Qual m x -> Left (QName m x)) $ S.toList (Q.freeVars a)
 
-filterByFeatures :: Connection -> S.Set QName -> Raw -> IO (Maybe [DbItem])
+filterByFeatures :: Connection -> S.Set QName -> Q.Term -> IO (Maybe [DbItem])
 filterByFeatures conn transparentDefSet a = case computeReturnTypeHeadRaw transparentDefSet a of
   Nothing -> pure Nothing
   Just retType -> do

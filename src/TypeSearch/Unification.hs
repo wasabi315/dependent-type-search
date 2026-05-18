@@ -4,10 +4,11 @@ import Data.HashMap.Strict qualified as HM
 import Data.ImmatureStream qualified as ImS
 import Data.IntMap.Strict qualified as IM
 import Data.IntSet qualified as IS
-import TypeSearch.Common
-import TypeSearch.Evaluation
+import TypeSearch.Core.Evaluation
+import TypeSearch.Core.Isomorphism
+import TypeSearch.Core.Name
+import TypeSearch.Core.Term hiding (rename)
 import TypeSearch.Prelude
-import TypeSearch.Term hiding (rename)
 
 --------------------------------------------------------------------------------
 

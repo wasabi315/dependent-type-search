@@ -30,7 +30,10 @@ library
       Data.ImmatureStream
       Database.PostgreSQL.Simple.Extra
       TypeSearch.Cli
-      TypeSearch.Common
+      TypeSearch.Core.Evaluation
+      TypeSearch.Core.Isomorphism
+      TypeSearch.Core.Name
+      TypeSearch.Core.Term
       TypeSearch.Database.Feature
       TypeSearch.Database.Index
       TypeSearch.Database.Index.Common
@@ -38,13 +41,11 @@ library
       TypeSearch.Database.Index.Term
       TypeSearch.Database.Index.TransparentDef
       TypeSearch.Database.PostgreSQL
-      TypeSearch.Evaluation
-      TypeSearch.Parser
+      TypeSearch.Database.Search
+      TypeSearch.Database.Search.Parser
+      TypeSearch.Database.Search.Query
       TypeSearch.Prelude
       TypeSearch.Pretty
-      TypeSearch.Raw
-      TypeSearch.Search
-      TypeSearch.Term
       TypeSearch.Unification
   other-modules:
       Paths_dependent_type_search

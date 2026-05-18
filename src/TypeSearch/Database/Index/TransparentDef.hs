@@ -14,10 +14,10 @@ import Agda.TypeChecking.Substitute as Agda
 import Agda.TypeChecking.Telescope
 import Agda.Utils.Impossible (__IMPOSSIBLE__)
 import Agda.Utils.Monad
+import TypeSearch.Core.Term qualified as TS
 import TypeSearch.Database.Index.Common
 import TypeSearch.Database.Index.Term
 import TypeSearch.Prelude
-import TypeSearch.Term qualified as TS
 
 --------------------------------------------------------------------------------
 -- Translate transparent definitions

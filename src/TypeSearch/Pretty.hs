@@ -1,20 +1,19 @@
 module TypeSearch.Pretty
   ( -- * Pretty printing
-    prettyModule,
-    prettyDecl,
-    prettyRaw,
     prettyTerm,
     prettyTerm0,
     prettyIso,
+    prettyQuery,
     QualifyMode (..),
   )
 where
 
 import Data.Text qualified as T
-import TypeSearch.Common
+import TypeSearch.Core.Isomorphism
+import TypeSearch.Core.Name
+import TypeSearch.Core.Term
+import TypeSearch.Database.Search.Query qualified as Q
 import TypeSearch.Prelude
-import TypeSearch.Raw as Raw
-import TypeSearch.Term as Term
 
 --------------------------------------------------------------------------------
 -- Pretty printing
@@ -32,47 +31,21 @@ piP = 2
 absP = 1
 pairP = 0
 
-prettyModule :: Module -> ShowS
-prettyModule (Module name imports decls) =
-  showString "module "
-    . shows name
-    . showString " where"
-    . showString "\n\n"
-    . appEndo (foldMap (\m -> Endo $ showString "import " . shows m . showChar '\n') imports)
-    . showChar '\n'
-    . appEndo (foldMap (\d -> Endo $ prettyDecl d . showString "\n\n") decls)
-
-prettyDecl :: Decl -> ShowS
-prettyDecl = \case
-  DLet _ n t u ->
-    showString "let "
-      . shows n
-      . showString " : "
-      . prettyRaw pairP t
-      . showString " = "
-      . prettyRaw pairP u
-  DAxiom _ n t ->
-    showString "postulate "
-      . shows n
-      . showString " : "
-      . prettyRaw pairP t
-
-prettyRaw :: Int -> Raw -> ShowS
-prettyRaw = go
+prettyQuery :: Int -> Q.Term -> ShowS
+prettyQuery = go
   where
     go p = \case
-      RVar n -> shows n
-      RU -> showString "U"
-      RPi "_" a b -> par p piP $ go sigmaP a . showString " → " . go piP b
-      RPi n a b -> par p piP $ piBind n a . goPi b
-      RLam n b -> par p absP $ showString "λ " . shows n . goAbs b
-      RApp a b -> par p appP $ go appP a . showChar ' ' . go projP b
-      RSigma "_" a b -> par p piP $ go appP a . showString " × " . go sigmaP b
-      RSigma n a b -> par p sigmaP $ piBind n a . showString " × " . go sigmaP b
-      RPair a b -> par p pairP $ go absP a . showString " , " . go absP b
-      RProj1 a -> par p projP $ go projP a . showString ".1"
-      RProj2 a -> par p projP $ go projP a . showString ".2"
-      RPos t _ -> go p t
+      Q.Var n -> shows n
+      Q.U -> showString "U"
+      Q.Pi "_" a b -> par p piP $ go sigmaP a . showString " → " . go piP b
+      Q.Pi n a b -> par p piP $ piBind n a . goPi b
+      Q.Lam n b -> par p absP $ showString "λ " . shows n . goAbs b
+      Q.App a b -> par p appP $ go appP a . showChar ' ' . go projP b
+      Q.Sigma "_" a b -> par p piP $ go appP a . showString " × " . go sigmaP b
+      Q.Sigma n a b -> par p sigmaP $ piBind n a . showString " × " . go sigmaP b
+      Q.Pair a b -> par p pairP $ go absP a . showString " , " . go absP b
+      Q.Proj1 a -> par p projP $ go projP a . showString ".1"
+      Q.Proj2 a -> par p projP $ go projP a . showString ".2"
 
     piBind n a =
       showString "("
@@ -82,16 +55,14 @@ prettyRaw = go
         . showChar ')'
 
     goPi = \case
-      RPi "_" a b ->
+      Q.Pi "_" a b ->
         showString " → " . go sigmaP a . showString " → " . go piP b
-      RPi n a b ->
+      Q.Pi n a b ->
         showChar ' ' . piBind n a . goPi b
-      RPos t _ -> goPi t
       b -> showString " → " . go piP b
 
     goAbs = \case
-      RLam n t -> showChar ' ' . shows n . goAbs t
-      RPos t _ -> goAbs t
+      Q.Lam n t -> showChar ' ' . shows n . goAbs t
       t -> showString " → " . go absP t
 
 data QualifyMode = Qualify | Unqualify

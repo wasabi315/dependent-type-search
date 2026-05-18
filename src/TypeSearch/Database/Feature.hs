@@ -5,10 +5,10 @@ import Database.PostgreSQL.Simple.Extra
 import Database.PostgreSQL.Simple.FromField
 import Database.PostgreSQL.Simple.Newtypes
 import Database.PostgreSQL.Simple.ToField
-import TypeSearch.Common
+import TypeSearch.Core.Name
+import TypeSearch.Core.Term
+import TypeSearch.Database.Search.Query qualified as Q
 import TypeSearch.Prelude
-import TypeSearch.Raw
-import TypeSearch.Term
 
 --------------------------------------------------------------------------------
 -- Features
@@ -37,17 +37,17 @@ computeReturnTypeHead t = case headTerm (returnType t) of
   _ -> impossible
 
 -- | The input type must be closed.
-computeReturnTypeHeadRaw :: S.Set QName -> Raw -> Maybe (ReturnTypeHead PQName)
-computeReturnTypeHeadRaw transparentDefSet (rteleView -> RTeleView tele cod) =
-  case unRPos (rawHeadTerm cod) of
-    RU -> Just RHU
-    RVar (Unqual x)
+computeReturnTypeHeadRaw :: S.Set QName -> Q.Type -> Maybe (ReturnTypeHead PQName)
+computeReturnTypeHeadRaw transparentDefSet (Q.teleView -> TeleView tele cod) =
+  case Q.headTerm cod of
+    Q.U -> Just RHU
+    Q.Var (Unqual x)
       | Just {} <- lookup x tele -> Just RHVar
-    RVar x | maybeTransparentDef x -> Just RHUnknown
-    RVar x -> Just $ RHTop x
-    RSigma {} -> Just RHSigma
-    RProj1 {} -> Just RHProj1
-    RProj2 {} -> Just RHProj2
+    Q.Var x | maybeTransparentDef x -> Just RHUnknown
+    Q.Var x -> Just $ RHTop x
+    Q.Sigma {} -> Just RHSigma
+    Q.Proj1 {} -> Just RHProj1
+    Q.Proj2 {} -> Just RHProj2
     _ -> Nothing
   where
     maybeTransparentDef = \case
@@ -69,11 +69,10 @@ computePolymorphic = \case
   _ -> NoPolymorphic
 
 -- | The input type must be closed.
-computePolymorphicRaw :: Raw -> Polymorphic
+computePolymorphicRaw :: Q.Type -> Polymorphic
 computePolymorphicRaw = \case
-  RPos t _ -> computePolymorphicRaw t
-  RPi _ a _ | rawEndsInSort a -> YesPolymorphic
-  RPi _ _ b -> computePolymorphicRaw b
+  Q.Pi _ a _ | Q.endsInSort a -> YesPolymorphic
+  Q.Pi _ _ b -> computePolymorphicRaw b
   _ -> NoPolymorphic
 
 --------------------------------------------------------------------------------
@@ -101,15 +100,14 @@ computeArity = go [] False 0
       _ -> Arity {..}
 
 -- | The input type must be closed.
-computeArityRaw :: Raw -> Arity
+computeArityRaw :: Q.Type -> Arity
 computeArityRaw = go [] False 0
   where
     go ctx hasVar arity = \case
-      RPos t _ -> go ctx hasVar arity t
-      RPi x a b -> case rawHeadTerm a of
-        RVar (Unqual y)
+      Q.Pi x a b -> case Q.headTerm a of
+        Q.Var (Unqual y)
           | Just t <- lookup y ctx,
-            rawEndsInSort t ->
+            Q.endsInSort t ->
               go ((x, a) : ctx) True (arity + 1) b
         _ ->
           go ((x, a) : ctx) hasVar (arity + 1) b
