@@ -10,8 +10,8 @@ module TypeSearch.Pretty
   )
 where
 
-import Data.Monoid
 import TypeSearch.Common
+import TypeSearch.Prelude
 import TypeSearch.Raw as Raw
 import TypeSearch.Term as Term
 
@@ -113,8 +113,10 @@ prettyTerm qm = go
       Pi (freshen ns -> n) a b ->
         par p piP $ piBind n ns a . goPi (n : ns) b
       Lam (freshen ns -> n) t ->
-        par p absP $
-          showString "λ " . shows n . goAbs (n : ns) t
+        par p absP
+          $ showString "λ "
+          . shows n
+          . goAbs (n : ns) t
       App t u -> par p appP $ go ns appP t . showChar ' ' . go ns projP u
       AppPruning t pr -> goPruning (go ns appP t) ns pr
       Sigma "_" a b ->

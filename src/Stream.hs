@@ -7,8 +7,7 @@ module Stream
   )
 where
 
-import Control.Applicative
-import Control.Monad
+import TypeSearch.Prelude
 
 --------------------------------------------------------------------------------
 

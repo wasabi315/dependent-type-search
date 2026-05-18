@@ -16,17 +16,15 @@ import Agda.TypeChecking.Reduce
 import Agda.TypeChecking.Sort
 import Agda.TypeChecking.Substitute as Agda
 import Agda.TypeChecking.Telescope
-import Agda.Utils.CallStack (HasCallStack)
 import Agda.Utils.Impossible (__IMPOSSIBLE__)
 import Agda.Utils.Monad
-import Control.Monad.Reader
 import Data.IntMap qualified as IM
 import Data.Map.Strict qualified as M
-import Data.Maybe
 import Data.Set qualified as S
 import Data.Text qualified as T
 import Database.PostgreSQL.Simple
 import TypeSearch.Common qualified as TS
+import TypeSearch.Prelude
 
 --------------------------------------------------------------------------------
 -- Types
@@ -86,8 +84,8 @@ translateDBVar ix = do
 isErasable :: Type -> M Bool
 isErasable a = do
   TelV tel b <- telView a
-  addContext tel $
-    orM
+  addContext tel
+    $ orM
       [ isLevelType b,
         isJust <$> isSizeType b
       ]

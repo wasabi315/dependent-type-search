@@ -17,6 +17,7 @@ where
 
 import Data.Set qualified as S
 import TypeSearch.Common
+import TypeSearch.Prelude
 
 --------------------------------------------------------------------------------
 

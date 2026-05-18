@@ -40,6 +40,7 @@ library
       TypeSearch.Evaluation
       TypeSearch.MainInteraction
       TypeSearch.Parser
+      TypeSearch.Prelude
       TypeSearch.Pretty
       TypeSearch.Raw
       TypeSearch.Term
@@ -71,6 +72,7 @@ library
       MultiParamTypeClasses
       MultiWayIf
       NoFieldSelectors
+      NoImplicitPrelude
       OverloadedStrings
       OverloadedRecordDot
       PackageImports
@@ -146,6 +148,7 @@ executable dependent-type-search-exe
       MultiParamTypeClasses
       MultiWayIf
       NoFieldSelectors
+      NoImplicitPrelude
       OverloadedStrings
       OverloadedRecordDot
       PackageImports
@@ -223,6 +226,7 @@ test-suite dependent-type-search-test
       MultiParamTypeClasses
       MultiWayIf
       NoFieldSelectors
+      NoImplicitPrelude
       OverloadedStrings
       OverloadedRecordDot
       PackageImports

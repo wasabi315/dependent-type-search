@@ -14,10 +14,9 @@ import Agda.TypeChecking.Substitute as Agda
 import Agda.TypeChecking.Telescope
 import Agda.Utils.Impossible (__IMPOSSIBLE__)
 import Agda.Utils.Monad
-import Data.Maybe
-import Data.String
 import TypeSearch.Database.Index.Common
 import TypeSearch.Database.Index.Term
+import TypeSearch.Prelude
 import TypeSearch.Term qualified as TS
 
 --------------------------------------------------------------------------------
@@ -27,10 +26,10 @@ hasLocalDefs :: Definition -> M Bool
 hasLocalDefs def = do
   defs <- curDefs
   let locals =
-        takeWhile (isAnonymousModuleName . qnameModule) $
-          dropWhile (<= def.defName) $
-            map fst $
-              sortDefs defs
+        takeWhile (isAnonymousModuleName . qnameModule)
+          $ dropWhile (<= def.defName)
+          $ map fst
+          $ sortDefs defs
   pure $! not (null locals)
 
 isProjectionLike :: Definition -> M Bool
@@ -68,6 +67,7 @@ translatePatternArgs = \cases
       (isErasable dom.unDom)
       do addContext ctxElt $ translatePatternArgs (absBody cod) ps k
       do
-        addContextAndRenaming ctxElt $
-          TS.Lam (fromString varName) <$> translatePatternArgs (absBody cod) ps k
+        addContextAndRenaming ctxElt
+          $ TS.Lam (fromString varName)
+          <$> translatePatternArgs (absBody cod) ps k
   _ _ _ -> translateError "Not supported: transparentDef definition by pattern-matching"

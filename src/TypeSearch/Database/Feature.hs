@@ -5,6 +5,7 @@ import Database.PostgreSQL.Simple.FromField
 import Database.PostgreSQL.Simple.Newtypes
 import Database.PostgreSQL.Simple.ToField
 import TypeSearch.Common
+import TypeSearch.Prelude
 import TypeSearch.Raw
 import TypeSearch.Term
 

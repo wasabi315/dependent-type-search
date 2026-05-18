@@ -6,16 +6,14 @@ module TypeSearch.Parser
   )
 where
 
-import Control.Applicative hiding (many, some)
-import Control.Monad
 import Data.Char
 import Data.Foldable
 import Data.Text qualified as T
-import Data.Void
 import Text.Megaparsec
 import Text.Megaparsec.Char qualified as C
 import Text.Megaparsec.Char.Lexer qualified as L
 import TypeSearch.Common hiding (QName)
+import TypeSearch.Prelude hiding (many, some)
 import TypeSearch.Raw
 
 --------------------------------------------------------------------------------
@@ -60,12 +58,12 @@ pBind = pName <|> (Name <$> symbol "_")
 
 keyword :: T.Text -> Bool
 keyword x =
-  x == "λ"
-    || x == "U"
-    || x == ":"
-    || x == "->"
-    || x == "→"
-    || x == "×"
+  (x == "λ")
+    || (x == "U")
+    || (x == ":")
+    || (x == "->")
+    || (x == "→")
+    || (x == "×")
 
 alternating1 :: Parser a -> Parser a -> Parser [a]
 alternating1 p q = do

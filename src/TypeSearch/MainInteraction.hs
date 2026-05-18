@@ -1,9 +1,5 @@
 module TypeSearch.MainInteraction (mainLoop) where
 
-import Control.Exception (displayException)
-import Control.Monad.IO.Class
-import Data.Foldable
-import Data.List (sortOn)
 import Data.Map.Strict qualified as M
 import Data.Set qualified as S
 import Data.Text qualified as T
@@ -16,6 +12,7 @@ import TypeSearch.Common
 import TypeSearch.Database.PostgreSQL
 import TypeSearch.Evaluation
 import TypeSearch.Parser
+import TypeSearch.Prelude
 import TypeSearch.Pretty
 import TypeSearch.Raw
 import TypeSearch.Term
@@ -120,18 +117,18 @@ displayTypeSearchResults cands matches time = do
   outputStrLn $ shows (length matches) $ showString " item(s) matched in " $ shows (length cands) " candidate(s)"
   outputStrLn $ showString "Took " $ shows time "\n"
   for_ matches \(TypeSearchResult (QName m x) _ origA i sol) -> do
-    outputStrLn $
-      unlines $
-        concat
-          [ [ showString "- " $ shows x $ showString " : " $ T.unpack origA,
-              showString "  - module        : " $ shows m ""
-            ],
-            case i of
-              Refl -> []
-              i -> [showString "  - isomorphism   : " $ prettyIso 0 i ""],
-            [ showString "  - solution      : " $ prettyTerm0 Unqualify sol ""
-            ]
+    outputStrLn
+      $ unlines
+      $ concat
+        [ [ showString "- " $ shows x $ showString " : " $ T.unpack origA,
+            showString "  - module        : " $ shows m ""
+          ],
+          case i of
+            Refl -> []
+            i -> [showString "  - isomorphism   : " $ prettyIso 0 i ""],
+          [ showString "  - solution      : " $ prettyTerm0 Unqualify sol ""
           ]
+        ]
 
 --------------------------------------------------------------------------------
 -- Search by name

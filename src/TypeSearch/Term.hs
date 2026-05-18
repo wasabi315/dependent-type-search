@@ -1,14 +1,11 @@
 module TypeSearch.Term where
 
-import Control.Monad.State.Strict
-import Data.List (elemIndex)
 import Data.Map.Strict qualified as M
-import Data.Maybe
 import Data.Set qualified as S
 import Database.PostgreSQL.Simple.FromField
 import Database.PostgreSQL.Simple.ToField
-import GHC.Generics
 import TypeSearch.Common
+import TypeSearch.Prelude
 import TypeSearch.Raw
 
 --------------------------------------------------------------------------------

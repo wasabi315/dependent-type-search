@@ -1,14 +1,5 @@
 module TypeSearch.Common
-  ( -- * Utils
-    impossible,
-    down,
-    choose,
-    applyN,
-    foldMapA,
-    (//),
-    DontPrint (..),
-
-    -- * DB
+  ( -- * DB
     ViaEnum (..),
     ViaFlat (..),
 
@@ -24,75 +15,20 @@ module TypeSearch.Common
 
     -- * Position
     SourcePos (..),
-
-    -- * Re-exports
-    module Data.Coerce,
-    flat,
-    unflat,
-    Flat,
-    Generic,
-    ToJSON,
-    FromJSON,
-    mapMaybe,
-    catMaybes,
-    wither,
-    forMaybe,
   )
 where
 
 import Control.Applicative
 import Control.Exception
 import Control.Monad
-import Data.Aeson
 import Data.ByteString qualified as BS
-import Data.Coerce
-import Data.Hashable
-import Data.Monoid
-import Data.String
 import Data.Text qualified as T
-import Data.Typeable
 import Database.PostgreSQL.Simple
 import Database.PostgreSQL.Simple.FromField hiding (Binary)
 import Database.PostgreSQL.Simple.ToField
 import Flat
-import GHC.Stack
 import Text.Megaparsec
-import Witherable
-
---------------------------------------------------------------------------------
--- Utils
-
-impossible :: (HasCallStack) => a
-impossible = error "impossible"
-
--- | @[x, x - 1, ..., y]@
-down :: (Enum a, Num a) => a -> a -> [a]
-down x y = [x, x - 1 .. y]
-{-# INLINE down #-}
-
-choose :: (Alternative f, Foldable t) => t a -> f a
-choose = foldr ((<|>) . pure) empty
-{-# INLINE choose #-}
-
-applyN :: Int -> (a -> a) -> a -> a
-applyN n _ _ | n < 0 = error "applyN: negative argument"
-applyN 0 _ x = x
-applyN n f x = f (applyN (n - 1) f x)
-{-# INLINE applyN #-}
-
-infix 2 //
-
--- strict pair construction
-(//) :: a -> b -> (a, b)
-a // b = (a, b)
-
-foldMapA :: (Alternative f, Foldable t) => (a -> f b) -> t a -> f b
-foldMapA f = getAlt . foldMap (Alt . f)
-
-newtype DontPrint a = DontPrint a
-
-instance Show (DontPrint a) where
-  showsPrec _ _ = id
+import TypeSearch.Prelude
 
 --------------------------------------------------------------------------------
 -- Wrapper type for DB
@@ -120,8 +56,9 @@ instance (Flat a, Typeable a) => FromField (ViaFlat a) where
     case unflat @a x of
       Right t -> pure t
       Left e ->
-        returnError ConversionFailed f $
-          "Flat deserialisation error: " ++ displayException e
+        returnError ConversionFailed f
+          $ "Flat deserialisation error: "
+          ++ displayException e
 
 --------------------------------------------------------------------------------
 -- Names
@@ -172,10 +109,8 @@ instance ToField QName where
 instance FromField QName where
   fromField f dat = do
     x <- fromField @T.Text f dat
-    let xs = T.splitOn "." x
-        m = coerce $ T.intercalate "." (init xs)
-        f = coerce $ last xs
-    pure $ QName m f
+    let (m, f) = T.breakOnEnd "." x
+    pure $ QName (coerce m) (coerce f)
 
 -- | Possibly qualified names
 data PQName

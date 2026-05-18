@@ -1,16 +1,12 @@
 module TypeSearch.Unification where
 
-import Control.Applicative
-import Control.Monad
-import Control.Monad.State.Strict
 import Data.HashMap.Strict qualified as HM
 import Data.IntMap.Strict qualified as IM
 import Data.IntSet qualified as IS
-import Data.Maybe
-import Data.String
 import Stream
 import TypeSearch.Common
 import TypeSearch.Evaluation
+import TypeSearch.Prelude
 import TypeSearch.Term hiding (rename)
 
 --------------------------------------------------------------------------------

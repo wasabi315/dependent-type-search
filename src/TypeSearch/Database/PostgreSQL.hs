@@ -1,16 +1,14 @@
 module TypeSearch.Database.PostgreSQL where
 
-import Control.Monad
-import Data.Either
 import Data.HashMap.Lazy qualified as HML
 import Data.Map.Strict qualified as M
 import Data.Set qualified as S
 import Data.Text qualified as T
-import Data.Traversable (for)
-import Database.PostgreSQL.Simple
+import Database.PostgreSQL.Simple as PSQL
 import TypeSearch.Common
 import TypeSearch.Database.Feature
 import TypeSearch.Evaluation
+import TypeSearch.Prelude
 import TypeSearch.Raw
 import TypeSearch.Term
 
@@ -34,8 +32,8 @@ data DbItem = DbItem
 
 saveManyItems :: Connection -> [DbItem] -> IO ()
 saveManyItems conn items =
-  void $
-    executeMany
+  void
+    $ executeMany
       conn
       "INSERT INTO library_items(name_qual,name_unqual,module,sig,sig_text,original_sig_text,body,return_type_head,polymorphic,arity,arity_has_var) VALUES (?,?,?,?,?,?,?,?,?,?,?)"
       items
@@ -53,8 +51,8 @@ fetchResolution conn a = do
       "SELECT DISTINCT name_qual, name_unqual FROM library_items WHERE name_qual in ? UNION SELECT DISTINCT name_qual, name_unqual FROM library_items WHERE name_unqual in ?"
       (In quals, In (unquals :: [Name]))
   let resol =
-        M.fromListWith (++) $
-          map
+        M.fromListWith (++)
+          $ map
             (\(x, y) -> (y, [x]))
             res
   pure resol
@@ -105,7 +103,7 @@ filterByFeatures conn transparentDefSet a = case computeReturnTypeHeadRaw transp
 
 fetchTopEnv :: Connection -> [QName] -> IO (TopEnv, M.Map Name [QName])
 fetchTopEnv conn _candNames = do
-  fold
+  PSQL.fold
     conn
     "SELECT name_qual, body FROM library_items WHERE body IS NOT NULL"
     ()

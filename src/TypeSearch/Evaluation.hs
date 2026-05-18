@@ -2,8 +2,8 @@ module TypeSearch.Evaluation where
 
 import Data.HashMap.Lazy qualified as HML
 import TypeSearch.Common
+import TypeSearch.Prelude
 import TypeSearch.Term
-import Prelude hiding (curry)
 
 infixr 6 -->
 
@@ -19,8 +19,8 @@ a *** b = VSigma "_" a \ ~_ -> b
 
 exMetaCtx :: MetaCtx
 exMetaCtx =
-  MetaCtx 5 $
-    HML.fromList
+  MetaCtx 5
+    $ HML.fromList
       [ (0, Unsolved VU),
         (1, Unsolved VU),
         (2, Unsolved VU),
@@ -48,36 +48,42 @@ vlist = VTop (QName "Agda.Builtin.List" "List") SNil Nothing
 
 tFoldr :: Type
 tFoldr =
-  quote exMetaCtx 0 $
-    VPi "A" VU \a -> VPi "B" VU \b ->
+  quote exMetaCtx 0
+    $ VPi "A" VU \a -> VPi "B" VU \b ->
       (a --> b --> b) --> b --> (vlist $$ a) --> b
 
 tFoldl :: Type
 tFoldl =
-  quote exMetaCtx 0 $
-    VPi "A" VU \a -> VPi "B" VU \b ->
+  quote exMetaCtx 0
+    $ VPi "A" VU \a -> VPi "B" VU \b ->
       (b --> a --> b) --> b --> (vlist $$ a) --> b
 
 tMap :: Type
 tMap =
-  quote exMetaCtx 0 $
-    VPi "A" VU \a -> VPi "B" VU \b ->
+  quote exMetaCtx 0
+    $ VPi "A" VU \a -> VPi "B" VU \b ->
       (a --> b) --> (vlist $$ a) --> (vlist $$ b)
 
 tFoldr1 :: Type
 tFoldr1 =
-  quote exMetaCtx 0 $
-    (valpha --> vbeta --> vbeta) --> vbeta --> (vlist $$ valpha) --> vbeta
+  quote exMetaCtx 0
+    $ (valpha --> vbeta --> vbeta)
+    --> vbeta
+    --> (vlist $$ valpha)
+    --> vbeta
 
 tFoldr2 :: Type
 tFoldr2 =
-  quote exMetaCtx 0 $
-    (vlist $$ vgamma) --> (veps *** vgamma --> veps) --> veps --> veps
+  quote exMetaCtx 0
+    $ (vlist $$ vgamma)
+    --> (veps *** vgamma --> veps)
+    --> veps
+    --> veps
 
 tFoldr3 :: Type
 tFoldr3 =
-  quote exMetaCtx 0 $
-    VPi "xs" (vlist $$ vgamma) \xs -> ((vdelta $$ xs) *** (vdelta $$ xs) --> (vdelta $$ xs)) *** (vdelta $$ xs) --> (vdelta $$ xs)
+  quote exMetaCtx 0
+    $ VPi "xs" (vlist $$ vgamma) \xs -> ((vdelta $$ xs) *** (vdelta $$ xs) --> (vdelta $$ xs)) *** (vdelta $$ xs) --> (vdelta $$ xs)
 
 -- printResults :: (Foldable t) => t (Iso, MetaCtx) -> IO ()
 -- printResults res = for_ res \(i, mctx) -> do

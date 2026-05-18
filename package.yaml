@@ -69,6 +69,7 @@ default-extensions:
   - MultiParamTypeClasses
   - MultiWayIf
   - NoFieldSelectors
+  - NoImplicitPrelude
   - OverloadedStrings
   - OverloadedRecordDot
   - PackageImports

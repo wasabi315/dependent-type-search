@@ -22,15 +22,10 @@ import Agda.Utils.FileName
 import Agda.Utils.IO.Directory
 import Agda.Utils.Impossible (__IMPOSSIBLE__)
 import Agda.Utils.Maybe (ifJustM)
-import Agda.Utils.Monad
-import Control.Monad.Except (throwError)
-import Control.Monad.Reader
-import Data.Bifunctor
-import Data.Functor.Compose
-import Data.List (partition, sort)
-import Data.List.NonEmpty qualified as NonEmpty
-import Data.Map.Strict qualified as Map
-import Data.Set qualified as Set
+import Agda.Utils.Monad hiding (unless)
+import Data.List.NonEmpty qualified as NE
+import Data.Map.Strict qualified as M
+import Data.Set qualified as S
 import Data.Text qualified as T
 import System.Directory
 import System.FilePath.Find qualified as Find
@@ -42,6 +37,7 @@ import TypeSearch.Database.Index.Term
 import TypeSearch.Database.Index.TransparentDef
 import TypeSearch.Database.PostgreSQL qualified as TS
 import TypeSearch.Evaluation qualified as TS
+import TypeSearch.Prelude
 import TypeSearch.Pretty qualified as TS
 import TypeSearch.Term qualified as TS
 
@@ -70,8 +66,11 @@ indexLibrary config = do
     importPrimitiveModules
     libDirPrim <- useTC stPrimitiveLibDir
     files <-
-      liftIO $
-        Data.List.sort . map Find.infoPath . concat <$> forM (filePath libDirPrim : paths) (findWithInfo (pure True) (hasAgdaExtension <$> Find.filePath))
+      liftIO
+        $ sort
+        . map Find.infoPath
+        . concat
+        <$> forM (filePath libDirPrim : paths) (findWithInfo (pure True) (hasAgdaExtension <$> Find.filePath))
 
     -- resolve transparent definition names
     -- FIXME: make this more sensible. traversing entire library twice currently.
@@ -84,8 +83,9 @@ indexLibrary config = do
             let m = srcModuleName src
             setCurrentRange (beginningOfFile path) do
               checkModuleName m (srcOrigin src) Nothing
-              withCurrentModule noModuleName $
-                withTopLevelModule m $ do
+              withCurrentModule noModuleName
+                $ withTopLevelModule m
+                $ do
                   mi <- getNonMainModuleInfo m (Just src)
                   setInterface mi.miInterface
                   withScope_ mi.miInterface.iInsideScope do
@@ -95,9 +95,9 @@ indexLibrary config = do
                       resolveDefinedName (show x.name) >>= \case
                         Nothing -> translateError $ vcat [text "Couldn't find definition", text $ show x]
                         Just x -> pure x
-                    pure (foldr Set.insert resolved resolved', unresolved')
+                    pure (foldr S.insert resolved resolved', unresolved')
         )
-        (mempty, Set.toList config.transparentDefNames)
+        (mempty, S.toList config.transparentDefNames)
         files
 
     unless (null unresolved) do
@@ -112,8 +112,9 @@ indexLibrary config = do
       let m = srcModuleName src
       setCurrentRange (beginningOfFile path) do
         checkModuleName m (srcOrigin src) Nothing
-        withCurrentModule noModuleName $
-          withTopLevelModule m $ do
+        withCurrentModule noModuleName
+          $ withTopLevelModule m
+          $ do
             mi <- getNonMainModuleInfo m (Just src)
             setInterface mi.miInterface
             mod' <- withScope_ mi.miInterface.iInsideScope do
@@ -138,14 +139,14 @@ translateInterface intf =
                   (Compose ns.nsModules)
               let xns =
                     [ (C.QName x, n.anameName)
-                    | (x, ns) <- Map.toList ns.nsNames,
-                      n <- NonEmpty.toList ns
+                    | (x, ns) <- M.toList ns.nsNames,
+                      n <- NE.toList ns
                     ]
-                  xns' = Map.foldMapWithKey (foldMap . map . first . C.Qual) sub
+                  xns' = M.foldMapWithKey (foldMap . map . first . C.Qual) sub
               pure $ xns <> xns'
 
     names <- lift $ go =<< getCurrentScope
-    TS.forMaybe names \(cname, origQName) ->
+    forMaybe names \(cname, origQName) ->
       getConstInfo' origQName >>= \case
         Left _ -> pure Nothing
         Right def -> do

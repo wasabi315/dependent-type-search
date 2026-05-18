@@ -23,9 +23,9 @@ import Agda.Utils.Function
 import Agda.Utils.Impossible (__IMPOSSIBLE__)
 import Agda.Utils.Monad
 import Data.Set qualified as S
-import Data.String
 import TypeSearch.Database.Index.Common
 import TypeSearch.Database.Index.Name
+import TypeSearch.Prelude
 import TypeSearch.Term qualified as TS
 
 --------------------------------------------------------------------------------
@@ -33,7 +33,7 @@ import TypeSearch.Term qualified as TS
 
 -- | Translate a @Type@.
 translateType :: Type -> M TS.Term
-translateType ty = translateTerm (sort $ getSort ty) ty.unEl
+translateType ty = translateTerm (Agda.sort $ getSort ty) ty.unEl
 
 -- | Translate a @Term@ of a given @Type@. Reduce transparent definitions.
 translateTerm :: Type -> Term -> M TS.Term
@@ -41,8 +41,8 @@ translateTerm ty v = do
   v <- reduceTransparentDef =<< instantiate v
 
   let bad s t =
-        translateError $
-          vcat
+        translateError
+          $ vcat
             [ "cannot compile" <+> text (s ++ ":"),
               nest 2 $ prettyTCM t
             ]
@@ -56,8 +56,9 @@ translateTerm ty v = do
         do
           a' <- translateType a.unDom
           let name = if isBinderUsed b then realName b.absName else "_"
-          addContextAndRenaming (name, a) $
-            TS.Pi (fromString name) a' <$> translateType (absBody b)
+          addContextAndRenaming (name, a)
+            $ TS.Pi (fromString name) a'
+            <$> translateType (absBody b)
     Var i es -> do
       ty <- typeOfBV i
       translateSpined (translateVar i ty) (Var i) ty es
@@ -163,8 +164,8 @@ translateSpined c tm ty = \case
     (_, b) <- mustBePi ty
     translateSpined (c . (x :)) (tm . (e :)) (absApp b x) es
   e@IApply {} : _ ->
-    translateError $
-      vcat ["cannot compile interval application:", nest 2 $ prettyTCM e]
+    translateError
+      $ vcat ["cannot compile interval application:", nest 2 $ prettyTCM e]
 
 translateProj ::
   QName ->
@@ -209,8 +210,9 @@ translateLam ty _argi abs = do
     (isErasable dom.unDom)
     do addContext ctxElt $ translateTerm (absBody cod) (absBody abs)
     do
-      addContextAndRenaming ctxElt $
-        TS.Lam (fromString name) <$> translateTerm (absBody cod) (absBody abs)
+      addContextAndRenaming ctxElt
+        $ TS.Lam (fromString name)
+        <$> translateTerm (absBody cod) (absBody abs)
 
 translateLit :: Literal -> M TS.Term
 translateLit = \case
