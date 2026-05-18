@@ -8,7 +8,6 @@ where
 
 import Control.Applicative hiding (many, some)
 import Control.Monad
-import Control.Monad.Combinators.Expr
 import Data.Char
 import Data.Foldable
 import Data.Text qualified as T
@@ -54,28 +53,37 @@ pArrow :: Parser T.Text
 pArrow = symbol "→" <|> symbol "->"
 
 pProd :: Parser Char
-pProd = char '*' <|> char '×'
+pProd = char '×'
 
 pBind :: Parser Name
 pBind = pName <|> (Name <$> symbol "_")
 
 keyword :: T.Text -> Bool
 keyword x =
-  x == "module"
-    || x == "where"
-    || x == "import"
-    || x == "let"
-    || x == "postulate"
-    || x == "λ"
+  x == "λ"
     || x == "U"
+    || x == ":"
+    || x == "->"
+    || x == "→"
+    || x == "×"
+
+alternating1 :: Parser a -> Parser a -> Parser [a]
+alternating1 p q = do
+  let pq = (:) <$> p <*> (qp <|> pure [])
+      qp = (:) <$> q <*> (pq <|> pure [])
+  try pq <|> qp
 
 pIdent :: Parser T.Text
 pIdent = try do
-  x <- C.letterChar
-  xs <- takeWhileP Nothing (\c -> isAlphaNum c || c == '\'' || c == '-')
-  let xs' = T.cons x xs
-  guard (not (keyword xs'))
-  xs' <$ ws
+  let pPart = do
+        p <- takeWhile1P Nothing \c ->
+          isPrint c && (c `notElem` (" @.(){};_" :: String))
+        guard $ not (keyword p)
+        pure p
+      pParts = alternating1 pPart (C.string "_")
+  xs <- T.concat <$> pParts
+  guard $ xs /= "_"
+  xs <$ ws
 
 pName :: Parser Name
 pName = Name <$> pIdent
@@ -85,10 +93,7 @@ pPQName = do
   x <- pIdent
   y <- optional (try (char '.' *> pIdent))
   pure $ case y of
-    Nothing -> Unqual $ Name case x of
-      -- "Nat" -> "ℕ"
-      "Eq" -> "_≡_"
-      _ -> x
+    Nothing -> Unqual $ Name x
     Just z -> Qual (ModuleName x) (Name z)
 
 pKeyword :: T.Text -> Parser ()
@@ -128,21 +133,11 @@ pApp = do
   args <- many pProjExp
   pure $ foldl' RApp h args
 
-pMathExpr :: Parser Raw
-pMathExpr =
-  makeExprParser
-    pApp
-    [ [binary "+" (\l r -> RVar "_+_" `RApp` l `RApp` r)],
-      [binary "**" (\l r -> RVar "_*_" `RApp` l `RApp` r)]
-    ]
-  where
-    binary name f = InfixL (f <$ symbol name)
-
 pSigmaExp :: Parser Raw
 pSigmaExp = do
   optional (try (char '(' *> pName <* char ':')) >>= \case
     Nothing -> do
-      t <- pMathExpr
+      t <- pApp
       (RSigma "_" t <$> (pProd *> pSigmaExp)) <|> pure t
     Just x -> do
       a <- pRaw
