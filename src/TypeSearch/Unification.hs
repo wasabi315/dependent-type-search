@@ -1,9 +1,9 @@
 module TypeSearch.Unification where
 
 import Data.HashMap.Strict qualified as HM
+import Data.ImmatureStream qualified as ImS
 import Data.IntMap.Strict qualified as IM
 import Data.IntSet qualified as IS
-import Stream
 import TypeSearch.Common
 import TypeSearch.Evaluation
 import TypeSearch.Prelude
@@ -570,17 +570,17 @@ closeTm = \cases
   Here t -> t
   (Bind locs x _) b -> closeTm locs (Lam x b)
 
-check :: QName -> (Ctx, Locals) -> Value -> Value -> Stream (Iso, Term)
+check :: QName -> (Ctx, Locals) -> Value -> Value -> ImS.Stream (Iso, Term)
 check h (ctx, locs) query item =
   ( do
       (item, inst, mctx) <- possibleInstantiation emptyMetaCtx (ctx, locs) item (VTop h SNil Nothing)
-      (i, i', mctx) <- maybeToStream $ listToMaybe $ unifyIso mctx ctx query item
+      (i, i', mctx) <- ImS.maybeToStream $ listToMaybe $ unifyIso mctx ctx query item
       guard $ allMetaSolved mctx
       let j = i <> sym i'
           ~sol = closeTm locs $ quote mctx ctx.level $ transportInv j inst
       pure (j, sol)
   )
-    <|> Later case forceAll emptyMetaCtx query of
+    <|> ImS.Later case forceAll emptyMetaCtx query of
       VPi "_" _ _ -> empty
       VPi x a b -> do
         check h (bind ctx, Bind locs x (quote emptyMetaCtx ctx.level a)) (b $ VVar ctx.level) item
@@ -592,10 +592,10 @@ freshMeta mctx ctx locs a = do
       (m, mctx') = newMeta mctx closed
   (AppPruning (Meta m) (replicate (coerce ctx.level) True), mctx')
 
-possibleInstantiation :: MetaCtx -> (Ctx, Locals) -> Value -> Value -> Stream (Value, Value, MetaCtx)
+possibleInstantiation :: MetaCtx -> (Ctx, Locals) -> Value -> Value -> ImS.Stream (Value, Value, MetaCtx)
 possibleInstantiation mctx (ctx, locs) a ~inst =
   pure (a, inst, mctx)
-    <|> Later case forceAll mctx a of
+    <|> ImS.Later case forceAll mctx a of
       VPi "_" _ _ -> empty
       VPi _ a b -> do
         (m, mctx) <- pure $ freshMeta mctx ctx locs a

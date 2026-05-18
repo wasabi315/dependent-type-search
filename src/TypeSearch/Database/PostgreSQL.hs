@@ -38,11 +38,6 @@ saveManyItems conn items =
       "INSERT INTO library_items(name_qual,name_unqual,module,sig,sig_text,original_sig_text,body,return_type_head,polymorphic,arity,arity_has_var) VALUES (?,?,?,?,?,?,?,?,?,?,?)"
       items
 
-fuzzySearchByName :: Connection -> String -> IO [(QName, Term)]
-fuzzySearchByName conn name = do
-  rows :: [(QName, Term, Float)] <- query conn "SELECT name_qual, sig, similarity(?, name_unqual) AS sml FROM library_items WHERE similarity(?, name_unqual) > 0.9 ORDER BY sml DESC" (name, name)
-  pure $ map (\(x, a, _) -> (x, a)) rows
-
 fetchResolution :: Connection -> Raw -> IO (M.Map Name [QName])
 fetchResolution conn a = do
   res :: [(QName, Name)] <-

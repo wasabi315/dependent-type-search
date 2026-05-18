@@ -2,6 +2,7 @@ module TypeSearch.Term where
 
 import Data.Map.Strict qualified as M
 import Data.Set qualified as S
+import Database.PostgreSQL.Simple.Extra
 import Database.PostgreSQL.Simple.FromField
 import Database.PostgreSQL.Simple.ToField
 import TypeSearch.Common

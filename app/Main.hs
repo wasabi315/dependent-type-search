@@ -1,61 +1,7 @@
 module Main (main) where
 
-import Data.Aeson (eitherDecodeFileStrict)
-import Data.Maybe
-import Database.PostgreSQL.Simple
-import Database.PostgreSQL.Simple.Migration
-import Options.Applicative
-import Paths_dependent_type_search
-import System.Environment (getEnv, lookupEnv)
-import System.Exit
-import System.FilePath
-import System.IO
-import TypeSearch.Database.Index
-import TypeSearch.Database.Index.Common
-import TypeSearch.MainInteraction
-
-getConnectInfo :: IO ConnectInfo
-getConnectInfo = do
-  connectHost <- fromMaybe "127.0.0.1" <$> lookupEnv "DATABASE_HOST"
-  connectPort <- maybe 5432 read <$> lookupEnv "DATABASE_PORT"
-  connectUser <- getEnv "DATABASE_USER"
-  connectPassword <- getEnv "DATABASE_PASSWORD"
-  connectDatabase <- getEnv "DATABASE_NAME"
-  pure $! ConnectInfo {..}
-
-data TopCommand
-  = Index FilePath FilePath
-  | Search FilePath
-
-opts :: Parser TopCommand
-opts =
-  hsubparser
-    ( command "index" (info (Index <$> argument str (metavar "PATH_TO_LIBRARY") <*> argument str (metavar "PATH_TO_ALIASE_FILE")) (progDesc "Index an Agda library"))
-        <> command "search" (info (Main.Search <$> argument str (metavar "PATH_TO_ALIASE_FILE")) (progDesc "Search within indexed library"))
-    )
+import TypeSearch.Cli qualified
+import Prelude
 
 main :: IO ()
-main = do
-  command <- execParser (info opts idm)
-  connInfo <- getConnectInfo
-  case command of
-    Index libDir transparentDefFile -> do
-      transparentDef <-
-        eitherDecodeFileStrict transparentDefFile >>= \case
-          Right transp -> pure transp
-          Left err -> hPutStrLn stderr err >> exitFailure
-      withConnect connInfo \conn -> do
-        dataDir <- getDataDir
-        let migrationDir = dataDir </> "migration"
-        _ <-
-          runMigrations
-            conn
-            defaultOptions
-            [MigrationInitialization, MigrationDirectory migrationDir]
-        indexLibrary (IndexConfig transparentDef libDir conn)
-    Main.Search transparentDefFile -> do
-      transparentDef <-
-        eitherDecodeFileStrict transparentDefFile >>= \case
-          Right transp -> pure transp
-          Left err -> hPutStrLn stderr err >> exitFailure
-      withConnect connInfo (flip mainLoop transparentDef)
+main = TypeSearch.Cli.main

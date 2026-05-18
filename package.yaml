@@ -110,7 +110,7 @@ library:
   source-dirs: src
 
 executables:
-  dependent-type-search-exe:
+  dependent-type-search:
     main: Main.hs
     source-dirs: app
     dependencies:

@@ -22,21 +22,11 @@ import Data.IntMap qualified as IM
 import Data.Map.Strict qualified as M
 import Data.Set qualified as S
 import Data.Text qualified as T
-import Database.PostgreSQL.Simple
 import TypeSearch.Common qualified as TS
 import TypeSearch.Prelude
 
 --------------------------------------------------------------------------------
 -- Types
-
-data IndexConfig = IndexConfig
-  { -- | Set of fully-qualified definition names subject to definition unfolding during search.
-    transparentDefNames :: S.Set TS.QName,
-    -- | Path to Agda library.
-    libraryDirectory :: FilePath,
-    -- | Connection to database.
-    databaseConnection :: Connection
-  }
 
 data IndexEnv = IndexEnv
   { transparentDefNames :: S.Set QName,

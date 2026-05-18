@@ -27,8 +27,9 @@ source-repository head
 
 library
   exposed-modules:
-      Stream
-      TypeSearch
+      Data.ImmatureStream
+      Database.PostgreSQL.Simple.Extra
+      TypeSearch.Cli
       TypeSearch.Common
       TypeSearch.Database.Feature
       TypeSearch.Database.Index
@@ -38,11 +39,11 @@ library
       TypeSearch.Database.Index.TransparentDef
       TypeSearch.Database.PostgreSQL
       TypeSearch.Evaluation
-      TypeSearch.MainInteraction
       TypeSearch.Parser
       TypeSearch.Prelude
       TypeSearch.Pretty
       TypeSearch.Raw
+      TypeSearch.Search
       TypeSearch.Term
       TypeSearch.Unification
   other-modules:
@@ -119,7 +120,7 @@ library
     , witherable
   default-language: GHC2021
 
-executable dependent-type-search-exe
+executable dependent-type-search
   main-is: Main.hs
   other-modules:
       Paths_dependent_type_search

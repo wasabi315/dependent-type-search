@@ -2,6 +2,7 @@
 
 module TypeSearch.Database.Index
   ( indexLibrary,
+    IndexConfig (..),
   )
 where
 
@@ -23,10 +24,12 @@ import Agda.Utils.IO.Directory
 import Agda.Utils.Impossible (__IMPOSSIBLE__)
 import Agda.Utils.Maybe (ifJustM)
 import Agda.Utils.Monad hiding (unless)
+import Data.IORef
 import Data.List.NonEmpty qualified as NE
 import Data.Map.Strict qualified as M
 import Data.Set qualified as S
 import Data.Text qualified as T
+import Database.PostgreSQL.Simple
 import System.Directory
 import System.FilePath.Find qualified as Find
 import TypeSearch.Common qualified as TS
@@ -44,7 +47,48 @@ import TypeSearch.Term qualified as TS
 --------------------------------------------------------------------------------
 -- Entrypoint
 
--- TODO: make indexer an Agda backend
+data IndexConfig = IndexConfig
+  { -- | Set of fully-qualified definition names subject to definition unfolding during search.
+    transparentDefNames :: S.Set TS.QName,
+    -- | Path to Agda library.
+    libraryDirectory :: FilePath,
+    -- | Connection to database.
+    databaseConnection :: Connection
+  }
+
+data IndexBackendEnv = IndexBackendEnv
+  { indexEnv :: IndexEnv,
+    indexConfig :: IndexConfig,
+    indexedModulesRef :: IORef (S.Set TopLevelModuleName)
+  }
+
+indexBackend :: IndexConfig -> IndexEnv -> IORef (S.Set TopLevelModuleName) -> Backend
+indexBackend config env indexedModulesRef =
+  Backend
+    $ Backend'
+      { backendName = "dependent-type-search",
+        backendVersion = Nothing,
+        options = (),
+        commandLineFlags = mempty,
+        isEnabled = const True,
+        preCompile = const $ pure $ IndexBackendEnv env config indexedModulesRef,
+        postCompile = \_ _ _ -> pure (),
+        preModule = \backendEnv _ mName _ -> do
+          indexed <- liftIO $ readIORef backendEnv.indexedModulesRef
+          if S.member mName indexed
+            then pure $ Skip ()
+            else pure $ Recompile (),
+        postModule = \backendEnv _ _ mName _ -> do
+          mod' <- runReaderT (translateInterface =<< curIF) backendEnv.indexEnv
+          liftIO $ TS.saveManyItems backendEnv.indexConfig.databaseConnection mod'
+          liftIO $ modifyIORef' backendEnv.indexedModulesRef (S.insert mName)
+          pure (),
+        compileDef = \_ _ _ _ -> pure (),
+        scopeCheckingSuffices = False,
+        mayEraseType = const $ pure True,
+        backendInteractTop = Nothing,
+        backendInteractHole = Nothing
+      }
 
 indexLibrary :: IndexConfig -> IO ()
 indexLibrary config = do
@@ -104,22 +148,15 @@ indexLibrary config = do
       translateError $ vcat [text "Couldn't find definitions", text $ show unresolved]
 
     let env = IndexEnv transparentDefNames 0 mempty False
+    indexedModulesRef <- liftIO $ newIORef mempty
+    setTCLens stBackends [indexBackend config env indexedModulesRef]
 
     forM_ files \inputFile -> do
       path <- liftIO (absolute inputFile)
       sf <- srcFromPath path
       src <- parseSource sf
-      let m = srcModuleName src
-      setCurrentRange (beginningOfFile path) do
-        checkModuleName m (srcOrigin src) Nothing
-        withCurrentModule noModuleName
-          $ withTopLevelModule m
-          $ do
-            mi <- getNonMainModuleInfo m (Just src)
-            setInterface mi.miInterface
-            mod' <- withScope_ mi.miInterface.iInsideScope do
-              runReaderT (translateInterface mi.miInterface) env
-            liftIO $ TS.saveManyItems config.databaseConnection mod'
+      result <- typeCheckMain TypeCheck src
+      callBackend "dependent-type-search" IsMain result
 
 --------------------------------------------------------------------------------
 -- Module translation

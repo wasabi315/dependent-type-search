@@ -1,4 +1,4 @@
-module Stream
+module Data.ImmatureStream
   ( Stream (..),
     streamToMaybe,
     streamToList,
@@ -7,7 +7,9 @@ module Stream
   )
 where
 
-import TypeSearch.Prelude
+import Control.Applicative
+import Control.Monad
+import Prelude
 
 --------------------------------------------------------------------------------
 

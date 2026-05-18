@@ -16,6 +16,7 @@ module TypeSearch.Raw
 where
 
 import Data.Set qualified as S
+import Text.Megaparsec.Pos
 import TypeSearch.Common
 import TypeSearch.Prelude
 

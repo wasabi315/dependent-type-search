@@ -1,6 +1,7 @@
 module TypeSearch.Database.Feature where
 
 import Data.Set qualified as S
+import Database.PostgreSQL.Simple.Extra
 import Database.PostgreSQL.Simple.FromField
 import Database.PostgreSQL.Simple.Newtypes
 import Database.PostgreSQL.Simple.ToField

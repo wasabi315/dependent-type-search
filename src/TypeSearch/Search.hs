@@ -1,11 +1,11 @@
-module TypeSearch.MainInteraction (mainLoop) where
+module TypeSearch.Search (search) where
 
+import Data.ImmatureStream qualified as ImS
 import Data.Map.Strict qualified as M
 import Data.Set qualified as S
 import Data.Text qualified as T
 import Data.Time.Clock
 import Database.PostgreSQL.Simple
-import Stream
 import Streamly.Data.Stream.Prelude qualified as Streamly
 import System.Console.Haskeline
 import TypeSearch.Common
@@ -24,8 +24,7 @@ data Command
   = Continue
   | Help
   | Quit
-  | SearchByName String
-  | SearchByType String
+  | Search String
 
 parseCommand :: Maybe String -> Either String Command
 parseCommand = maybe (pure Continue) \input -> case words input of
@@ -35,9 +34,7 @@ parseCommand = maybe (pure Continue) \input -> case words input of
   ":quit" : _ -> pure Quit
   ":q" : _ -> pure Quit
   (':' : cmd) : _ -> Left $ "Unknown command: " <> cmd
-  "name" : name : _ -> pure $ SearchByName name
-  "type" : rest -> pure $ SearchByType (unwords rest)
-  search : _ -> Left $ "Unknown search: " <> search
+  _ -> pure $ Search input
 
 helpText :: String
 helpText =
@@ -51,8 +48,8 @@ helpText =
       ""
     ]
 
-mainLoop :: Connection -> S.Set QName -> IO ()
-mainLoop conn transparentDefSet = runInputT defaultSettings go
+search :: Connection -> S.Set QName -> IO ()
+search conn transparentDefSet = runInputT defaultSettings go
   where
     go = do
       input <- getInputLine ">> "
@@ -65,18 +62,13 @@ mainLoop conn transparentDefSet = runInputT defaultSettings go
           outputStrLn helpText
           go
         Right Quit -> outputStrLn "Bye!"
-        Right (SearchByName name) -> do
-          items <- liftIO $ fuzzySearchByName conn name
-          displaySearchByNameResult items
-          go
-        Right (SearchByType typ) -> case parseRaw "interactive" (T.pack typ) of
+        Right (Search typ) -> case parseRaw "interactive" (T.pack typ) of
           Left err -> outputStrLn (displayException err) >> go
           Right typ -> do
             cands <- liftIO $ filterByFeatures conn transparentDefSet typ
             case cands of
               Nothing -> outputStrLn "Ill-formed type" >> go
               Just cands -> do
-                -- outputStrLn $ show $ map (.name_unqual) cands
                 resol1 <- liftIO $ fetchResolution conn typ
                 (tenv, resol2) <- liftIO $ fetchTopEnv conn $ map (.name_qual) cands
                 (result, time) <- liftIO $ timed $ typeSearch tenv (M.unionWith (++) resol1 resol2) typ cands
@@ -101,13 +93,13 @@ typeSearch tenv resol query items = do
     $ Streamly.parConcatMap
       id
       ( \item ->
-          case streamToMaybe $ foldMapA (\query -> typeSearchOne tenv query item) queries of
+          case ImS.streamToMaybe $ foldMapA (\query -> typeSearchOne tenv query item) queries of
             Nothing -> Streamly.nil
             Just res -> Streamly.cons res Streamly.nil
       )
     $ Streamly.fromList items
 
-typeSearchOne :: TopEnv -> Term -> DbItem -> Stream TypeSearchResult
+typeSearchOne :: TopEnv -> Term -> DbItem -> ImS.Stream TypeSearchResult
 typeSearchOne tenv query DbItem {sig, original_sig_text, name_qual = name} = do
   (i, inst) <- check name (initCtx tenv, Here) (eval emptyMetaCtx tenv [] query) (eval emptyMetaCtx tenv [] sig)
   pure (TypeSearchResult name sig original_sig_text i inst)
@@ -117,23 +109,15 @@ displayTypeSearchResults cands matches time = do
   outputStrLn $ shows (length matches) $ showString " item(s) matched in " $ shows (length cands) " candidate(s)"
   outputStrLn $ showString "Took " $ shows time "\n"
   for_ matches \(TypeSearchResult (QName m x) _ origA i sol) -> do
-    outputStrLn
-      $ unlines
-      $ concat
-        [ [ showString "- " $ shows x $ showString " : " $ T.unpack origA,
-            showString "  - module        : " $ shows m ""
-          ],
-          case i of
-            Refl -> []
-            i -> [showString "  - isomorphism   : " $ prettyIso 0 i ""],
-          [ showString "  - solution      : " $ prettyTerm0 Unqualify sol ""
+    outputStrLn $
+      unlines $
+        concat
+          [ [ showString "- " $ shows x $ showString " : " $ T.unpack origA,
+              showString "  - module        : " $ shows m ""
+            ],
+            case i of
+              Refl -> []
+              i -> [showString "  - isomorphism   : " $ prettyIso 0 i ""],
+            [ showString "  - solution      : " $ prettyTerm0 Unqualify sol ""
+            ]
           ]
-        ]
-
---------------------------------------------------------------------------------
--- Search by name
-
-displaySearchByNameResult :: [(QName, Term)] -> InputT IO ()
-displaySearchByNameResult = traverse_ \(QName m x, a) -> do
-  outputStrLn $ shows x $ showString " : " $ prettyTerm0 Unqualify a ""
-  outputStrLn $ showString "  in " $ shows m "\n"

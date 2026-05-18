@@ -10,6 +10,7 @@ module TypeSearch.Pretty
   )
 where
 
+import Data.Text qualified as T
 import TypeSearch.Common
 import TypeSearch.Prelude
 import TypeSearch.Raw as Raw
@@ -165,3 +166,28 @@ prettyIso p = \case
   PiCongR i -> par p 10 $ showString "ΠR " . prettyIso 11 i
   SigmaCongL i -> par p 10 $ showString "ΣL " . prettyIso 11 i
   SigmaCongR i -> par p 10 $ showString "ΣR " . prettyIso 11 i
+
+freshen :: [Name] -> Name -> Name
+freshen ns n
+  | n `elem` ns = go 0
+  | otherwise = n
+  where
+    go (i :: Int)
+      | n' `notElem` ns = n'
+      | otherwise = go (i + 1)
+      where
+        n' = Name $ coerce n <> T.pack (map subscript (show i))
+
+subscript :: Char -> Char
+subscript = \case
+  '0' -> '₀'
+  '1' -> '₁'
+  '2' -> '₂'
+  '3' -> '₃'
+  '4' -> '₄'
+  '5' -> '₅'
+  '6' -> '₆'
+  '7' -> '₇'
+  '8' -> '₈'
+  '9' -> '₉'
+  c -> c
