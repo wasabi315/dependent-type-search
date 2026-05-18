@@ -1,8 +1,7 @@
 -- Adopted from elaboration-zoo
 
 module TypeSearch.Parser
-  ( parseModule,
-    parseRaw,
+  ( parseRaw,
     ParserError,
   )
 where
@@ -77,9 +76,6 @@ pIdent = try do
   let xs' = T.cons x xs
   guard (not (keyword xs'))
   xs' <$ ws
-
-pModuleName :: Parser ModuleName
-pModuleName = ModuleName <$> pIdent
 
 pName :: Parser Name
 pName = Name <$> pIdent
@@ -191,41 +187,6 @@ pRaw :: Parser Raw
 pRaw = withPos do
   t <- pAbsPi
   (RPair t <$> (char ',' *> pRaw)) <|> pure t
-
-pLet :: Parser Decl
-pLet = do
-  pos <- getSourcePos
-  pKeyword "let"
-  x <- pPQName
-  _ <- char ':'
-  ann <- pRaw
-  _ <- char '='
-  t <- pRaw
-  pure $ DLet (Just pos) x ann t
-
-pAxiom :: Parser Decl
-pAxiom = do
-  pos <- getSourcePos
-  pKeyword "postulate"
-  x <- pPQName
-  _ <- char ':'
-  ann <- pRaw
-  pure $ DAxiom (Just pos) x ann
-
-pDecl :: Parser Decl
-pDecl = pLet <|> pAxiom
-
-pModule :: Parser Module
-pModule = do
-  _ <- pKeyword "module"
-  m <- pModuleName
-  _ <- pKeyword "where"
-  imports <- many $ pKeyword "import" *> pModuleName
-  decls <- many pDecl
-  pure $ Module m imports decls
-
-parseModule :: FilePath -> T.Text -> Either ParserError Module
-parseModule fname src = parse (ws *> pModule <* eof) fname src
 
 parseRaw :: FilePath -> T.Text -> Either ParserError Raw
 parseRaw fname src = parse (ws *> pRaw <* eof) fname src

@@ -77,11 +77,21 @@ rawEndsInSort t = case unRPos (rawReturnType t) of
   RU -> True
   _ -> False
 
+data RAppView = RAppView
+  { head :: Raw,
+    args :: [Raw]
+  }
+
+rappView :: Raw -> RAppView
+rappView = go id
+  where
+    go args = \case
+      (unRPos -> RApp t u) -> go ((u :) . args) t
+      t -> RAppView {head = t, args = args []}
+
 -- | The head term. Doesn't consider projections as elimination. Doesn't perform any reduction.
 rawHeadTerm :: Raw -> Raw
-rawHeadTerm = \case
-  (unRPos -> RApp t _) -> rawHeadTerm t
-  t -> t
+rawHeadTerm = (.head) . rappView
 
 rawFreeVars :: Raw -> S.Set PQName
 rawFreeVars = \case

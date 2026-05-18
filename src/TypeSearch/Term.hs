@@ -106,11 +106,21 @@ endsInSort t = case teleView t of
   TeleView _ U -> True
   _ -> False
 
+data AppView = AppView
+  { head :: Term,
+    args :: [Term]
+  }
+
+appView :: Term -> AppView
+appView = go id
+  where
+    go args = \case
+      App t u -> go ((u :) . args) t
+      t -> AppView {head = t, args = args []}
+
 -- | The head term. Doesn't consider projections as elimination. Doesn't perform any reduction.
 headTerm :: Term -> Term
-headTerm = \case
-  App t _ -> headTerm t
-  t -> t
+headTerm = (.head) . appView
 
 termSize :: Term -> Int
 termSize = \case
