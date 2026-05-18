@@ -44,7 +44,6 @@ library
       TypeSearch.Raw
       TypeSearch.Term
       TypeSearch.Unification
-      TypeSearch.UnificationModuloIso
   other-modules:
       Paths_dependent_type_search
   autogen-modules:

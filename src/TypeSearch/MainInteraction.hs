@@ -1,13 +1,10 @@
 module TypeSearch.MainInteraction (mainLoop) where
 
-import Control.Applicative
 import Control.Exception (displayException)
-import Control.Monad
 import Control.Monad.IO.Class
 import Data.Foldable
 import Data.List (sortOn)
 import Data.Map.Strict qualified as M
-import Data.Maybe
 import Data.Set qualified as S
 import Data.Text qualified as T
 import Data.Time.Clock
@@ -23,7 +20,6 @@ import TypeSearch.Pretty
 import TypeSearch.Raw
 import TypeSearch.Term
 import TypeSearch.Unification
-import TypeSearch.UnificationModuloIso
 
 --------------------------------------------------------------------------------
 
@@ -118,53 +114,6 @@ typeSearchOne :: TopEnv -> Term -> DbItem -> Stream TypeSearchResult
 typeSearchOne tenv query DbItem {sig, original_sig_text, name_qual = name} = do
   (i, inst) <- check name (initCtx tenv, Here) (eval emptyMetaCtx tenv [] query) (eval emptyMetaCtx tenv [] sig)
   pure (TypeSearchResult name sig original_sig_text i inst)
-
-data Locals
-  = Here
-  | Bind Locals Name ~Term
-
-closeTy :: Locals -> Term -> Term
-closeTy = \cases
-  Here b -> b
-  (Bind locs x a) b -> closeTy locs (Pi x a b)
-
-closeTm :: Locals -> Term -> Term
-closeTm = \cases
-  Here t -> t
-  (Bind locs x _) b -> closeTm locs (Lam x b)
-
-check :: QName -> (Ctx, Locals) -> Value -> Value -> Stream (Iso, Term)
-check h (ctx, locs) query item =
-  ( do
-      (item, inst, mctx) <- possibleInstantiation emptyMetaCtx (ctx, locs) item (VTop h SNil Nothing)
-      (i, i', mctx) <- maybeToStream $ listToMaybe $ unifyIso mctx ctx query item
-      guard $ allMetaSolved mctx
-      let j = i <> sym i'
-          ~sol = closeTm locs $ quote mctx ctx.level $ transportInv j inst
-      pure (j, sol)
-  )
-    <|> Later case forceAll emptyMetaCtx query of
-      VPi "_" _ _ -> empty
-      VPi x a b -> do
-        check h (bind ctx, Bind locs x (quote emptyMetaCtx ctx.level a)) (b $ VVar ctx.level) item
-      _ -> empty
-
-freshMeta :: MetaCtx -> Ctx -> Locals -> Value -> (Term, MetaCtx)
-freshMeta mctx ctx locs a = do
-  let ~closed = eval mctx ctx.topEnv [] $ closeTy locs (quote mctx ctx.level a)
-      (m, mctx') = newMeta mctx closed
-  (AppPruning (Meta m) (replicate (coerce ctx.level) True), mctx')
-
-possibleInstantiation :: MetaCtx -> (Ctx, Locals) -> Value -> Value -> Stream (Value, Value, MetaCtx)
-possibleInstantiation mctx (ctx, locs) a ~inst =
-  pure (a, inst, mctx)
-    <|> Later case forceAll mctx a of
-      VPi "_" _ _ -> empty
-      VPi _ a b -> do
-        (m, mctx) <- pure $ freshMeta mctx ctx locs a
-        let mv = eval mctx ctx.topEnv ctx.env m
-        possibleInstantiation mctx (ctx, locs) (b mv) (inst $$ mv)
-      _ -> empty
 
 displayTypeSearchResults :: [DbItem] -> [TypeSearchResult] -> NominalDiffTime -> InputT IO ()
 displayTypeSearchResults cands matches time = do
