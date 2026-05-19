@@ -124,14 +124,17 @@ data Feature n = Feature
 computeFeature :: Type -> Feature QName
 computeFeature typ =
   Feature
-    (computeReturnTypeHead typ)
-    (computePolymorphic typ)
-    (computeArity typ)
+    { returnTypeHead = computeReturnTypeHead typ,
+      polymorphic = computePolymorphic typ,
+      arity = computeArity typ
+    }
 
 computeFeatureQ :: S.Set QName -> Q.Type -> Maybe (Feature PQName)
-computeFeatureQ transparentDefNames typ =
-  liftA3
+computeFeatureQ transparentDefNames typ = do
+  returnTypeHead <- computeReturnTypeHeadQ transparentDefNames typ
+  pure
     Feature
-    (computeReturnTypeHeadQ transparentDefNames typ)
-    (pure $ computePolymorphicQ typ)
-    (pure $ computeArityQ typ)
+      { returnTypeHead,
+        polymorphic = computePolymorphicQ typ,
+        arity = computeArityQ typ
+      }

@@ -29,24 +29,26 @@ library
   exposed-modules:
       Data.ImmatureStream
       Database.PostgreSQL.Simple.Extra
+      TypeSearch.AgdaUtils
       TypeSearch.Cli
       TypeSearch.Core.Evaluation
       TypeSearch.Core.Isomorphism
+      TypeSearch.Core.Module
       TypeSearch.Core.Name
       TypeSearch.Core.Term
       TypeSearch.Database.Feature
       TypeSearch.Database.Index
-      TypeSearch.Database.Index.Common
-      TypeSearch.Database.Index.Definition
-      TypeSearch.Database.Index.Name
-      TypeSearch.Database.Index.Term
-      TypeSearch.Database.Index.TransparentDef
       TypeSearch.Database.PostgreSQL
       TypeSearch.Database.Search
       TypeSearch.Database.Search.Parser
       TypeSearch.Database.Search.Query
       TypeSearch.Prelude
       TypeSearch.Pretty
+      TypeSearch.Translate.Common
+      TypeSearch.Translate.Definition
+      TypeSearch.Translate.Name
+      TypeSearch.Translate.Term
+      TypeSearch.Translate.TransparentDef
       TypeSearch.Unification
   other-modules:
       Paths_dependent_type_search

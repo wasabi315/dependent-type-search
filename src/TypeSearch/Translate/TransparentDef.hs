@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
-module TypeSearch.Database.Index.TransparentDef
+module TypeSearch.Translate.TransparentDef
   ( translateTransparentDefBody,
   )
 where
@@ -14,15 +14,16 @@ import Agda.TypeChecking.Substitute as Agda
 import Agda.TypeChecking.Telescope
 import Agda.Utils.Impossible (__IMPOSSIBLE__)
 import Agda.Utils.Monad
+import TypeSearch.AgdaUtils
 import TypeSearch.Core.Term qualified as TS
-import TypeSearch.Database.Index.Common
-import TypeSearch.Database.Index.Term
 import TypeSearch.Prelude
+import TypeSearch.Translate.Common
+import TypeSearch.Translate.Term
 
 --------------------------------------------------------------------------------
 -- Translate transparent definitions
 
-hasLocalDefs :: Definition -> M Bool
+hasLocalDefs :: Definition -> TransM Bool
 hasLocalDefs def = do
   defs <- curDefs
   let locals =
@@ -32,14 +33,14 @@ hasLocalDefs def = do
           $ sortDefs defs
   pure $! not (null locals)
 
-isProjectionLike :: Definition -> M Bool
+isProjectionLike :: Definition -> TransM Bool
 isProjectionLike def = do
   let Function {..} = def.theDef
   case funProjection of
     Left {} -> pure False
     Right {} -> pure True
 
-translateTransparentDefBody :: Definition -> M TS.Term
+translateTransparentDefBody :: Definition -> TransM TS.Term
 translateTransparentDefBody def = do
   let Function {..} = def.theDef
 
@@ -56,7 +57,7 @@ translateTransparentDefBody def = do
   locallyReduceTransparentDef $ translatePatternArgs def.defType namedClausePats \ty ->
     translateTerm ty (fromMaybe __IMPOSSIBLE__ clauseBody)
 
-translatePatternArgs :: Type -> NAPs -> (Type -> M TS.Term) -> M TS.Term
+translatePatternArgs :: Type -> NAPs -> (Type -> TransM TS.Term) -> TransM TS.Term
 translatePatternArgs = \cases
   ty [] k -> k ty
   ty ((namedArg -> (VarP _ x)) : ps) k -> do

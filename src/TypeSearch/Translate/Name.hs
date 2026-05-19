@@ -1,4 +1,4 @@
-module TypeSearch.Database.Index.Name
+module TypeSearch.Translate.Name
   ( translateModuleName,
     translateTopLevelModuleName,
     translateQName,

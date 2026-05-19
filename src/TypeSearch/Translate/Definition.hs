@@ -1,4 +1,4 @@
-module TypeSearch.Database.Index.Definition
+module TypeSearch.Translate.Definition
   ( translateDefinition,
   )
 where
@@ -6,16 +6,17 @@ where
 import Agda.Compiler.Backend
 import Agda.Syntax.Internal hiding (arity)
 import Agda.Utils.Monad hiding (unless)
+import TypeSearch.AgdaUtils
+import TypeSearch.Core.Module qualified as TS
 import TypeSearch.Core.Name qualified as TS
-import TypeSearch.Core.Term qualified as TS
-import TypeSearch.Database.Index.Common
-import TypeSearch.Database.Index.Term
-import TypeSearch.Database.Index.TransparentDef
 import TypeSearch.Prelude
+import TypeSearch.Translate.Common
+import TypeSearch.Translate.Term
+import TypeSearch.Translate.TransparentDef
 
 --------------------------------------------------------------------------------
 
-translateDefinition :: TS.QName -> Definition -> M (Maybe TS.Definition)
+translateDefinition :: TS.QName -> Definition -> TransM (Maybe TS.Definition)
 translateDefinition qname def = setCurrentRangeQ def.defName do
   ifM
     (orM [isErasable def.defType, isDeprecated def.defName])
@@ -32,12 +33,12 @@ translateDefinition qname def = setCurrentRangeQ def.defName do
       GeneralizableVar {} -> pure Nothing
       PrimitiveSortDefn {} -> pure Nothing
 
-translateToAxiom :: TS.QName -> Type -> M TS.Definition
+translateToAxiom :: TS.QName -> Type -> TransM TS.Definition
 translateToAxiom name sig = do
   sig <- locallyReduceTransparentDef $ translateType sig
   pure $ TS.Definition {body = Nothing, ..}
 
-translateFunDef :: TS.QName -> Definition -> M TS.Definition
+translateFunDef :: TS.QName -> Definition -> TransM TS.Definition
 translateFunDef name def = do
   sig <- locallyReduceTransparentDef $ translateType def.defType
   body <- ifM

@@ -31,17 +31,18 @@ import Data.Text qualified as T
 import Database.PostgreSQL.Simple
 import System.Directory
 import System.FilePath.Find qualified as Find
+import TypeSearch.AgdaUtils
 import TypeSearch.Core.Evaluation qualified as TS
 import TypeSearch.Core.Isomorphism qualified as TS
+import TypeSearch.Core.Module qualified as TS
 import TypeSearch.Core.Name qualified as TS
-import TypeSearch.Core.Term qualified as TS
 import TypeSearch.Database.Feature qualified as TS
-import TypeSearch.Database.Index.Common
-import TypeSearch.Database.Index.Definition
-import TypeSearch.Database.Index.Name
 import TypeSearch.Database.PostgreSQL qualified as TS
 import TypeSearch.Prelude
 import TypeSearch.Pretty qualified as TS
+import TypeSearch.Translate.Common
+import TypeSearch.Translate.Definition
+import TypeSearch.Translate.Name
 
 --------------------------------------------------------------------------------
 -- Entrypoint
@@ -115,8 +116,6 @@ indexLibrary config = do
     unless (null unresolved) do
       translateError $ vcat [text "Couldn't find definitions", text $ show unresolved]
 
-    let env = IndexEnv transparentDefNames 0 mempty False
-
     forM_ files \inputFile -> do
       path <- liftIO (absolute inputFile)
       sf <- srcFromPath path
@@ -130,13 +129,14 @@ indexLibrary config = do
             mi <- getNonMainModuleInfo m (Just src)
             setInterface mi.miInterface
             mod' <- withScope_ mi.miInterface.iInsideScope do
-              runReaderT (translateInterface mi.miInterface) env
+              runTransM transparentDefNames do
+                translateInterface mi.miInterface
             liftIO $ TS.saveManyItems config.dbConn mod'
 
 --------------------------------------------------------------------------------
 -- Module translation
 
-translateInterface :: Interface -> M [TS.DbItem]
+translateInterface :: Interface -> TransM [TS.DbItem]
 translateInterface intf =
   ifJustM (useTC (stPragmaOptions . lensOptCubical)) (\_ -> pure []) do
     let go :: Scope -> TCM [(C.QName, QName)]
@@ -166,7 +166,7 @@ translateInterface intf =
           mdef <- translateDefinition outName def
           for mdef $ constructDbItem def.defType
 
-constructDbItem :: Type -> TS.Definition -> M TS.DbItem
+constructDbItem :: Type -> TS.Definition -> TransM TS.DbItem
 constructDbItem origSig (TS.Definition {name = nameQual, ..}) = do
   -- FIXME: unqualify all top-level names in origSigText
   origSigText <- T.show <$> inTopContext (prettyTCM origSig)

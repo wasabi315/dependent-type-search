@@ -1,4 +1,23 @@
-module TypeSearch.Core.Term where
+module TypeSearch.Core.Term
+  ( Term (..),
+    Type,
+    Pruning,
+    RevPruning (..),
+    revPruning,
+    freeVar,
+    subst,
+    rename,
+    weakenBy,
+    TeleView (..),
+    teleView,
+    returnType,
+    endsInSort,
+    AppView (..),
+    appView,
+    headTerm,
+    termSize,
+  )
+where
 
 import Data.Set qualified as S
 import Database.PostgreSQL.Simple.Extra
@@ -35,12 +54,6 @@ newtype RevPruning = RevPruning Pruning
 
 revPruning :: Pruning -> RevPruning
 revPruning = RevPruning . reverse
-
-data Definition = Definition
-  { name :: QName,
-    sig :: Type,
-    body :: Maybe Term
-  }
 
 --------------------------------------------------------------------------------
 
