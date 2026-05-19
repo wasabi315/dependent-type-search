@@ -2,7 +2,7 @@
 
 module TypeSearch.Database.Index
   ( indexLibrary,
-    IndexConfig (..),
+    Config (..),
   )
 where
 
@@ -46,20 +46,21 @@ import TypeSearch.Pretty qualified as TS
 --------------------------------------------------------------------------------
 -- Entrypoint
 
-data IndexConfig = IndexConfig
+data Config = Config
   { -- | Set of fully-qualified definition names subject to definition unfolding during search.
     transparentDefNames :: S.Set TS.QName,
     -- | Path to Agda library.
-    libraryDirectory :: FilePath,
+    libraryDir :: FilePath,
     -- | Connection to database.
-    databaseConnection :: Connection
+    dbConn :: Connection
   }
 
 -- TODO: make indexer an Agda backend
 
-indexLibrary :: IndexConfig -> IO ()
+indexLibrary :: Config -> IO ()
 indexLibrary config = do
-  setCurrentDirectory config.libraryDirectory
+  TS.migrate config.dbConn
+  setCurrentDirectory config.libraryDir
   (Right (_, opts), _) <- pure $ runOptM $ parseBackendOptions [] [] defaultOptions
   runTCMTop' do
     opts <- addTrustedExecutables opts
@@ -130,7 +131,7 @@ indexLibrary config = do
             setInterface mi.miInterface
             mod' <- withScope_ mi.miInterface.iInsideScope do
               runReaderT (translateInterface mi.miInterface) env
-            liftIO $ TS.saveManyItems config.databaseConnection mod'
+            liftIO $ TS.saveManyItems config.dbConn mod'
 
 --------------------------------------------------------------------------------
 -- Module translation

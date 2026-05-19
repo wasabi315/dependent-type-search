@@ -5,6 +5,9 @@ import Data.Map.Strict qualified as M
 import Data.Set qualified as S
 import Data.Text qualified as T
 import Database.PostgreSQL.Simple as PSQL
+import Database.PostgreSQL.Simple.Migration
+import Paths_dependent_type_search
+import System.FilePath
 import TypeSearch.Core.Evaluation
 import TypeSearch.Core.Name
 import TypeSearch.Core.Term
@@ -29,6 +32,15 @@ data DbItem = DbItem
   }
   deriving stock (Generic)
   deriving anyclass (ToRow, FromRow)
+
+migrate :: Connection -> IO ()
+migrate conn = do
+  migrationDir <- getDataDir <&> (</> "migration")
+  void do
+    runMigrations
+      conn
+      defaultOptions
+      [MigrationInitialization, MigrationDirectory migrationDir]
 
 saveManyItems :: Connection -> [DbItem] -> IO ()
 saveManyItems conn items =

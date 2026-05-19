@@ -4,9 +4,7 @@ import Data.Aeson (eitherDecodeFileStrict)
 import Data.Maybe
 import Data.Text qualified as T
 import Database.PostgreSQL.Simple
-import Database.PostgreSQL.Simple.Migration
 import Options.Applicative
-import Paths_dependent_type_search
 import System.Environment (getEnv, lookupEnv)
 import System.Exit
 import System.FilePath
@@ -24,7 +22,7 @@ getConnectInfo = do
   connectUser <- getEnv "DATABASE_USER"
   connectPassword <- getEnv "DATABASE_PASSWORD"
   connectDatabase <- getEnv "DATABASE_NAME"
-  pure $! ConnectInfo {..}
+  pure ConnectInfo {..}
 
 data Command
   = Index IndexCommand
@@ -65,8 +63,8 @@ optInteractiveSearchCommand =
 commandDesc :: String -> String -> Parser a -> Mod CommandFields a
 commandDesc cmd desc p = command cmd $ info p (progDesc desc)
 
-opts :: Parser Command
-opts =
+optCommand :: Parser Command
+optCommand =
   hsubparser
     $ mconcat
       [ commandDesc "index" "Index an Agda Library" do
@@ -76,6 +74,12 @@ opts =
         commandDesc "interactive" "Interactive search shell" do
           InteractiveSearch <$> optInteractiveSearchCommand
       ]
+
+main :: IO ()
+main = do
+  command <- execParser (info (optCommand <**> helper) fullDesc)
+  connInfo <- getConnectInfo
+  dispatchCommand command connInfo
 
 --------------------------------------------------------------------------------
 
@@ -88,36 +92,20 @@ dispatchCommand = \case
   Search cmd -> search cmd
   InteractiveSearch cmd -> interactive cmd
 
-migrate :: Connection -> IO ()
-migrate conn = do
-  migrationDir <- getDataDir <&> (</> "migration")
-  void do
-    runMigrations
-      conn
-      defaultOptions
-      [MigrationInitialization, MigrationDirectory migrationDir]
-
 index :: IndexCommand -> ConnectInfo -> IO ()
-index (IndexCommand {..}) connInfo = do
+index IndexCommand {..} connInfo = do
   transparentDefNames <- orDie $ eitherDecodeFileStrict transparentDefsFile
-  withConnect connInfo \conn -> do
-    migrate conn
-    Index.indexLibrary (Index.IndexConfig transparentDefNames libraryDir conn)
+  withConnect connInfo \dbConn -> do
+    Index.indexLibrary Index.Config {..}
 
 search :: SearchCommand -> ConnectInfo -> IO ()
-search (SearchCommand {..}) connInfo = do
+search SearchCommand {..} connInfo = do
   transparentDefNames <- orDie $ eitherDecodeFileStrict transparentDefsFile
   withConnect connInfo \conn -> do
     Search.search conn transparentDefNames query
 
 interactive :: InteractiveSearchCommand -> ConnectInfo -> IO ()
-interactive (InteractiveSearchCommand {..}) connInfo = do
+interactive InteractiveSearchCommand {..} connInfo = do
   transparentDefNames <- orDie $ eitherDecodeFileStrict transparentDefsFile
   withConnect connInfo \conn -> do
     Search.interactive conn transparentDefNames
-
-main :: IO ()
-main = do
-  command <- execParser (info (opts <**> helper) fullDesc)
-  connInfo <- getConnectInfo
-  dispatchCommand command connInfo
