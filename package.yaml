@@ -40,6 +40,7 @@ dependencies:
   - parser-combinators
   - postgresql-migration
   - postgresql-simple
+  - repline
   - streamly
   - text
   - time
@@ -66,6 +67,7 @@ default-extensions:
   - ImplicitParams
   - KindSignatures
   - LambdaCase
+  - MultilineStrings
   - MultiParamTypeClasses
   - MultiWayIf
   - NoFieldSelectors

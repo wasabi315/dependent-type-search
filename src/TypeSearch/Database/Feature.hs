@@ -37,8 +37,8 @@ computeReturnTypeHead t = case headTerm (returnType t) of
   _ -> impossible
 
 -- | The input type must be closed.
-computeReturnTypeHeadRaw :: S.Set QName -> Q.Type -> Maybe (ReturnTypeHead PQName)
-computeReturnTypeHeadRaw transparentDefSet (Q.teleView -> TeleView tele cod) =
+computeReturnTypeHeadQ :: S.Set QName -> Q.Type -> Maybe (ReturnTypeHead PQName)
+computeReturnTypeHeadQ transparentDefNames (Q.teleView -> TeleView tele cod) =
   case Q.headTerm cod of
     Q.U -> Just RHU
     Q.Var (Unqual x)
@@ -51,8 +51,8 @@ computeReturnTypeHeadRaw transparentDefSet (Q.teleView -> TeleView tele cod) =
     _ -> Nothing
   where
     maybeTransparentDef = \case
-      Unqual x -> any (\y -> x == y.name) transparentDefSet
-      Qual m x -> S.member (QName m x) transparentDefSet
+      Unqual x -> any (\y -> x == y.name) transparentDefNames
+      Qual m x -> S.member (QName m x) transparentDefNames
 
 --------------------------------------------------------------------------------
 
@@ -69,10 +69,10 @@ computePolymorphic = \case
   _ -> NoPolymorphic
 
 -- | The input type must be closed.
-computePolymorphicRaw :: Q.Type -> Polymorphic
-computePolymorphicRaw = \case
+computePolymorphicQ :: Q.Type -> Polymorphic
+computePolymorphicQ = \case
   Q.Pi _ a _ | Q.endsInSort a -> YesPolymorphic
-  Q.Pi _ _ b -> computePolymorphicRaw b
+  Q.Pi _ _ b -> computePolymorphicQ b
   _ -> NoPolymorphic
 
 --------------------------------------------------------------------------------
@@ -100,8 +100,8 @@ computeArity = go [] False 0
       _ -> Arity {..}
 
 -- | The input type must be closed.
-computeArityRaw :: Q.Type -> Arity
-computeArityRaw = go [] False 0
+computeArityQ :: Q.Type -> Arity
+computeArityQ = go [] False 0
   where
     go ctx hasVar arity = \case
       Q.Pi x a b -> case Q.headTerm a of
@@ -112,3 +112,26 @@ computeArityRaw = go [] False 0
         _ ->
           go ((x, a) : ctx) hasVar (arity + 1) b
       _ -> Arity {..}
+
+--------------------------------------------------------------------------------
+
+data Feature n = Feature
+  { returnTypeHead :: ReturnTypeHead n,
+    polymorphic :: Polymorphic,
+    arity :: Arity
+  }
+
+computeFeature :: Type -> Feature QName
+computeFeature typ =
+  Feature
+    (computeReturnTypeHead typ)
+    (computePolymorphic typ)
+    (computeArity typ)
+
+computeFeatureQ :: S.Set QName -> Q.Type -> Maybe (Feature PQName)
+computeFeatureQ transparentDefNames typ =
+  liftA3
+    Feature
+    (computeReturnTypeHeadQ transparentDefNames typ)
+    (pure $ computePolymorphicQ typ)
+    (pure $ computeArityQ typ)

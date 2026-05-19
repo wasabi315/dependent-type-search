@@ -47,6 +47,8 @@ module TypeSearch.Prelude
     applyN,
     (//),
     timed,
+    (??:),
+    (??%),
   )
 where
 
@@ -82,7 +84,6 @@ import Data.Void
 import Flat (Flat)
 import GHC.Generics (Generic, Generically)
 import GHC.Stack
-import System.Exit
 import Witherable
 import Prelude hiding (curry, filter, foldl1, foldr1, head, last, maximum, minimum, unzip)
 
@@ -123,3 +124,13 @@ timed a = do
   t2 <- getCurrentTime
   let diff = diffUTCTime t2 t1
   pure (res, diff)
+
+infixr 0 ??:, ??%
+
+(??:) :: (MonadError e m) => Maybe a -> e -> m a
+(??:) x_ e = maybe (throwError e) pure x_
+
+(??%) :: (MonadError e' m) => Either e a -> (e -> e') -> m a
+(??%) x f = case x of
+  Left e -> throwError (f e)
+  Right y -> pure y

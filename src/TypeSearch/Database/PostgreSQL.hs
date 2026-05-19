@@ -15,17 +15,17 @@ import TypeSearch.Prelude
 --------------------------------------------------------------------------------
 
 data DbItem = DbItem
-  { name_qual :: QName,
-    name_unqual :: Name,
+  { nameQual :: QName,
+    nameUnqual :: Name,
     modul :: ModuleName,
     sig :: Term,
-    sig_text :: T.Text,
-    original_sig_text :: T.Text,
+    sigText :: T.Text,
+    origSigText :: T.Text,
     body :: Maybe Term,
-    return_type_head :: ReturnTypeHead QName,
+    returnTypeHead :: ReturnTypeHead QName,
     polymorphic :: Polymorphic,
     arity :: Int,
-    arity_has_var :: Bool
+    arityHasVar :: Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToRow, FromRow)
@@ -54,47 +54,45 @@ fetchResolution conn a = do
   where
     (quals, unquals) = partitionEithers $ map (\case Unqual x -> Right x; Qual m x -> Left (QName m x)) $ S.toList (Q.freeVars a)
 
-filterByFeatures :: Connection -> S.Set QName -> Q.Term -> IO (Maybe [DbItem])
-filterByFeatures conn transparentDefSet a = case computeReturnTypeHeadRaw transparentDefSet a of
-  Nothing -> pure Nothing
-  Just retType -> do
-    let poly = case computePolymorphicRaw a of
-          YesPolymorphic -> In [YesPolymorphic]
-          NoPolymorphic -> In [NoPolymorphic, YesPolymorphic]
-    let retType' = for retType \case
-          Unqual x -> Left x
-          Qual m x -> pure $ QName m x
-    Just <$> case (retType', computeArityRaw a) of
-      (Right RHUnknown, (.hasVar) -> True) ->
-        query
-          conn
-          "SELECT name_qual, name_unqual, module, sig, sig_text, original_sig_text, body, return_type_head, polymorphic, arity, arity_has_var FROM library_items WHERE (polymorphic in ?) AND arity_has_var"
-          (Only poly)
-      (Right RHUnknown, arity) ->
-        query
-          conn
-          "SELECT name_qual, name_unqual, module, sig, sig_text, original_sig_text, body, return_type_head, polymorphic, arity, arity_has_var FROM library_items WHERE (polymorphic in ?) AND (arity_has_var OR arity >= ?)"
-          (poly, arity.arity)
-      (Left x, (.hasVar) -> True) ->
-        query
-          conn
-          "SELECT name_qual, name_unqual, module, sig, sig_text, original_sig_text, body, return_type_head, polymorphic, arity, arity_has_var FROM library_items WHERE (polymorphic in ?) AND arity_has_var AND ((return_type_head ->> 'tag' = 'RHVar') OR ((return_type_head ->> 'tag' = 'RHTop') AND (return_type_head #>> '{contents,name}' = ?)))"
-          (poly, x)
-      (Left x, arity) ->
-        query
-          conn
-          "SELECT name_qual, name_unqual, module, sig, sig_text, original_sig_text, body, return_type_head, polymorphic, arity, arity_has_var FROM library_items WHERE (polymorphic in ?) AND (arity_has_var OR arity = ?) AND ((return_type_head ->> 'tag' = 'RHVar') OR ((return_type_head ->> 'tag' = 'RHTop') AND (return_type_head #>> '{contents,name}' = ?)))"
-          (poly, arity.arity, x)
-      (Right ret, (.hasVar) -> True) ->
-        query
-          conn
-          "SELECT name_qual, name_unqual, module, sig, sig_text, original_sig_text, body, return_type_head, polymorphic, arity, arity_has_var FROM library_items WHERE (polymorphic in ?) AND arity_has_var AND (return_type_head in ?)"
-          (poly, In [ret, RHVar])
-      (Right ret, arity) -> do
-        query
-          conn
-          "SELECT name_qual, name_unqual, module, sig, sig_text, original_sig_text, body, return_type_head, polymorphic, arity, arity_has_var FROM library_items WHERE (polymorphic in ?) AND (arity_has_var OR arity = ?) AND (return_type_head in ?)"
-          (poly, arity.arity, In [ret, RHVar])
+filterByFeatures :: Connection -> Feature PQName -> IO [DbItem]
+filterByFeatures conn (Feature {..}) = do
+  let retType = for returnTypeHead \case
+        Unqual x -> Left x
+        Qual m x -> pure $ QName m x
+      poly = case polymorphic of
+        YesPolymorphic -> In [YesPolymorphic]
+        NoPolymorphic -> In [NoPolymorphic, YesPolymorphic]
+  case (retType, arity) of
+    (Right RHUnknown, (.hasVar) -> True) ->
+      query
+        conn
+        "SELECT name_qual, name_unqual, module, sig, sig_text, original_sig_text, body, return_type_head, polymorphic, arity, arity_has_var FROM library_items WHERE (polymorphic in ?) AND arity_has_var"
+        (Only poly)
+    (Right RHUnknown, arity) ->
+      query
+        conn
+        "SELECT name_qual, name_unqual, module, sig, sig_text, original_sig_text, body, return_type_head, polymorphic, arity, arity_has_var FROM library_items WHERE (polymorphic in ?) AND (arity_has_var OR arity >= ?)"
+        (poly, arity.arity)
+    (Left x, (.hasVar) -> True) ->
+      query
+        conn
+        "SELECT name_qual, name_unqual, module, sig, sig_text, original_sig_text, body, return_type_head, polymorphic, arity, arity_has_var FROM library_items WHERE (polymorphic in ?) AND arity_has_var AND ((return_type_head ->> 'tag' = 'RHVar') OR ((return_type_head ->> 'tag' = 'RHTop') AND (return_type_head #>> '{contents,name}' = ?)))"
+        (poly, x)
+    (Left x, arity) ->
+      query
+        conn
+        "SELECT name_qual, name_unqual, module, sig, sig_text, original_sig_text, body, return_type_head, polymorphic, arity, arity_has_var FROM library_items WHERE (polymorphic in ?) AND (arity_has_var OR arity = ?) AND ((return_type_head ->> 'tag' = 'RHVar') OR ((return_type_head ->> 'tag' = 'RHTop') AND (return_type_head #>> '{contents,name}' = ?)))"
+        (poly, arity.arity, x)
+    (Right ret, (.hasVar) -> True) ->
+      query
+        conn
+        "SELECT name_qual, name_unqual, module, sig, sig_text, original_sig_text, body, return_type_head, polymorphic, arity, arity_has_var FROM library_items WHERE (polymorphic in ?) AND arity_has_var AND (return_type_head in ?)"
+        (poly, In [ret, RHVar])
+    (Right ret, arity) -> do
+      query
+        conn
+        "SELECT name_qual, name_unqual, module, sig, sig_text, original_sig_text, body, return_type_head, polymorphic, arity, arity_has_var FROM library_items WHERE (polymorphic in ?) AND (arity_has_var OR arity = ?) AND (return_type_head in ?)"
+        (poly, arity.arity, In [ret, RHVar])
 
 fetchTopEnv :: Connection -> [QName] -> IO (TopEnv, M.Map Name [QName])
 fetchTopEnv conn _candNames = do

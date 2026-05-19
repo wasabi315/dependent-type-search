@@ -71,6 +71,7 @@ library
       ImplicitParams
       KindSignatures
       LambdaCase
+      MultilineStrings
       MultiParamTypeClasses
       MultiWayIf
       NoFieldSelectors
@@ -114,6 +115,7 @@ library
     , parser-combinators
     , postgresql-migration
     , postgresql-simple
+    , repline
     , streamly
     , text
     , time
@@ -147,6 +149,7 @@ executable dependent-type-search
       ImplicitParams
       KindSignatures
       LambdaCase
+      MultilineStrings
       MultiParamTypeClasses
       MultiWayIf
       NoFieldSelectors
@@ -191,6 +194,7 @@ executable dependent-type-search
     , parser-combinators
     , postgresql-migration
     , postgresql-simple
+    , repline
     , streamly
     , text
     , time
@@ -225,6 +229,7 @@ test-suite dependent-type-search-test
       ImplicitParams
       KindSignatures
       LambdaCase
+      MultilineStrings
       MultiParamTypeClasses
       MultiWayIf
       NoFieldSelectors
@@ -269,6 +274,7 @@ test-suite dependent-type-search-test
     , parser-combinators
     , postgresql-migration
     , postgresql-simple
+    , repline
     , streamly
     , text
     , time
