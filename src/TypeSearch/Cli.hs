@@ -2,6 +2,7 @@ module TypeSearch.Cli (main) where
 
 import Data.Aeson (eitherDecodeFileStrict)
 import Data.Maybe
+import Data.Text qualified as T
 import Database.PostgreSQL.Simple
 import Database.PostgreSQL.Simple.Migration
 import Options.Applicative
@@ -28,33 +29,52 @@ getConnectInfo = do
 data Command
   = Index IndexCommand
   | Search SearchCommand
+  | InteractiveSearch InteractiveSearchCommand
 
 data IndexCommand = IndexCommand
   { libraryDir :: FilePath,
     transparentDefsFile :: FilePath
   }
 
-newtype SearchCommand = SearchCommand
+data SearchCommand = SearchCommand
+  { transparentDefsFile :: FilePath,
+    query :: T.Text
+  }
+
+newtype InteractiveSearchCommand = InteractiveSearchCommand
   { transparentDefsFile :: FilePath
   }
 
 optIndexCommand :: Parser IndexCommand
 optIndexCommand =
   IndexCommand
-    <$> argument str (metavar "LIBRARY_DIR")
-    <*> argument str (metavar "TRANSPARENT_DEFS_FILE")
+    <$> strArgument (metavar "LIBRARY_DIR")
+    <*> strArgument (metavar "TRANSPARENT_DEFS_FILE")
 
 optSearchCommand :: Parser SearchCommand
 optSearchCommand =
   SearchCommand
-    <$> argument str (metavar "TRANSPARENT_DEFS_FILE")
+    <$> strArgument (metavar "TRANSPARENT_DEFS_FILE")
+    <*> strArgument (metavar "QUERY")
+
+optInteractiveSearchCommand :: Parser InteractiveSearchCommand
+optInteractiveSearchCommand =
+  InteractiveSearchCommand
+    <$> strArgument (metavar "TRANSPARENT_DEFS_FILE")
+
+commandDesc :: String -> String -> Parser a -> Mod CommandFields a
+commandDesc cmd desc p = command cmd $ info p (progDesc desc)
 
 opts :: Parser Command
 opts =
   hsubparser
     $ mconcat
-      [ command "index" (info (Index <$> optIndexCommand) (progDesc "Index an Agda library")),
-        command "search" (info (Search <$> optSearchCommand) (progDesc "Search within indexed library"))
+      [ commandDesc "index" "Index an Agda Library" do
+          Index <$> optIndexCommand,
+        commandDesc "search" "Search within indexed library" do
+          Search <$> optSearchCommand,
+        commandDesc "interactive" "Interactive search shell" do
+          InteractiveSearch <$> optInteractiveSearchCommand
       ]
 
 --------------------------------------------------------------------------------
@@ -63,9 +83,10 @@ orDie :: IO (Either String a) -> IO a
 orDie m = m >>= either die pure
 
 dispatchCommand :: Command -> ConnectInfo -> IO ()
-dispatchCommand = \cases
-  (Index cmd) connInfo -> index cmd connInfo
-  (Search cmd) connInfo -> search cmd connInfo
+dispatchCommand = \case
+  Index cmd -> index cmd
+  Search cmd -> search cmd
+  InteractiveSearch cmd -> interactive cmd
 
 migrate :: Connection -> IO ()
 migrate conn = do
@@ -87,10 +108,16 @@ search :: SearchCommand -> ConnectInfo -> IO ()
 search (SearchCommand {..}) connInfo = do
   transparentDefNames <- orDie $ eitherDecodeFileStrict transparentDefsFile
   withConnect connInfo \conn -> do
-    Search.search conn transparentDefNames
+    Search.search conn transparentDefNames query
+
+interactive :: InteractiveSearchCommand -> ConnectInfo -> IO ()
+interactive (InteractiveSearchCommand {..}) connInfo = do
+  transparentDefNames <- orDie $ eitherDecodeFileStrict transparentDefsFile
+  withConnect connInfo \conn -> do
+    Search.interactive conn transparentDefNames
 
 main :: IO ()
 main = do
-  command <- execParser (info opts fullDesc)
+  command <- execParser (info (opts <**> helper) fullDesc)
   connInfo <- getConnectInfo
   dispatchCommand command connInfo

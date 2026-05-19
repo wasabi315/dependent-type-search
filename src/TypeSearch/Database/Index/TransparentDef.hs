@@ -70,4 +70,4 @@ translatePatternArgs = \cases
         addContextAndRenaming ctxElt
           $ TS.Lam (fromString varName)
           <$> translatePatternArgs (absBody cod) ps k
-  _ _ _ -> translateError "Not supported: transparentDef definition by pattern-matching"
+  _ _ _ -> translateError "Not supported: transparent definition by pattern-matching"

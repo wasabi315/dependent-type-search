@@ -175,7 +175,7 @@ executable dependent-type-search
       UnboxedTuples
       UnboxedSums
       ViewPatterns
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -O2 -funbox-strict-fields -threaded -rtsopts -with-rtsopts= "-A64M -s -N4"
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -O2 -funbox-strict-fields -threaded -rtsopts -with-rtsopts= "-A64M -N4"
   build-depends:
       Agda
     , aeson

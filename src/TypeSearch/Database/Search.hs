@@ -1,5 +1,6 @@
 module TypeSearch.Database.Search
-  ( search,
+  ( interactive,
+    search,
   )
 where
 
@@ -25,63 +26,50 @@ import TypeSearch.Unification
 
 --------------------------------------------------------------------------------
 
-search :: Connection -> S.Set QName -> IO ()
-search conn transparentDefNames =
-  evalReplOpts
-    ReplOpts
-      { banner = const $ pure ">> ",
-        command = doSearch conn transparentDefNames,
-        options = opts,
-        prefix = Just ':',
-        multilineCommand = Nothing,
-        tabComplete = Word0 completer,
-        initialiser = ini,
-        finaliser = final
-      }
-
-type Repl = HaskelineT IO
-
-opts :: Options Repl
-opts =
-  [ ("help", help)
-  ]
-
-help :: Command Repl
-help _ =
-  liftIO
-    $ putStrLn
-      """
-      dependent-type-search
-
-      Commands:
-        :help          : show this help text
-        <type>         : search for definitions by type
-      """
-
-ini :: Repl ()
-ini = liftIO $ putStrLn "Welcome!"
-
-final :: Repl ExitDecision
-final = Exit <$ liftIO (putStrLn "Bye!")
-
-completer :: (Monad m) => WordCompleter m
-completer = listWordCompleter []
-
---------------------------------------------------------------------------------
-
-doSearch :: Connection -> S.Set QName -> String -> Repl ()
-doSearch conn transparentDefNames typ =
-  either (liftIO . putStrLn) pure =<< runExceptT do
-    typ <- parseQuery "interactive" (T.pack typ) ??% displayException
+search :: Connection -> S.Set QName -> T.Text -> IO ()
+search conn transparentDefNames typ =
+  either putStrLn pure =<< runExceptT do
+    typ <- parseQuery "interactive" typ ??% displayException
     feats <- computeFeatureQ transparentDefNames typ ??: "Ill-formed type"
     cands <- liftIO $ filterByFeatures conn feats
     resol1 <- liftIO $ fetchResolution conn typ
     (tenv, resol2) <- liftIO $ fetchTopEnv conn $ map (.nameQual) cands
     (result, time) <- liftIO $ timed $ typeSearch tenv (M.unionWith (++) resol1 resol2) typ cands
-    let sorted = sortOn (\(TypeSearchResult _ _ _ _ sol) -> termSize sol) result
+    let sorted = sortOn (termSize . (.solution)) result
     liftIO $ displayTypeSearchResults cands sorted time
 
-data TypeSearchResult = TypeSearchResult QName Type T.Text Iso Term
+-- Interactive search shell
+interactive :: Connection -> S.Set QName -> IO ()
+interactive conn transparentDefNames = evalReplOpts ReplOpts {..}
+  where
+    banner _ = pure ">> "
+    command = liftIO . search conn transparentDefNames . T.pack
+    prefix = Just ':'
+    multilineCommand = Nothing
+    tabComplete = Word0 (listWordCompleter [])
+    initialiser = liftIO $ putStrLn "Welcome to dependent-type-search!"
+    finaliser = liftIO $ Exit <$ putStrLn "Bye!"
+
+    options = [("help", help)]
+    help _ =
+      liftIO
+        $ putStrLn
+          """
+          Commands:
+            :help          : show this help text
+            <type>         : search for definitions by type
+
+          """
+
+--------------------------------------------------------------------------------
+
+data TypeSearchResult = TypeSearchResult
+  { name :: QName,
+    sig :: Type,
+    origSigText :: T.Text,
+    iso :: Iso,
+    solution :: Term
+  }
 
 typeSearch :: TopEnv -> M.Map Name [QName] -> Q.Type -> [DbItem] -> IO [TypeSearchResult]
 typeSearch tenv resol query items = do
@@ -105,16 +93,16 @@ displayTypeSearchResults :: [DbItem] -> [TypeSearchResult] -> NominalDiffTime ->
 displayTypeSearchResults cands matches time = do
   putStrLn $ shows (length matches) $ showString " item(s) matched in " $ shows (length cands) " candidate(s)"
   putStrLn $ showString "Took " $ shows time "\n"
-  for_ matches \(TypeSearchResult (QName m x) _ origA i sol) -> do
+  for_ matches \TypeSearchResult {name = QName {..}, ..} -> do
     putStrLn
       $ unlines
       $ concat
-        [ [ showString "- " $ shows x $ showString " : " $ T.unpack origA,
-            showString "  - module        : " $ shows m ""
+        [ [ showString "- " $ shows name $ showString " : " $ T.unpack origSigText,
+            showString "  - module        : " $ shows moduleName ""
           ],
-          case i of
+          case iso of
             Refl -> []
             i -> [showString "  - isomorphism   : " $ prettyIso 0 i ""],
-          [ showString "  - solution      : " $ prettyTerm0 Unqualify sol ""
+          [ showString "  - solution      : " $ prettyTerm0 Unqualify solution ""
           ]
         ]
