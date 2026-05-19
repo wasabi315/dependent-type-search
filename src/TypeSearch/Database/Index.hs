@@ -37,9 +37,8 @@ import TypeSearch.Core.Name qualified as TS
 import TypeSearch.Core.Term qualified as TS
 import TypeSearch.Database.Feature qualified as TS
 import TypeSearch.Database.Index.Common
+import TypeSearch.Database.Index.Definition
 import TypeSearch.Database.Index.Name
-import TypeSearch.Database.Index.Term
-import TypeSearch.Database.Index.TransparentDef
 import TypeSearch.Database.PostgreSQL qualified as TS
 import TypeSearch.Prelude
 import TypeSearch.Pretty qualified as TS
@@ -163,44 +162,11 @@ translateInterface intf =
         Left _ -> pure Nothing
         Right def -> do
           let outName = translateConcreteQName (translateModuleName intf.iModuleName) cname
-          translateDefinition outName def
+          mdef <- translateDefinition outName def
+          for mdef $ constructDbItem def.defType
 
---------------------------------------------------------------------------------
--- Definition translation
-
-translateDefinition :: TS.QName -> Definition -> M (Maybe TS.DbItem)
-translateDefinition qname def = setCurrentRangeQ def.defName do
-  ifM
-    (orM [isErasable def.defType, isDeprecated def.defName])
-    do pure Nothing
-    case def.theDef of
-      AxiomDefn {} -> Just <$> translateToAxiom qname def.defType
-      AbstractDefn {} -> Just <$> translateToAxiom qname def.defType
-      FunctionDefn {} -> Just <$> translateFunDef qname def
-      DatatypeDefn {} -> Just <$> translateToAxiom qname def.defType
-      RecordDefn {} -> Just <$> translateToAxiom qname def.defType
-      ConstructorDefn {} -> Just <$> translateToAxiom qname def.defType
-      PrimitiveDefn {} -> Just <$> translateToAxiom qname def.defType
-      DataOrRecSigDefn {} -> pure Nothing
-      GeneralizableVar {} -> pure Nothing
-      PrimitiveSortDefn {} -> pure Nothing
-
-translateToAxiom :: TS.QName -> Type -> M TS.DbItem
-translateToAxiom x ty = do
-  ty' <- locallyReduceTransparentDef $ translateType ty
-  constructDbItem x ty' ty Nothing
-
-translateFunDef :: TS.QName -> Definition -> M TS.DbItem
-translateFunDef qname def = do
-  ty <- locallyReduceTransparentDef $ translateType def.defType
-  body <- ifM
-    (isTransparentDef def.defName)
-    do Just <$> translateTransparentDefBody def
-    do pure Nothing
-  constructDbItem qname ty def.defType body
-
-constructDbItem :: TS.QName -> TS.Type -> Type -> Maybe TS.Term -> M TS.DbItem
-constructDbItem nameQual sig origSig body = do
+constructDbItem :: Type -> TS.Definition -> M TS.DbItem
+constructDbItem origSig (TS.Definition {name = nameQual, ..}) = do
   -- FIXME: unqualify all top-level names in origSigText
   origSigText <- T.show <$> inTopContext (prettyTCM origSig)
   pure TS.DbItem {..}

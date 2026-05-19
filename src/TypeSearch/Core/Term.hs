@@ -36,6 +36,12 @@ newtype RevPruning = RevPruning Pruning
 revPruning :: Pruning -> RevPruning
 revPruning = RevPruning . reverse
 
+data Definition = Definition
+  { name :: QName,
+    sig :: Type,
+    body :: Maybe Term
+  }
+
 --------------------------------------------------------------------------------
 
 freeVar :: Term -> S.Set Index
@@ -132,5 +138,3 @@ termSize = \case
   Pair t u -> 1 + termSize t + termSize u
   Proj1 t -> 1 + termSize t
   Proj2 t -> 1 + termSize t
-
---------------------------------------------------------------------------------
