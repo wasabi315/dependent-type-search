@@ -32,9 +32,9 @@ search conn transparentDefNames typ =
     typ <- parseQuery "interactive" typ ??% displayException
     feats <- featureQ transparentDefNames typ ??: "Ill-formed type"
     cands <- liftIO $ filterByFeatures conn feats
-    resol1 <- liftIO $ fetchResolution conn typ
-    (tenv, resol2) <- liftIO $ fetchTopEnv conn $ map (.nameQual) cands
-    (result, time) <- liftIO $ timed $ typeSearch tenv (M.unionWith (++) resol1 resol2) typ cands
+    resol <- liftIO $ fetchResolution conn typ
+    tenv <- liftIO $ fetchTopEnv conn $ map (.nameQual) cands
+    (result, time) <- liftIO $ timed $ typeSearch tenv resol typ cands
     let sorted = sortOn (termSize . (.solution)) result
     liftIO $ displayTypeSearchResults cands sorted time
 

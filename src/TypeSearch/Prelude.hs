@@ -128,9 +128,7 @@ timed a = do
 infixr 0 ??:, ??%
 
 (??:) :: (MonadError e m) => Maybe a -> e -> m a
-(??:) x_ e = maybe (throwError e) pure x_
+(??:) x e = maybe (throwError e) pure x
 
 (??%) :: (MonadError e' m) => Either e a -> (e -> e') -> m a
-(??%) x f = case x of
-  Left e -> throwError (f e)
-  Right y -> pure y
+(??%) x f = either (throwError . f) pure x

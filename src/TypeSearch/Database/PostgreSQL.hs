@@ -106,15 +106,13 @@ filterByFeatures conn (Feature {..}) = do
         "SELECT name_qual, name_unqual, module, sig, sig_text, original_sig_text, body, return_type_head, polymorphic, arity, arity_has_var FROM library_items WHERE (polymorphic in ?) AND (arity_has_var OR arity = ?) AND (return_type_head in ?)"
         (poly, arity.arity, In [ret, RHVar])
 
-fetchTopEnv :: Connection -> [QName] -> IO (TopEnv, M.Map Name [QName])
+fetchTopEnv :: Connection -> [QName] -> IO TopEnv
 fetchTopEnv conn _candNames = do
   PSQL.fold
     conn
     "SELECT name_qual, body FROM library_items WHERE body IS NOT NULL"
     ()
-    (HML.empty, mempty)
-    ( \(tenv, resol) (x, t) -> do
-        let tenv' = HML.insert x (eval emptyMetaCtx mempty [] t) tenv
-            resol' = M.insertWith (++) x.name [x] resol
-        pure (tenv', resol')
+    HML.empty
+    ( \tenv (x, t) -> do
+        pure $! HML.insert x (eval emptyMetaCtx mempty [] t) tenv
     )
