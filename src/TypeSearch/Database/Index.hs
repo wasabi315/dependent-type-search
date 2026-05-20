@@ -106,7 +106,7 @@ indexLibrary config = do
                         (toResolve, unresolved') = partition ((mname ==) . show . (.moduleName)) unresolved
                     resolved' <- forM toResolve \x ->
                       resolveDefinedName (show x.name) >>= \case
-                        Nothing -> translateError $ vcat [text "Couldn't find definition", text $ show x]
+                        Nothing -> throwError $ GenericException $ "Couldn't find definition " ++ show x
                         Just x -> pure x
                     pure (foldr S.insert resolved resolved', unresolved')
         )
@@ -114,7 +114,7 @@ indexLibrary config = do
         files
 
     unless (null unresolved) do
-      translateError $ vcat [text "Couldn't find definitions", text $ show unresolved]
+      throwError $ GenericException $ "Couldn't find definitions " ++ show unresolved
 
     forM_ files \inputFile -> do
       path <- liftIO (absolute inputFile)
@@ -129,14 +129,14 @@ indexLibrary config = do
             mi <- getNonMainModuleInfo m (Just src)
             setInterface mi.miInterface
             mod' <- withScope_ mi.miInterface.iInsideScope do
-              runTransM transparentDefNames do
+              runTransl transparentDefNames do
                 translateInterface mi.miInterface
             liftIO $ TS.saveManyItems config.dbConn mod'
 
 --------------------------------------------------------------------------------
 -- Module translation
 
-translateInterface :: Interface -> TransM [TS.DbItem]
+translateInterface :: Interface -> Transl [TS.DbItem]
 translateInterface intf =
   ifJustM (useTC (stPragmaOptions . lensOptCubical)) (\_ -> pure []) do
     let go :: Scope -> TCM [(C.QName, QName)]
@@ -166,7 +166,7 @@ translateInterface intf =
           mdef <- translateDefinition outName def
           for mdef $ constructDbItem def.defType
 
-constructDbItem :: Type -> TS.Definition -> TransM TS.DbItem
+constructDbItem :: Type -> TS.Definition -> Transl TS.DbItem
 constructDbItem origSig (TS.Definition {name = nameQual, ..}) = do
   -- FIXME: unqualify all top-level names in origSigText
   origSigText <- T.show <$> inTopContext (prettyTCM origSig)

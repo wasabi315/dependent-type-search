@@ -33,11 +33,11 @@ import TypeSearch.Translate.Name
 -- Agda Internal term/type to our Term
 
 -- | Translate a @Type@.
-translateType :: Type -> TransM TS.Term
+translateType :: Type -> Transl TS.Term
 translateType ty = translateTerm (Agda.sort $ getSort ty) ty.unEl
 
 -- | Translate a @Term@ of a given @Type@. Reduce transparent definitions.
-translateTerm :: Type -> Term -> TransM TS.Term
+translateTerm :: Type -> Term -> Transl TS.Term
 translateTerm ty v = do
   v <- reduceTransparentDef =<< instantiate v
 
@@ -78,12 +78,12 @@ translateTerm ty v = do
     v@Dummy {} -> bad "dummy term" v
     Level {} -> __IMPOSSIBLE__
 
-translateVar :: Int -> Type -> [Term] -> TransM TS.Term
+translateVar :: Int -> Type -> [Term] -> Transl TS.Term
 translateVar i ty args = do
   i <- translateDBVar i
   translateApp (TS.Var i) ty args
 
-translateDef :: QName -> Type -> [Term] -> TransM TS.Term
+translateDef :: QName -> Type -> [Term] -> Transl TS.Term
 translateDef f ty args = case prettyShow f of
   "Agda.Builtin.Sigma.Σ" -> translateSigma ty args
   "Agda.Builtin.Sigma._,_" -> translatePair ty args
@@ -93,7 +93,7 @@ translateDef f ty args = case prettyShow f of
     let name = translateQName f
     translateApp (TS.Top name) ty args
 
-translateSigma :: Type -> [Term] -> TransM TS.Term
+translateSigma :: Type -> [Term] -> Transl TS.Term
 translateSigma ty args =
   translateArgs ty args >>= \case
     -- fully applied
@@ -107,7 +107,7 @@ translateSigma ty args =
     [] -> pure $ TS.Lam "A" $ TS.Lam "B" $ TS.Sigma "x" (TS.Var 1) (TS.Var 0)
     _ -> translateError "Ill-formed sigma"
 
-translatePair :: Type -> [Term] -> TransM TS.Term
+translatePair :: Type -> [Term] -> Transl TS.Term
 translatePair ty args =
   translateArgs ty args >>= \case
     -- fully applied
@@ -118,7 +118,7 @@ translatePair ty args =
     [] -> pure $ TS.Lam "x" $ TS.Lam "y" $ TS.Pair (TS.Var 1) (TS.Var 0)
     _ -> translateError "Ill-formed pair construction"
 
-translateFst :: Type -> [Term] -> TransM TS.Term
+translateFst :: Type -> [Term] -> Transl TS.Term
 translateFst ty args =
   translateArgs ty args >>= \case
     -- fully applied
@@ -126,7 +126,7 @@ translateFst ty args =
     -- unapplied
     [] -> pure $ TS.Lam "p" $ TS.Proj1 (TS.Var 0)
 
-translateSnd :: Type -> [Term] -> TransM TS.Term
+translateSnd :: Type -> [Term] -> Transl TS.Term
 translateSnd ty args =
   translateArgs ty args >>= \case
     -- fully applied
@@ -134,7 +134,7 @@ translateSnd ty args =
     -- unapplied
     [] -> pure $ TS.Lam "p" $ TS.Proj2 (TS.Var 0)
 
-translateCon :: ConHead -> ConInfo -> Type -> Args -> [Term] -> TransM TS.Term
+translateCon :: ConHead -> ConInfo -> Type -> Args -> [Term] -> Transl TS.Term
 translateCon ch i ty pars args = do
   let c = ch.conName
   conDef <- getConstInfo c
@@ -150,11 +150,11 @@ translateCon ch i ty pars args = do
       translateApp t ty args
 
 translateSpined ::
-  ([Term] -> TransM TS.Term) ->
+  ([Term] -> Transl TS.Term) ->
   (Elims -> Term) ->
   Type ->
   Elims ->
-  TransM TS.Term
+  Transl TS.Term
 translateSpined c tm ty = \case
   [] -> c []
   e@(Proj o q) : es -> do
@@ -174,21 +174,21 @@ translateProj ::
   Term ->
   Type ->
   [Term] ->
-  TransM TS.Term
+  Transl TS.Term
 translateProj q tty t ty args = do
   let name = translateQName q
   arg <- translateTerm tty t
   translateApp (TS.Top name `TS.App` arg) ty args
 
-translateApp :: TS.Term -> Type -> [Term] -> TransM TS.Term
+translateApp :: TS.Term -> Type -> [Term] -> Transl TS.Term
 translateApp f ty args = do
   args <- translateArgs ty args
   pure $! foldl' TS.App f args
 
-translateArgs :: Type -> [Term] -> TransM [TS.Term]
+translateArgs :: Type -> [Term] -> Transl [TS.Term]
 translateArgs ty args = snd <$> translateArgs' ty args
 
-translateArgs' :: Type -> [Term] -> TransM (Type, [TS.Term])
+translateArgs' :: Type -> [Term] -> Transl (Type, [TS.Term])
 translateArgs' ty = \case
   [] -> pure (ty, [])
   (x : xs) -> do
@@ -202,7 +202,7 @@ translateArgs' ty = \case
         (ty, xs) <- rest
         pure (ty, x : xs)
 
-translateLam :: Type -> ArgInfo -> Abs Term -> TransM TS.Term
+translateLam :: Type -> ArgInfo -> Abs Term -> Transl TS.Term
 translateLam ty _argi abs = do
   (dom, cod) <- mustBePi ty
   let name = realName abs.absName
@@ -215,7 +215,7 @@ translateLam ty _argi abs = do
         $ TS.Lam (fromString name)
         <$> translateTerm (absBody cod) (absBody abs)
 
-translateLit :: Literal -> TransM TS.Term
+translateLit :: Literal -> Transl TS.Term
 translateLit = \case
   LitNat n -> do
     zero <- translateQName <$> getBuiltinName_ BuiltinZero

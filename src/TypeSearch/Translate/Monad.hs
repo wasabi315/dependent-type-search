@@ -1,6 +1,6 @@
 module TypeSearch.Translate.Monad
-  ( TransM,
-    runTransM,
+  ( Transl,
+    runTransl,
     translateError,
     addContextAndRenaming,
     translateDBVar,
@@ -29,7 +29,7 @@ import TypeSearch.Prelude
 --------------------------------------------------------------------------------
 -- Monad for translation
 
-type TransM = ReaderT TransEnv TCM
+type Transl = ReaderT TransEnv TCM
 
 data TransEnv = TransEnv
   { -- | Context size after erasure
@@ -42,8 +42,8 @@ data TransEnv = TransEnv
     reduceTransparentDef :: Bool
   }
 
-runTransM :: S.Set QName -> TransM a -> TCM a
-runTransM = flip runReaderT . initEnv
+runTransl :: S.Set QName -> Transl a -> TCM a
+runTransl = flip runReaderT . initEnv
 
 initEnv :: S.Set QName -> TransEnv
 initEnv transparentDefNames =
@@ -55,13 +55,13 @@ initEnv transparentDefNames =
     }
 
 --------------------------------------------------------------------------------
--- TransM interface
+-- Transl interface
 
-translateError :: (HasCallStack, MonadTCError m) => m Doc -> m a
+translateError :: (HasCallStack) => Transl Doc -> Transl a
 translateError msg = typeError . CustomBackendError "translation" =<< msg
 
 -- | Extend both Agda's and our context and save the de Bruijn level association.
-addContextAndRenaming :: (AddContext (name, Dom Type)) => (name, Dom Type) -> TransM a -> TransM a
+addContextAndRenaming :: (AddContext (name, Dom Type)) => (name, Dom Type) -> Transl a -> Transl a
 addContextAndRenaming ctxElt m = do
   ctxSize <- getContextSize
   local
@@ -74,22 +74,22 @@ addContextAndRenaming ctxElt m = do
     $ addContext ctxElt m
 
 -- | Translate a de Bruijn index from Agda into ours according to the current renaming.
-translateDBVar :: Nat -> TransM TS.Index
+translateDBVar :: Nat -> Transl TS.Index
 translateDBVar ix = do
   ctxSize <- getContextSize
-  let lvl = ctxSize - ix - 1
   asks \env -> do
-    let lvl' = IM.findWithDefault __IMPOSSIBLE__ lvl env.renaming
+    let lvl = ctxSize - ix - 1
+        lvl' = IM.findWithDefault __IMPOSSIBLE__ lvl env.renaming
         ix' = env.contextSizeAfterErasure - lvl' - 1
     TS.Index ix'
 
-isTransparentDef :: QName -> TransM Bool
+isTransparentDef :: QName -> Transl Bool
 isTransparentDef x = asks \env -> x `S.member` env.transparentDefNames
 
-locallyReduceTransparentDef :: TransM a -> TransM a
+locallyReduceTransparentDef :: Transl a -> Transl a
 locallyReduceTransparentDef = local \env -> env {reduceTransparentDef = True}
 
-reduceTransparentDef :: Term -> TransM Term
+reduceTransparentDef :: Term -> Transl Term
 reduceTransparentDef t =
   ifNotM (asks \env -> env.reduceTransparentDef) (pure t) do
     ds <- asks \env -> OnlyReduceDefs env.transparentDefNames
@@ -99,7 +99,7 @@ reduceTransparentDef t =
 -- Erase level/size
 
 -- | Determine whether it is ok to erase arguments of this type.
-isErasable :: Type -> TransM Bool
+isErasable :: Type -> Transl Bool
 isErasable a = do
   TelV tel b <- telView a
   addContext tel $

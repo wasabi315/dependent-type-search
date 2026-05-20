@@ -16,7 +16,7 @@ import TypeSearch.Translate.TransparentDef
 
 --------------------------------------------------------------------------------
 
-translateDefinition :: TS.QName -> Definition -> TransM (Maybe TS.Definition)
+translateDefinition :: TS.QName -> Definition -> Transl (Maybe TS.Definition)
 translateDefinition qname def = setCurrentRangeQ def.defName do
   ifM
     (orM [isErasable def.defType, isDeprecated def.defName])
@@ -33,12 +33,12 @@ translateDefinition qname def = setCurrentRangeQ def.defName do
       GeneralizableVar {} -> pure Nothing
       PrimitiveSortDefn {} -> pure Nothing
 
-translateToAxiom :: TS.QName -> Type -> TransM TS.Definition
+translateToAxiom :: TS.QName -> Type -> Transl TS.Definition
 translateToAxiom name sig = do
   sig <- locallyReduceTransparentDef $ translateType sig
   pure $ TS.Definition {body = Nothing, ..}
 
-translateFunDef :: TS.QName -> Definition -> TransM TS.Definition
+translateFunDef :: TS.QName -> Definition -> Transl TS.Definition
 translateFunDef name def = do
   sig <- locallyReduceTransparentDef $ translateType def.defType
   body <- ifM

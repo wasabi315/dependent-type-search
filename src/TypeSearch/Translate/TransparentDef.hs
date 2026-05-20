@@ -23,7 +23,7 @@ import TypeSearch.Translate.Term
 --------------------------------------------------------------------------------
 -- Translate transparent definitions
 
-hasLocalDefs :: Definition -> TransM Bool
+hasLocalDefs :: Definition -> Transl Bool
 hasLocalDefs def = do
   defs <- curDefs
   let locals =
@@ -33,14 +33,14 @@ hasLocalDefs def = do
           $ sortDefs defs
   pure $! not (null locals)
 
-isProjectionLike :: Definition -> TransM Bool
+isProjectionLike :: Definition -> Transl Bool
 isProjectionLike def = do
   let Function {..} = def.theDef
   case funProjection of
     Left {} -> pure False
     Right {} -> pure True
 
-translateTransparentDefBody :: Definition -> TransM TS.Term
+translateTransparentDefBody :: Definition -> Transl TS.Term
 translateTransparentDefBody def = do
   let Function {..} = def.theDef
 
@@ -57,7 +57,7 @@ translateTransparentDefBody def = do
   locallyReduceTransparentDef $ translatePatternArgs def.defType namedClausePats \ty ->
     translateTerm ty (fromMaybe __IMPOSSIBLE__ clauseBody)
 
-translatePatternArgs :: Type -> NAPs -> (Type -> TransM TS.Term) -> TransM TS.Term
+translatePatternArgs :: Type -> NAPs -> (Type -> Transl TS.Term) -> Transl TS.Term
 translatePatternArgs = \cases
   ty [] k -> k ty
   ty ((namedArg -> (VarP _ x)) : ps) k -> do
