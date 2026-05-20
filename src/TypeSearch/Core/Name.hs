@@ -32,7 +32,7 @@ newtype MetaVar = MetaVar Int
   deriving newtype (Num, Eq, Ord, Hashable, Enum, Flat)
 
 instance Show MetaVar where
-  showsPrec _ (MetaVar m) = showString "?G%" . shows m
+  showsPrec _ (MetaVar m) = showString "?M" . shows m
 
 -- | Names
 newtype Name = Name T.Text

@@ -3,7 +3,6 @@ module TypeSearch.Database.PostgreSQL where
 import Data.HashMap.Lazy qualified as HML
 import Data.Map.Strict qualified as M
 import Data.Set qualified as S
-import Data.Text qualified as T
 import Database.PostgreSQL.Simple as PSQL
 import Database.PostgreSQL.Simple.Migration
 import Paths_dependent_type_search
@@ -22,8 +21,6 @@ data DbItem = DbItem
     nameUnqual :: Name,
     modul :: ModuleName,
     sig :: Term,
-    sigText :: T.Text,
-    origSigText :: T.Text,
     body :: Maybe Term,
     returnTypeHead :: ReturnTypeHead QName,
     polymorphic :: Polymorphic,
@@ -47,7 +44,7 @@ saveManyItems conn items =
   void
     $ executeMany
       conn
-      "INSERT INTO library_items(name_qual,name_unqual,module,sig,sig_text,original_sig_text,body,return_type_head,polymorphic,arity,arity_has_var) VALUES (?,?,?,?,?,?,?,?,?,?,?)"
+      "INSERT INTO library_items(name_qual,name_unqual,module,sig,body,return_type_head,polymorphic,arity,arity_has_var) VALUES (?,?,?,?,?,?,?,?,?)"
       items
 
 fetchResolution :: Connection -> Q.Term -> IO (M.Map Name [QName])
@@ -78,32 +75,32 @@ filterByFeatures conn (Feature {..}) = do
     (Right RHUnknown, (.hasVar) -> True) ->
       query
         conn
-        "SELECT name_qual, name_unqual, module, sig, sig_text, original_sig_text, body, return_type_head, polymorphic, arity, arity_has_var FROM library_items WHERE (polymorphic in ?) AND arity_has_var"
+        "SELECT name_qual, name_unqual, module, sig, body, return_type_head, polymorphic, arity, arity_has_var FROM library_items WHERE (polymorphic in ?) AND arity_has_var"
         (Only poly)
     (Right RHUnknown, arity) ->
       query
         conn
-        "SELECT name_qual, name_unqual, module, sig, sig_text, original_sig_text, body, return_type_head, polymorphic, arity, arity_has_var FROM library_items WHERE (polymorphic in ?) AND (arity_has_var OR arity >= ?)"
+        "SELECT name_qual, name_unqual, module, sig, body, return_type_head, polymorphic, arity, arity_has_var FROM library_items WHERE (polymorphic in ?) AND (arity_has_var OR arity >= ?)"
         (poly, arity.arity)
     (Left x, (.hasVar) -> True) ->
       query
         conn
-        "SELECT name_qual, name_unqual, module, sig, sig_text, original_sig_text, body, return_type_head, polymorphic, arity, arity_has_var FROM library_items WHERE (polymorphic in ?) AND arity_has_var AND ((return_type_head ->> 'tag' = 'RHVar') OR ((return_type_head ->> 'tag' = 'RHTop') AND (return_type_head #>> '{contents,name}' = ?)))"
+        "SELECT name_qual, name_unqual, module, sig, body, return_type_head, polymorphic, arity, arity_has_var FROM library_items WHERE (polymorphic in ?) AND arity_has_var AND ((return_type_head ->> 'tag' = 'RHVar') OR ((return_type_head ->> 'tag' = 'RHTop') AND (return_type_head #>> '{contents,name}' = ?)))"
         (poly, x)
     (Left x, arity) ->
       query
         conn
-        "SELECT name_qual, name_unqual, module, sig, sig_text, original_sig_text, body, return_type_head, polymorphic, arity, arity_has_var FROM library_items WHERE (polymorphic in ?) AND (arity_has_var OR arity = ?) AND ((return_type_head ->> 'tag' = 'RHVar') OR ((return_type_head ->> 'tag' = 'RHTop') AND (return_type_head #>> '{contents,name}' = ?)))"
+        "SELECT name_qual, name_unqual, module, sig, body, return_type_head, polymorphic, arity, arity_has_var FROM library_items WHERE (polymorphic in ?) AND (arity_has_var OR arity = ?) AND ((return_type_head ->> 'tag' = 'RHVar') OR ((return_type_head ->> 'tag' = 'RHTop') AND (return_type_head #>> '{contents,name}' = ?)))"
         (poly, arity.arity, x)
     (Right ret, (.hasVar) -> True) ->
       query
         conn
-        "SELECT name_qual, name_unqual, module, sig, sig_text, original_sig_text, body, return_type_head, polymorphic, arity, arity_has_var FROM library_items WHERE (polymorphic in ?) AND arity_has_var AND (return_type_head in ?)"
+        "SELECT name_qual, name_unqual, module, sig, body, return_type_head, polymorphic, arity, arity_has_var FROM library_items WHERE (polymorphic in ?) AND arity_has_var AND (return_type_head in ?)"
         (poly, In [ret, RHVar])
     (Right ret, arity) -> do
       query
         conn
-        "SELECT name_qual, name_unqual, module, sig, sig_text, original_sig_text, body, return_type_head, polymorphic, arity, arity_has_var FROM library_items WHERE (polymorphic in ?) AND (arity_has_var OR arity = ?) AND (return_type_head in ?)"
+        "SELECT name_qual, name_unqual, module, sig, body, return_type_head, polymorphic, arity, arity_has_var FROM library_items WHERE (polymorphic in ?) AND (arity_has_var OR arity = ?) AND (return_type_head in ?)"
         (poly, arity.arity, In [ret, RHVar])
 
 fetchTopEnv :: Connection -> [QName] -> IO TopEnv

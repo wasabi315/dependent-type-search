@@ -66,7 +66,6 @@ interactive conn transparentDefNames = evalReplOpts ReplOpts {..}
 data TypeSearchResult = TypeSearchResult
   { name :: QName,
     sig :: Type,
-    origSigText :: T.Text,
     iso :: Iso,
     solution :: Term
   }
@@ -85,9 +84,9 @@ typeSearch tenv resol query items = do
     $ Streamly.fromList items
 
 typeSearchOne :: TopEnv -> Term -> DbItem -> ImS.Stream TypeSearchResult
-typeSearchOne tenv query DbItem {sig, origSigText, nameQual = name} = do
+typeSearchOne tenv query DbItem {sig, nameQual = name} = do
   (i, inst) <- check name (initCtx tenv, Here) (eval emptyMetaCtx tenv [] query) (eval emptyMetaCtx tenv [] sig)
-  pure (TypeSearchResult name sig origSigText i inst)
+  pure (TypeSearchResult name sig i inst)
 
 displayTypeSearchResults :: [DbItem] -> [TypeSearchResult] -> NominalDiffTime -> IO ()
 displayTypeSearchResults cands matches time = do
@@ -97,7 +96,7 @@ displayTypeSearchResults cands matches time = do
     putStrLn
       $ unlines
       $ concat
-        [ [ showString "- " $ shows name $ showString " : " $ T.unpack origSigText,
+        [ [ showString "- " $ shows name $ showString " : " $ prettyTerm0 Unqualify sig "",
             showString "  - module        : " $ shows moduleName ""
           ],
           case iso of

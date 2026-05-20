@@ -14,11 +14,9 @@ import Agda.Interaction.Library
 import Agda.Interaction.Options
 import Agda.Syntax.Common.Pretty (prettyShow)
 import Agda.Syntax.Concrete.Name qualified as C
-import Agda.Syntax.Internal hiding (arity)
 import Agda.Syntax.Position
 import Agda.Syntax.Scope.Base
 import Agda.Syntax.Scope.Monad (getCurrentScope, getNamedScope, isDatatypeModule)
-import Agda.TypeChecking.Pretty
 import Agda.Utils.FileName
 import Agda.Utils.IO.Directory
 import Agda.Utils.Impossible (__IMPOSSIBLE__)
@@ -27,7 +25,6 @@ import Agda.Utils.Monad hiding (unless)
 import Data.List.NonEmpty qualified as NE
 import Data.Map.Strict qualified as M
 import Data.Set qualified as S
-import Data.Text qualified as T
 import Database.PostgreSQL.Simple
 import System.Directory
 import System.FilePath.Find qualified as Find
@@ -39,7 +36,6 @@ import TypeSearch.Core.Name qualified as TS
 import TypeSearch.Database.Feature qualified as TS
 import TypeSearch.Database.PostgreSQL qualified as TS
 import TypeSearch.Prelude
-import TypeSearch.Pretty qualified as TS
 import TypeSearch.Translate.Definition
 import TypeSearch.Translate.Monad
 import TypeSearch.Translate.Name
@@ -164,17 +160,14 @@ translateInterface intf =
         Right def -> do
           let outName = translateConcreteQName (translateModuleName intf.iModuleName) cname
           mdef <- translateDefinition outName def
-          for mdef $ constructDbItem def.defType
+          pure $ constructDbItem <$> mdef
 
-constructDbItem :: Type -> TS.Definition -> Transl TS.DbItem
-constructDbItem origSig (TS.Definition {name = nameQual, ..}) = do
-  -- FIXME: unqualify all top-level names in origSigText
-  origSigText <- T.show <$> inTopContext (prettyTCM origSig)
-  pure TS.DbItem {..}
+constructDbItem :: TS.Definition -> TS.DbItem
+constructDbItem (TS.Definition {name = nameQual, ..}) = do
+  TS.DbItem {..}
   where
     nameUnqual = nameQual.name
     modul = nameQual.moduleName
-    sigText = T.pack $ TS.prettyTerm0 TS.Qualify sig ""
     (sig', _) = TS.normalise0 TS.emptyMetaCtx mempty sig
     TS.Feature {arity = TS.Arity {hasVar = arityHasVar, ..}, ..} =
       TS.feature sig'
