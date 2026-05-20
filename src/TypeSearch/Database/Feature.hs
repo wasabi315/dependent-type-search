@@ -26,8 +26,8 @@ data ReturnTypeHead n
   deriving (ToField, FromField) via Aeson (ReturnTypeHead n)
 
 -- | The input type must be closed. Doesn't perform any reduction.
-computeReturnTypeHead :: Type -> ReturnTypeHead QName
-computeReturnTypeHead t = case headTerm (returnType t) of
+returnTypeHead :: Type -> ReturnTypeHead QName
+returnTypeHead t = case headTerm (returnType t) of
   U -> RHU
   Var {} -> RHVar
   Top x -> RHTop x
@@ -37,8 +37,8 @@ computeReturnTypeHead t = case headTerm (returnType t) of
   _ -> impossible
 
 -- | The input type must be closed.
-computeReturnTypeHeadQ :: S.Set QName -> Q.Type -> Maybe (ReturnTypeHead PQName)
-computeReturnTypeHeadQ transparentDefNames (Q.teleView -> TeleView tele cod) =
+returnTypeHeadQ :: S.Set QName -> Q.Type -> Maybe (ReturnTypeHead PQName)
+returnTypeHeadQ transparentDefNames (Q.teleView -> TeleView tele cod) =
   case Q.headTerm cod of
     Q.U -> Just RHU
     Q.Var (Unqual x)
@@ -62,17 +62,17 @@ data Polymorphic = NoPolymorphic | YesPolymorphic
   deriving (ToField, FromField) via ViaEnum Polymorphic
 
 -- | The input type must be closed. Doesn't perform any reduction.
-computePolymorphic :: Type -> Polymorphic
-computePolymorphic = \case
+polymorphic :: Type -> Polymorphic
+polymorphic = \case
   Pi _ a _ | endsInSort a -> YesPolymorphic
-  Pi _ _ b -> computePolymorphic b
+  Pi _ _ b -> polymorphic b
   _ -> NoPolymorphic
 
 -- | The input type must be closed.
-computePolymorphicQ :: Q.Type -> Polymorphic
-computePolymorphicQ = \case
+polymorphicQ :: Q.Type -> Polymorphic
+polymorphicQ = \case
   Q.Pi _ a _ | Q.endsInSort a -> YesPolymorphic
-  Q.Pi _ _ b -> computePolymorphicQ b
+  Q.Pi _ _ b -> polymorphicQ b
   _ -> NoPolymorphic
 
 --------------------------------------------------------------------------------
@@ -87,8 +87,8 @@ data Arity = Arity
   deriving (ToField, FromField) via Aeson Arity
 
 -- | The input type must be closed. Doesn't perform any reduction.
-computeArity :: Type -> Arity
-computeArity = go [] False 0
+arity :: Type -> Arity
+arity = go [] False 0
   where
     go ctx hasVar arity = \case
       Pi _ a b -> case headTerm a of
@@ -100,8 +100,8 @@ computeArity = go [] False 0
       _ -> Arity {..}
 
 -- | The input type must be closed.
-computeArityQ :: Q.Type -> Arity
-computeArityQ = go [] False 0
+arityQ :: Q.Type -> Arity
+arityQ = go [] False 0
   where
     go ctx hasVar arity = \case
       Q.Pi x a b -> case Q.headTerm a of
@@ -121,20 +121,20 @@ data Feature n = Feature
     arity :: Arity
   }
 
-computeFeature :: Type -> Feature QName
-computeFeature typ =
+feature :: Type -> Feature QName
+feature typ =
   Feature
-    { returnTypeHead = computeReturnTypeHead typ,
-      polymorphic = computePolymorphic typ,
-      arity = computeArity typ
+    { returnTypeHead = returnTypeHead typ,
+      polymorphic = polymorphic typ,
+      arity = arity typ
     }
 
-computeFeatureQ :: S.Set QName -> Q.Type -> Maybe (Feature PQName)
-computeFeatureQ transparentDefNames typ = do
-  returnTypeHead <- computeReturnTypeHeadQ transparentDefNames typ
+featureQ :: S.Set QName -> Q.Type -> Maybe (Feature PQName)
+featureQ transparentDefNames typ = do
+  returnTypeHead <- returnTypeHeadQ transparentDefNames typ
   pure
     Feature
       { returnTypeHead,
-        polymorphic = computePolymorphicQ typ,
-        arity = computeArityQ typ
+        polymorphic = polymorphicQ typ,
+        arity = arityQ typ
       }

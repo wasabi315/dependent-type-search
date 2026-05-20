@@ -17,7 +17,7 @@ import Agda.Utils.Monad
 import TypeSearch.AgdaUtils
 import TypeSearch.Core.Term qualified as TS
 import TypeSearch.Prelude
-import TypeSearch.Translate.Common
+import TypeSearch.Translate.Monad
 import TypeSearch.Translate.Term
 
 --------------------------------------------------------------------------------

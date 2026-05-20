@@ -26,7 +26,7 @@ import Data.Set qualified as S
 import TypeSearch.AgdaUtils
 import TypeSearch.Core.Term qualified as TS
 import TypeSearch.Prelude
-import TypeSearch.Translate.Common
+import TypeSearch.Translate.Monad
 import TypeSearch.Translate.Name
 
 --------------------------------------------------------------------------------

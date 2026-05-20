@@ -10,7 +10,7 @@ import TypeSearch.AgdaUtils
 import TypeSearch.Core.Module qualified as TS
 import TypeSearch.Core.Name qualified as TS
 import TypeSearch.Prelude
-import TypeSearch.Translate.Common
+import TypeSearch.Translate.Monad
 import TypeSearch.Translate.Term
 import TypeSearch.Translate.TransparentDef
 

@@ -30,7 +30,7 @@ search :: Connection -> S.Set QName -> T.Text -> IO ()
 search conn transparentDefNames typ =
   either putStrLn pure =<< runExceptT do
     typ <- parseQuery "interactive" typ ??% displayException
-    feats <- computeFeatureQ transparentDefNames typ ??: "Ill-formed type"
+    feats <- featureQ transparentDefNames typ ??: "Ill-formed type"
     cands <- liftIO $ filterByFeatures conn feats
     resol1 <- liftIO $ fetchResolution conn typ
     (tenv, resol2) <- liftIO $ fetchTopEnv conn $ map (.nameQual) cands

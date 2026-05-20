@@ -44,8 +44,8 @@ library
       TypeSearch.Database.Search
       TypeSearch.Prelude
       TypeSearch.Pretty
-      TypeSearch.Translate.Common
       TypeSearch.Translate.Definition
+      TypeSearch.Translate.Monad
       TypeSearch.Translate.Name
       TypeSearch.Translate.Term
       TypeSearch.Translate.TransparentDef

@@ -1,4 +1,4 @@
-module TypeSearch.Translate.Common
+module TypeSearch.Translate.Monad
   ( TransM,
     runTransM,
     translateError,
@@ -102,8 +102,8 @@ reduceTransparentDef t =
 isErasable :: Type -> TransM Bool
 isErasable a = do
   TelV tel b <- telView a
-  addContext tel
-    $ orM
+  addContext tel $
+    orM
       [ isLevelType b,
         isJust <$> isSizeType b
       ]

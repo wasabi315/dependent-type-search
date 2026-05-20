@@ -40,8 +40,8 @@ import TypeSearch.Database.Feature qualified as TS
 import TypeSearch.Database.PostgreSQL qualified as TS
 import TypeSearch.Prelude
 import TypeSearch.Pretty qualified as TS
-import TypeSearch.Translate.Common
 import TypeSearch.Translate.Definition
+import TypeSearch.Translate.Monad
 import TypeSearch.Translate.Name
 
 --------------------------------------------------------------------------------
@@ -177,4 +177,4 @@ constructDbItem origSig (TS.Definition {name = nameQual, ..}) = do
     sigText = T.pack $ TS.prettyTerm0 TS.Qualify sig ""
     (sig', _) = TS.normalise0 TS.emptyMetaCtx mempty sig
     TS.Feature {arity = TS.Arity {hasVar = arityHasVar, ..}, ..} =
-      TS.computeFeature sig'
+      TS.feature sig'
