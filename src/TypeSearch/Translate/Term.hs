@@ -15,6 +15,7 @@ import Agda.TypeChecking.Datatypes
 import Agda.TypeChecking.Free
 import Agda.TypeChecking.Pretty
 import Agda.TypeChecking.ProjectionLike
+import Agda.TypeChecking.ReconstructParameters ()
 import Agda.TypeChecking.Records
 import Agda.TypeChecking.Reduce
 import Agda.TypeChecking.Substitute as Agda
@@ -146,6 +147,7 @@ translateCon ch i ty pars args = do
       dataDef <- getConstInfo conData
       -- For making parameters explicit
       -- e.g) Builtin.List._∷_ x xs -> Builtin.List._∷_ A x xs
+      -- TODO: Reuse things from Agda.TypeChecking.ReconstructParameters
       t <- translateApp (TS.Top name) dataDef.defType $ map unArg pars
       translateApp t ty args
 

@@ -95,7 +95,7 @@ pKeyword kw = do
 pNatLit :: Parser Term
 pNatLit = do
   n <- decimal
-  pure $ applyN n (Var (Qual "Agda.Builtin.Nat" "suc") `App`) (Var (Qual "Agda.Builtin.Nat" "zero"))
+  pure $ applyN n (Var (Qual "Agda.Builtin.Nat.Nat" "suc") `App`) (Var (Qual "Agda.Builtin.Nat.Nat" "zero"))
 
 pAtom :: Parser Term
 pAtom =
