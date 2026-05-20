@@ -61,3 +61,6 @@ resolveDefinedName s = do
   case rname of
     DefinedName _ aname _ -> pure $ Just $ anameName aname
     _ -> pure Nothing
+
+useCanonical :: QName -> QName
+useCanonical q = q {qnameName = q.qnameName {nameConcrete = q.qnameName.nameCanonical}}

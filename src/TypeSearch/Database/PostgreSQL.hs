@@ -16,7 +16,7 @@ import TypeSearch.Prelude
 
 --------------------------------------------------------------------------------
 
-data DbItem = DbItem
+data Item = Item
   { nameQual :: QName,
     nameUnqual :: Name,
     modul :: ModuleName,
@@ -39,7 +39,7 @@ migrate conn = do
       defaultOptions
       [MigrationInitialization, MigrationDirectory migrationDir]
 
-saveManyItems :: Connection -> [DbItem] -> IO ()
+saveManyItems :: Connection -> [Item] -> IO ()
 saveManyItems conn items =
   void
     $ executeMany
@@ -63,7 +63,7 @@ fetchResolution conn a = do
   where
     (quals, unquals) = partitionEithers $ map (\case Unqual x -> Right x; Qual m x -> Left (QName m x)) $ S.toList (Q.freeVars a)
 
-filterByFeatures :: Connection -> Feature PQName -> IO [DbItem]
+filterByFeatures :: Connection -> Feature PQName -> IO [Item]
 filterByFeatures conn (Feature {..}) = do
   let retType = for returnTypeHead \case
         Unqual x -> Left x

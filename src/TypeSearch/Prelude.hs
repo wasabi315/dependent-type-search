@@ -16,6 +16,7 @@ module TypeSearch.Prelude
     module Data.Either,
     module Data.Foldable,
     module Data.Foldable1,
+    module Data.Function,
     module Data.Functor,
     module Data.Functor.Compose,
     module Data.Functor.Identity,
@@ -68,6 +69,7 @@ import Data.Coerce
 import Data.Either
 import Data.Foldable hiding (foldl1, foldr1, maximum, maximumBy, minimum, minimumBy)
 import Data.Foldable1
+import Data.Function
 import Data.Functor
 import Data.Functor.Compose
 import Data.Functor.Identity

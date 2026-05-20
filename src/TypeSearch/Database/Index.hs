@@ -23,6 +23,7 @@ import Data.Set qualified as S
 import Database.PostgreSQL.Simple
 import System.Directory
 import System.FilePath.Find qualified as Find
+import System.IO
 import TypeSearch.AgdaUtils
 import TypeSearch.Core.Evaluation qualified as TS
 import TypeSearch.Core.Isomorphism qualified as TS
@@ -125,15 +126,15 @@ indexLibrary config = do
 
 --------------------------------------------------------------------------------
 
-translateInterface :: Interface -> Transl [TS.DbItem]
+translateInterface :: Interface -> Transl [TS.Item]
 translateInterface intf =
   ifJustM (useTC (stPragmaOptions . lensOptCubical)) (\_ -> pure []) do
     modul <- translateScope intf.iInsideScope
-    pure $ constructDbItem <$> modul.definitions
+    pure $ constructItem <$> modul.definitions
 
-constructDbItem :: TS.Definition -> TS.DbItem
-constructDbItem (TS.Definition {name = nameQual, ..}) = do
-  TS.DbItem {..}
+constructItem :: TS.Definition -> TS.Item
+constructItem (TS.Definition {name = nameQual, ..}) = do
+  TS.Item {..}
   where
     nameUnqual = nameQual.name
     modul = nameQual.moduleName

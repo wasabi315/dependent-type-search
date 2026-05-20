@@ -70,7 +70,7 @@ data TypeSearchResult = TypeSearchResult
     solution :: Term
   }
 
-typeSearch :: TopEnv -> M.Map Name [QName] -> Q.Type -> [DbItem] -> IO [TypeSearchResult]
+typeSearch :: TopEnv -> M.Map Name [QName] -> Q.Type -> [Item] -> IO [TypeSearchResult]
 typeSearch tenv resol query items = do
   let queries = Q.possibleResolutions resol query
   Streamly.toList
@@ -83,12 +83,12 @@ typeSearch tenv resol query items = do
       )
     $ Streamly.fromList items
 
-typeSearchOne :: TopEnv -> Term -> DbItem -> ImS.Stream TypeSearchResult
-typeSearchOne tenv query DbItem {sig, nameQual = name} = do
+typeSearchOne :: TopEnv -> Term -> Item -> ImS.Stream TypeSearchResult
+typeSearchOne tenv query Item {sig, nameQual = name} = do
   (i, inst) <- check name (initCtx tenv, Here) (eval emptyMetaCtx tenv [] query) (eval emptyMetaCtx tenv [] sig)
   pure (TypeSearchResult name sig i inst)
 
-displayTypeSearchResults :: [DbItem] -> [TypeSearchResult] -> NominalDiffTime -> IO ()
+displayTypeSearchResults :: [Item] -> [TypeSearchResult] -> NominalDiffTime -> IO ()
 displayTypeSearchResults cands matches time = do
   putStrLn $ shows (length matches) $ showString " item(s) matched in " $ shows (length cands) " candidate(s)"
   putStrLn $ showString "Took " $ shows time "\n"
