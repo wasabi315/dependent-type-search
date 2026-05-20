@@ -7,7 +7,7 @@ import Database.PostgreSQL.Simple.Newtypes
 import Database.PostgreSQL.Simple.ToField
 import TypeSearch.Core.Name
 import TypeSearch.Core.Term
-import TypeSearch.Database.Search.Query qualified as Q
+import TypeSearch.Database.Query qualified as Q
 import TypeSearch.Prelude
 
 --------------------------------------------------------------------------------

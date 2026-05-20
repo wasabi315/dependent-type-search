@@ -12,7 +12,7 @@ import TypeSearch.Core.Evaluation
 import TypeSearch.Core.Name
 import TypeSearch.Core.Term
 import TypeSearch.Database.Feature
-import TypeSearch.Database.Search.Query qualified as Q
+import TypeSearch.Database.Query qualified as Q
 import TypeSearch.Prelude
 
 --------------------------------------------------------------------------------

@@ -12,7 +12,7 @@ import Data.Text qualified as T
 import TypeSearch.Core.Isomorphism
 import TypeSearch.Core.Name
 import TypeSearch.Core.Term
-import TypeSearch.Database.Search.Query qualified as Q
+import TypeSearch.Database.Query qualified as Q
 import TypeSearch.Prelude
 
 --------------------------------------------------------------------------------

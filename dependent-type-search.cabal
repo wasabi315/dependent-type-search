@@ -38,10 +38,10 @@ library
       TypeSearch.Core.Term
       TypeSearch.Database.Feature
       TypeSearch.Database.Index
+      TypeSearch.Database.Parser
       TypeSearch.Database.PostgreSQL
+      TypeSearch.Database.Query
       TypeSearch.Database.Search
-      TypeSearch.Database.Search.Parser
-      TypeSearch.Database.Search.Query
       TypeSearch.Prelude
       TypeSearch.Pretty
       TypeSearch.Translate.Common

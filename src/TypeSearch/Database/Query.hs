@@ -1,4 +1,4 @@
-module TypeSearch.Database.Search.Query
+module TypeSearch.Database.Query
   ( Term (..),
     Type,
     teleView,
@@ -46,9 +46,7 @@ teleView = go []
 
 -- | Get the return type. Doesn't perform any reduction.
 returnType :: Term -> Term
-returnType = \case
-  Pi _ _ b -> returnType b
-  t -> t
+returnType = (.cod) . teleView
 
 -- | Is the return type U? Doesn't perform any reduction.
 endsInSort :: Term -> Bool

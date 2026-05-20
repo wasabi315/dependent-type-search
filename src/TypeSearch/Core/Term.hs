@@ -117,8 +117,8 @@ returnType = (.cod) . teleView
 
 -- | Is the return type U? Doesn't perform any reduction.
 endsInSort :: Type -> Bool
-endsInSort t = case teleView t of
-  TeleView _ U -> True
+endsInSort t = case returnType t of
+  U -> True
   _ -> False
 
 data AppView a = AppView

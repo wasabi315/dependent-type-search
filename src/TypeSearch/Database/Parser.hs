@@ -1,4 +1,4 @@
-module TypeSearch.Database.Search.Parser
+module TypeSearch.Database.Parser
   ( parseQuery,
     ParserError,
   )
@@ -11,7 +11,7 @@ import Text.Megaparsec
 import Text.Megaparsec.Char qualified as C
 import Text.Megaparsec.Char.Lexer qualified as L
 import TypeSearch.Core.Name hiding (QName)
-import TypeSearch.Database.Search.Query
+import TypeSearch.Database.Query
 import TypeSearch.Prelude hiding (many, some)
 
 --------------------------------------------------------------------------------
