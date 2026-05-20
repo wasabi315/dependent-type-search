@@ -1,6 +1,5 @@
 module TypeSearch.Core.Module
   ( Definition (..),
-    Reexport (..),
     Module (..),
   )
 where
@@ -17,13 +16,6 @@ data Definition = Definition
     body :: Maybe Term
   }
 
-data Reexport = Reexport
-  { canonicalName :: QName,
-    exportAs :: QName
-  }
-
-data Module = Module
-  { moduleName :: ModuleName,
-    definitions :: [Definition],
-    reexports :: [Reexport]
+newtype Module = Module
+  { definitions :: [Definition]
   }

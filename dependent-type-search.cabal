@@ -45,6 +45,7 @@ library
       TypeSearch.Prelude
       TypeSearch.Pretty
       TypeSearch.Translate.Definition
+      TypeSearch.Translate.Module
       TypeSearch.Translate.Monad
       TypeSearch.Translate.Name
       TypeSearch.Translate.Term
@@ -107,6 +108,7 @@ library
     , bytestring
     , containers
     , directory
+    , dlist
     , filemanip
     , filepath
     , flat
@@ -186,6 +188,7 @@ executable dependent-type-search
     , containers
     , dependent-type-search
     , directory
+    , dlist
     , filemanip
     , filepath
     , flat
@@ -266,6 +269,7 @@ test-suite dependent-type-search-test
     , containers
     , dependent-type-search
     , directory
+    , dlist
     , filemanip
     , filepath
     , flat

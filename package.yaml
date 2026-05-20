@@ -29,6 +29,7 @@ dependencies:
   - bytestring
   - containers
   - directory
+  - dlist
   - filepath
   - filemanip
   - flat

@@ -13,17 +13,12 @@ import Agda.Interaction.Imports
 import Agda.Interaction.Library
 import Agda.Interaction.Options
 import Agda.Syntax.Common.Pretty (prettyShow)
-import Agda.Syntax.Concrete.Name qualified as C
 import Agda.Syntax.Position
-import Agda.Syntax.Scope.Base
-import Agda.Syntax.Scope.Monad (getCurrentScope, getNamedScope, isDatatypeModule)
 import Agda.Utils.FileName
 import Agda.Utils.IO.Directory
 import Agda.Utils.Impossible (__IMPOSSIBLE__)
 import Agda.Utils.Maybe (ifJustM)
 import Agda.Utils.Monad hiding (unless)
-import Data.List.NonEmpty qualified as NE
-import Data.Map.Strict qualified as M
 import Data.Set qualified as S
 import Database.PostgreSQL.Simple
 import System.Directory
@@ -36,9 +31,8 @@ import TypeSearch.Core.Name qualified as TS
 import TypeSearch.Database.Feature qualified as TS
 import TypeSearch.Database.PostgreSQL qualified as TS
 import TypeSearch.Prelude
-import TypeSearch.Translate.Definition
+import TypeSearch.Translate.Module
 import TypeSearch.Translate.Monad
-import TypeSearch.Translate.Name
 
 --------------------------------------------------------------------------------
 -- Entrypoint
@@ -130,37 +124,12 @@ indexLibrary config = do
             liftIO $ TS.saveManyItems config.dbConn mod'
 
 --------------------------------------------------------------------------------
--- Module translation
 
 translateInterface :: Interface -> Transl [TS.DbItem]
 translateInterface intf =
   ifJustM (useTC (stPragmaOptions . lensOptCubical)) (\_ -> pure []) do
-    let go :: Scope -> TCM [(C.QName, QName)]
-        go scope =
-          isDatatypeModule scope.scopeName >>= \case
-            Just IsDataModule -> pure mempty
-            _ -> do
-              let ns = thingsInScope [PublicNS] scope
-              Compose sub <-
-                traverse
-                  (go <=< getNamedScope . amodName)
-                  (Compose ns.nsModules)
-              let xns =
-                    [ (C.QName x, n.anameName)
-                    | (x, ns) <- M.toList ns.nsNames,
-                      n <- NE.toList ns
-                    ]
-                  xns' = M.foldMapWithKey (foldMap . map . first . C.Qual) sub
-              pure $ xns <> xns'
-
-    names <- lift $ go =<< getCurrentScope
-    forMaybe names \(cname, origQName) ->
-      getConstInfo' origQName >>= \case
-        Left _ -> pure Nothing
-        Right def -> do
-          let outName = translateConcreteQName (translateModuleName intf.iModuleName) cname
-          mdef <- translateDefinition outName def
-          pure $ constructDbItem <$> mdef
+    modul <- translateScope intf.iInsideScope
+    pure $ constructDbItem <$> modul.definitions
 
 constructDbItem :: TS.Definition -> TS.DbItem
 constructDbItem (TS.Definition {name = nameQual, ..}) = do
