@@ -6,6 +6,7 @@ where
 
 import Data.Char
 import Data.Foldable
+import Data.List.NonEmpty qualified as NE
 import Data.Text qualified as T
 import Text.Megaparsec
 import Text.Megaparsec.Char qualified as C
@@ -80,10 +81,11 @@ pName = Name <$> pIdent
 pPQName :: Parser PQName
 pPQName = do
   x <- pIdent
-  y <- optional (try (char '.' *> pIdent))
-  pure $ case y of
+  y <- many (try (char '.' *> pIdent))
+  pure case NE.nonEmpty y of
     Nothing -> Unqual $ Name x
-    Just z -> Qual (ModuleName x) (Name z)
+    Just ys ->
+      Qual (ModuleName $ T.intercalate "." $ x : NE.init ys) (Name $ NE.last ys)
 
 pKeyword :: T.Text -> Parser ()
 pKeyword kw = do

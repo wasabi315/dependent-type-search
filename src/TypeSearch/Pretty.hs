@@ -31,11 +31,14 @@ piP = 2
 absP = 1
 pairP = 0
 
-prettyQuery :: Int -> Q.Term -> ShowS
-prettyQuery = go
+prettyQuery :: QualifyMode -> Int -> Q.Term -> ShowS
+prettyQuery qm = go
   where
     go p = \case
-      Q.Var n -> shows n
+      Q.Var (Unqual n) -> shows n
+      Q.Var (Qual m n) -> case qm of
+        Qualify -> shows (Qual m n)
+        Unqualify -> shows n
       Q.U -> showString "U"
       Q.Pi "_" a b -> par p piP $ go sigmaP a . showString " → " . go piP b
       Q.Pi n a b -> par p piP $ piBind n a . goPi b
