@@ -6,9 +6,9 @@ A prototype type-based library search tool for Agda.
 
 ## What It Does
 
-Aegle searches Agda definitions by type, beyond syntactic equality:
+Aegle searches Agda definitions library-wide by type, beyond syntactic equality:
 
-- Match up to basic type isomorphisms, so we can find definitions whose types are essentially the same as the query but written in a different shape.
+- Match up to selected type isomorphisms, so we can find definitions whose types are essentially the same as the query but written in a different shape.
 
    <details>
      <summary>Supported type isomorphisms</summary>
@@ -27,6 +27,8 @@ Aegle searches Agda definitions by type, beyond syntactic equality:
 - Match up to generalisation, so we can find definitions that fit the query type after an appropriate instantiation.
 
 - Expand type aliases, so queries do not have to use the same aliases as the definitions they match.
+
+- Resolve an unqualified name to all matching qualified names, allowing ambiguous names in queries.
 
 Aegle also synthesises code that makes a matched definition fit the query type.
 
@@ -127,6 +129,14 @@ Examples: `: (A B : U) → (A → B) → A → B` and `+ comm : Commutative Nat 
 Aegle grew out of this paper, though the implementation has since evolved:
 
 - [Satoshi Takimoto et al., "Unification Modulo Isomorphisms between Dependent Types for Type-Based Library Search", TyDe 2025](https://dl.acm.org/doi/10.1145/3759538.3759651)
+
+## TODO
+
+- [ ] Make the search procedure complete for the intended search space
+- [ ] Integration to agda-mode
+- [ ] Operator parsing
+- [ ] Implicit arguments
+- [ ] Standalone database backend (Aegle currently relies on PostgreSQL)
 
 ## Acknowledgements
 
