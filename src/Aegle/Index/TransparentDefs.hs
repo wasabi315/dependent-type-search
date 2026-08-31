@@ -1,6 +1,7 @@
 module Aegle.Index.TransparentDefs
   ( decideTransparency,
     TransparentDefPolicy (..),
+    OpaqueDefNames,
     OpaqueReason (..),
   )
 where
@@ -26,8 +27,10 @@ import Data.Text qualified as T
 
 data TransparentDefPolicy
   = None
-  | AllExcept (S.Set T.Text)
+  | AllExcept OpaqueDefNames
   deriving stock (Eq, Ord, Show, Generic)
+
+type OpaqueDefNames = S.Set T.Text
 
 data OpaqueReason
   = NotFunction
@@ -38,13 +41,10 @@ data OpaqueReason
   | ExcludedByConfig
   deriving stock (Eq, Ord, Show, Generic)
 
-decideTransparency :: TransparentDefPolicy -> Definition -> TCM (Either OpaqueReason ())
-decideTransparency policy def = runExceptT do
-  case policy of
-    AllExcept exc
-      | T.pack (P.prettyShow def.defName) `S.notMember` exc ->
-          pure ()
-    None; AllExcept {} -> throwError ExcludedByConfig
+decideTransparency :: OpaqueDefNames -> Definition -> TCM (Either OpaqueReason ())
+decideTransparency opaques def = runExceptT do
+  when (T.pack (P.prettyShow def.defName) `S.member` opaques) do
+    throwError ExcludedByConfig
 
   fun <- case def.theDef of
     FunctionDefn fun -> pure fun

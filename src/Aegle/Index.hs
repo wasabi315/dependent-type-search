@@ -98,23 +98,32 @@ indexOne config logger builder = withCurrentDirectory config.path do
 -- Transparent definitions
 
 collectTransparentDefs :: Logger -> TransparentDefPolicy -> [FilePath] -> TCM (S.Set QName)
-collectTransparentDefs logger = \cases
-  None _ -> pure mempty
-  policy@(AllExcept exc) files -> do
-    (transps, excluded) <-
-      foldMap (parseFile >=> decideAllTransparency logger policy) files
-    let unmatched = exc S.\\ S.map (T.pack . prettyShow) excluded
-    unless (S.null unmatched) do
-      aegleWarning
-        $ vsep ["Unmatched exclusions found", prettyList_ (pretty <$> S.toList unmatched)]
-    pure transps
+collectTransparentDefs logger policy files =
+  flip Foldl.foldM files
+    $ Foldl.premapM parseFile
+    $ decideAllTransparencyFold logger policy
+
+decideAllTransparencyFold ::
+  Logger ->
+  TransparentDefPolicy ->
+  Foldl.FoldM TCM Source (S.Set QName)
+decideAllTransparencyFold _ None = mempty
+decideAllTransparencyFold logger (AllExcept opaques) = Foldl.FoldM step (pure mempty) done
+  where
+    step acc src = (acc <>) <$!> decideAllTransparency logger opaques src
+    done (transps, excluded) = do
+      let unmatched = opaques S.\\ S.map (T.pack . prettyShow) excluded
+      unless (S.null unmatched) do
+        aegleWarning
+          $ vsep ["Unmatched exclusions found", prettyList_ (pretty <$> S.toList unmatched)]
+      pure transps
 
 decideAllTransparency ::
   Logger ->
-  TransparentDefPolicy ->
+  OpaqueDefNames ->
   Source ->
   TCM (S.Set QName, S.Set QName)
-decideAllTransparency logger policy src = withModuleInfo src \modInfo -> do
+decideAllTransparency logger opaques src = withModuleInfo src \modInfo -> do
   -- cubical is not yet supported
   ifJustM (useTC (stPragmaOptions . lensOptCubical)) (\_ -> pure mempty) do
     let pubNames = collectPublicNames modInfo.miInterface.iInsideScope
@@ -122,7 +131,7 @@ decideAllTransparency logger policy src = withModuleInfo src \modInfo -> do
       def <- getConstInfo pubName
       let modName = T.pack $ prettyShow modInfo.miInterface.iTopLevelModuleName
           name = T.pack $ prettyShow pubName
-      decideTransparency policy def >>= \case
+      decideTransparency opaques def >>= \case
         Right () -> do
           liftIO $ logTransp modName name
           pure $! S.singleton pubName // mempty
