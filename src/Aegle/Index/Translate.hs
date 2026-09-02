@@ -7,6 +7,7 @@ module Aegle.Index.Translate
     withAllDefsOpaque,
     isTransparentDef,
     reduceTransparentDef,
+    lookupModuleOrigin,
     isErasable,
   )
 where
@@ -14,6 +15,7 @@ where
 import Aegle.Core.Name qualified as TS
 import Aegle.Prelude
 import Agda.Compiler.Backend hiding (Args, initEnv)
+import Agda.Interaction.Library.Base
 import Agda.Syntax.Common
 import Agda.Syntax.Internal hiding (arity, termSize)
 import Agda.TypeChecking.Level
@@ -23,6 +25,7 @@ import Agda.TypeChecking.Telescope
 import Agda.Utils.Impossible (__IMPOSSIBLE__)
 import Agda.Utils.Monad
 import Data.IntMap qualified as IM
+import Data.Map.Strict qualified as M
 import Data.Set qualified as S
 
 --------------------------------------------------------------------------------
@@ -36,12 +39,16 @@ data Env = Env
     -- | De Bruijn level → De Bruijn level after erasure
     renaming :: IM.IntMap Int,
     -- | Set of transparent definitions (already resolved)
-    transparentDefs :: S.Set QName
+    transparentDefs :: S.Set QName,
+    -- | Module origins
+    moduleOrigins :: M.Map TopLevelModuleName LibName
   }
 
-newtype Config = Config
+data Config = Config
   { -- | Set of transparent definitions (already resolved)
-    transparentDefs :: S.Set QName
+    transparentDefs :: S.Set QName,
+    -- | Module origins
+    moduleOrigins :: M.Map TopLevelModuleName LibName
   }
 
 runTransl :: Config -> Transl a -> TCM a
@@ -89,6 +96,9 @@ reduceTransparentDef :: Term -> Transl Term
 reduceTransparentDef t = do
   ds <- asks \env -> OnlyReduceDefs env.transparentDefs
   locallyReduceDefs ds $ reduce t
+
+lookupModuleOrigin :: TopLevelModuleName -> Transl LibName
+lookupModuleOrigin x = asks \env -> env.moduleOrigins M.! x
 
 --------------------------------------------------------------------------------
 -- Erase level/size
