@@ -6,6 +6,7 @@ module Aegle.Cli.Search
 where
 
 import Aegle.Core.Isomorphism
+import Aegle.Core.Name
 import Aegle.Core.Term
 import Aegle.Database.Backend
 import Aegle.Database.Backend.PostgreSQL
@@ -87,14 +88,15 @@ putResult Result {..} =
     matchDoc Match {item = LibraryItem {..}, ..} =
       vsep
         [ annotate (bold <> color Green) do
-            "∙" <+> pretty canonicalName <+> colon <+> pretty (Unqualified originalSignature),
+            "∙" <+> pretty (ignoreLibName canonicalName) <+> colon <+> pretty (Unqualified originalSignature),
           indent 2
             $ vsep
             $ catMaybes
-              [ Just $ "◦ kind           :" <+> kindDoc kind,
+              [ Just $ "◦ library        :" <+> pretty canonicalName.libName,
+                Just $ "◦ kind           :" <+> kindDoc kind,
                 case reexportedAs of
                   [] -> Nothing
-                  _ -> Just $ "◦ re-exported as :" <+> hsep (punctuate comma $ pretty <$> reexportedAs),
+                  _ -> Just $ "◦ re-exported as :" <+> hsep (punctuate comma $ reexportedAs <&> \name -> pretty name.libName <+> pretty (ignoreLibName name)),
                 case iso of
                   Refl -> Nothing
                   _ -> Just $ "◦ isomorphism    :" <+> pretty iso,

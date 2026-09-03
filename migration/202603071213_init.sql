@@ -50,7 +50,8 @@ CREATE TABLE library_items (
 CREATE TABLE exports (
     id                   bigint            GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     canonical_name       text              NOT NULL,
-    export_as_qual       text              NOT NULL,
+    export_as_qual       text              NOT NULL, -- include lib name
+    export_as_qual_      text              NOT NULL, -- does not include lib name
     export_as_unqual     text              NOT NULL
 );
 
@@ -59,9 +60,9 @@ SELECT DISTINCT export_as_unqual, canonical_name
 FROM exports;
 
 CREATE MATERIALIZED VIEW exports_qual AS
-SELECT DISTINCT export_as_qual, canonical_name
+SELECT DISTINCT export_as_qual, export_as_qual_, canonical_name
 FROM exports;
 
-CREATE INDEX ON exports_qual   (export_as_qual, canonical_name);
+CREATE INDEX ON exports_qual   (export_as_qual_, canonical_name);
 CREATE INDEX ON exports_unqual (export_as_unqual, canonical_name);
 CREATE INDEX ON library_items  (result_head, result_head_top);

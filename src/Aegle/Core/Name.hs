@@ -4,7 +4,10 @@ module Aegle.Core.Name
     MetaVar (..),
     Name (..),
     ModuleName (..),
+    LibName (..),
     QName (..),
+    QName' (..),
+    ignoreLibName,
     PQName (..),
   )
 where
@@ -42,13 +45,29 @@ newtype ModuleName = ModuleName T.Text
   deriving stock (Generic)
   deriving newtype (Eq, Ord, Show, Hashable, IsString, Flat, NFData, Pretty)
 
--- | Qualified names
+-- | Library names
+newtype LibName = LibName T.Text
+  deriving stock (Generic)
+  deriving newtype (Eq, Ord, Show, Hashable, IsString, Flat, NFData, Pretty)
+
+-- | Fully-qualified names
 data QName = QName
+  { libName :: LibName,
+    moduleName :: ModuleName,
+    name :: Name
+  }
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving anyclass (Hashable, Flat, NFData)
+
+data QName' = QName'
   { moduleName :: ModuleName,
     name :: Name
   }
   deriving stock (Eq, Ord, Show, Generic)
   deriving anyclass (Hashable, Flat, NFData)
+
+ignoreLibName :: QName -> QName'
+ignoreLibName QName {..} = QName' {..}
 
 -- | Possibly-qualified names
 data PQName
@@ -73,9 +92,14 @@ instance Pretty MetaVar where
   pretty (MetaVar m) = "?" <> pretty m
 
 instance Pretty QName where
-  pretty QName {..} = pretty @T.Text (coerce moduleName <> "." <> coerce name)
+  pretty QName {..} =
+    pretty libName <> ";" <> pretty moduleName <> "." <> pretty name
+
+instance Pretty QName' where
+  pretty QName' {..} =
+    pretty moduleName <> "." <> pretty name
 
 instance Pretty PQName where
   pretty = \case
     Unqual x -> pretty x
-    Qual m x -> pretty (QName m x)
+    Qual m x -> pretty (QName' m x)

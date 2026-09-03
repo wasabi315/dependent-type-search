@@ -61,9 +61,23 @@ type Logger = "logName" :? T.Text -> P.Doc P.AnsiStyle -> IO ()
 index :: Config -> Logger -> TS.DbBuilder IO a -> IO a
 index Config {..} logger builder = do
   primLibConfig <- liftIO loadPrimLibConfig
-  Foldl.foldM
-    (builder `inStagesM` \b config -> indexOne config logger b)
-    (primLibConfig : libraryConfigs)
+  let libConfigs = primLibConfig : libraryConfigs
+  -- each library is traversed twice for lower memory residency
+  (transparentDefs, moduleOrigins) <-
+    flip foldMap libConfigs \config -> foldLibrarySources config.path do
+      (,)
+        <$> collectTransparentDefs logger config.transparentDefPolicy
+        <*> collectModuleOrigins
+  let config = Transl.Config {..}
+  builder <-
+    foldM
+      ( \builder libConfig -> foldLibrarySources libConfig.path do
+          Foldl.premapM (translate config) do
+            Foldl.hoists liftIO (Foldl.duplicateM builder)
+      )
+      builder
+      libConfigs
+  extractM builder
 
 loadPrimLibConfig :: IO LibraryConfig
 loadPrimLibConfig = do
@@ -71,47 +85,32 @@ loadPrimLibConfig = do
   let transparentDefPolicy = AllExcept mempty
   pure LibraryConfig {..}
 
-indexOne :: LibraryConfig -> Logger -> TS.DbBuilder IO a -> IO a
-indexOne config logger builder = withCurrentDirectory config.path do
-  (Right (_, opts), _) <- pure $ runOptM $ parseBackendOptions [] [] defaultOptions
-  runTCMTop' do
-    setCommandLineOptions =<< addTrustedExecutables opts
-    AgdaLibFile {_libIncludes = paths, _libPragmas = libOpts} <-
-      libToTCM (getAgdaLibFile config.path) >>= \case
-        [file] -> pure file
-        [] -> aegleError "No libraries found to index"
-        _ -> __IMPOSSIBLE__
-    checkAndSetOptionsFromPragma libOpts
-    importPrimitiveModules
+--------------------------------------------------------------------------------
+-- Module provenance
 
-    files <-
-      liftIO $ sort . map Find.infoPath <$> do
-        foldMap (findWithInfo (pure True) (hasAgdaExtension <$> Find.filePath)) paths
-
-    -- Files are parsed twice, but this lowers peak memory residency
-
-    transparentDefs <- collectTransparentDefs logger config.transparentDefPolicy files
-
-    buildDb transparentDefs files builder
+-- FIXME: false assumption: module name uniquely determins library name
+collectModuleOrigins :: Foldl.FoldM TCM Source [(ModuleName, LibName)]
+collectModuleOrigins = flip foldMapM pure \src ->
+  withModuleInfo src \modInfo -> do
+    -- cubical is not yet supported
+    ifJustM (useTC (stPragmaOptions . lensOptCubical)) (\_ -> pure mempty) do
+      let modName = modInfo.miInterface.iModuleName
+          libName = case src.srcProjectLibs of
+            [libFile] -> libFile._libName
+            _ -> error "TODO: collectModuleOrigins"
+      pure [(modName, libName)]
 
 --------------------------------------------------------------------------------
 -- Transparent definitions
 
-collectTransparentDefs :: Logger -> TransparentDefPolicy -> [FilePath] -> TCM (S.Set QName)
-collectTransparentDefs logger policy files =
-  flip Foldl.foldM files
-    $ Foldl.premapM parseFile
-    $ decideAllTransparencyFold logger policy
-
-decideAllTransparencyFold ::
+collectTransparentDefs ::
   Logger ->
   TransparentDefPolicy ->
   Foldl.FoldM TCM Source (S.Set QName)
-decideAllTransparencyFold _ None = mempty
-decideAllTransparencyFold logger (AllExcept opaques) = Foldl.FoldM step (pure mempty) done
-  where
-    step acc src = (acc <>) <$!> decideAllTransparency logger opaques src
-    done (transps, excluded) = do
+collectTransparentDefs logger = \case
+  None -> mempty
+  AllExcept opaques ->
+    foldMapM (decideAllTransparency logger opaques) \(transps, excluded) -> do
       let unmatched = opaques S.\\ S.map (T.pack . prettyShow) excluded
       unless (S.null unmatched) do
         aegleWarning
@@ -126,6 +125,7 @@ decideAllTransparency ::
 decideAllTransparency logger opaques src = withModuleInfo src \modInfo -> do
   -- cubical is not yet supported
   ifJustM (useTC (stPragmaOptions . lensOptCubical)) (\_ -> pure mempty) do
+    -- TODO: share pubNames with decideNameOriginFold?
     let pubNames = collectPublicNames modInfo.miInterface.iInsideScope
     flip foldMap pubNames \pubName -> do
       def <- getConstInfo pubName
@@ -163,22 +163,36 @@ decideAllTransparency logger opaques src = withModuleInfo src \modInfo -> do
           )
 
 --------------------------------------------------------------------------------
--- Indexing
+-- Translation
 
-buildDb :: S.Set QName -> [FilePath] -> TS.DbBuilder IO a -> TCM a
-buildDb transparentDefs files builder =
-  flip Foldl.foldM files
-    $ Foldl.premapM (parseFile >=> extractFragment transparentDefs)
-    $ Foldl.hoists liftIO builder
-
-extractFragment :: S.Set QName -> Source -> TCM TS.LibraryFragment
-extractFragment transparentDefs src = withModuleInfo src \modInfo -> do
+translate :: Transl.Config -> Source -> TCM TS.LibraryFragment
+translate config src = withModuleInfo src \modInfo -> do
   -- cubical is not yet supported
   ifJustM (useTC (stPragmaOptions . lensOptCubical)) (\_ -> pure mempty) do
-    runTransl Transl.Config {..} do
+    runTransl config do
       translateScope modInfo.miInterface.iInsideScope
 
 --------------------------------------------------------------------------------
+-- Utils
+
+foldLibrarySources :: FilePath -> Foldl.FoldM TCM Source r -> IO r
+foldLibrarySources libPath fold = withCurrentDirectory libPath do
+  (Right (_, opts), _) <- pure $ runOptM $ parseBackendOptions [] [] defaultOptions
+  runTCMTop' do
+    setCommandLineOptions =<< addTrustedExecutables opts
+    AgdaLibFile {_libIncludes = paths, _libPragmas = libOpts} <-
+      libToTCM (getAgdaLibFile libPath) >>= \case
+        [file] -> pure file
+        [] -> aegleError "No libraries found to index"
+        _ -> __IMPOSSIBLE__
+    checkAndSetOptionsFromPragma libOpts
+    importPrimitiveModules
+
+    files <-
+      liftIO $ sort . map Find.infoPath <$> do
+        foldMap (findWithInfo (pure True) (hasAgdaExtension <$> Find.filePath)) paths
+
+    flip Foldl.foldM files $ Foldl.premapM parseFile fold
 
 parseFile :: FilePath -> TCM Source
 parseFile file = do
@@ -195,10 +209,8 @@ withModuleInfo src act = do
       setInterface modInfo.miInterface
       act modInfo
 
-inStagesM ::
-  (Applicative m) =>
-  Foldl.FoldM m a r ->
-  (forall x. Foldl.FoldM m a x -> b -> m x) ->
-  Foldl.FoldM m b r
-Foldl.FoldM step begin done `inStagesM` runStage =
-  Foldl.FoldM (\x -> runStage (Foldl.FoldM step (pure x) pure)) begin done
+extractM :: (Monad m) => Foldl.FoldM m a r -> m r
+extractM (Foldl.FoldM _ begin done) = begin >>= done
+
+foldMapM :: (Monad m, Monoid w) => (a -> m w) -> (w -> m b) -> Foldl.FoldM m a b
+foldMapM f g = Foldl.FoldM (\acc x -> (acc <>) <$!> f x) (pure mempty) g

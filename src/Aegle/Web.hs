@@ -255,17 +255,24 @@ searchUI dbReader timeout = \query -> do
                 " "
               span_ [class_ "match-main"] do
                 a_ [hrefDefSite moduleName position] do
-                  strong_ $ prettyHtml canonicalName
+                  strong_ $ prettyHtml (ignoreLibName canonicalName)
                 " :"
                 wbr_ []
                 " "
                 prettyHtml $ Unqualified originalSignature
             div_ [class_ "match-details"] do
+              p_ [class_ "detail-row"] do
+                strong_ "From: "
+                code_ $ prettyHtml canonicalName.libName
               unless (null reexportedAs) do
                 p_ [class_ "detail-row"] do
                   strong_ "Re-exported as: "
                   sequence_ $ intersperse ", " do
-                    code_ . prettyHtml <$> reexportedAs
+                    reexportedAs <&> \name ->
+                      code_ do
+                        prettyHtml name.libName
+                        " "
+                        prettyHtml (ignoreLibName name)
               p_ [class_ "detail-row"] do
                 strong_ "Solution: "
                 code_ $ prettyHtml $ Unqualified solution
