@@ -25,16 +25,12 @@ translateScope scopeInfo = do
   definitions <- forMaybe (S.toList pubNames) \aname -> do
     def <- getConstInfo aname
     translateDefinition def
-  let reexports =
-        collectReexportNames scopeInfo
-          <&> \(cname, aname) -> do
-            let exportAs =
-                  translateConcreteQName
-                    (translateModuleName scopeInfo._scopeCurrent)
-                    cname
-                canonicalName = translateQName aname
-            TS.Export {..}
-      exports =
+  libName <- translateLibName <$> lookupModuleOrigin scopeInfo._scopeCurrent
+  reexports <- for (collectReexportNames scopeInfo) \(cname, aname) -> do
+    exportAs <- translateConcreteQName libName cname
+    canonicalName <- translateQName aname
+    pure TS.Export {..}
+  let exports =
         fmap (\def -> TS.Export {canonicalName = def.name, exportAs = def.name}) definitions
           ++ reexports
   pure $! TS.LibraryFragment {..}
@@ -55,8 +51,10 @@ collectPublicNames scope =
 
 collectReexportNames :: ScopeInfo -> [(C.QName, QName)]
 collectReexportNames scopeInfo = do
-  let scope = scopeInfo._scopeModules M.! scopeInfo._scopeCurrent
+  let modul = scopeInfo._scopeCurrent
+      scope = scopeInfo._scopeModules M.! scopeInfo._scopeCurrent
   (cname, anames) <- M.toList $ namesInScope @AbstractName [ImportedNS] scope
+  let cname' = C.qualify (mnameToConcrete modul) cname
   aname <- NE.toList anames
   guard $ isNameOfTypedThing aname
-  pure (C.QName cname, useCanonical aname.anameName)
+  pure (cname', useCanonical aname.anameName)

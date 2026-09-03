@@ -69,7 +69,8 @@ data DbLibraryItemRow = DbLibraryItemRow
 
 data DbExportRow = DbExportRow
   { canonicalName :: T.Text,
-    exportAsQual :: T.Text,
+    exportAsQual :: T.Text, -- includes lib name
+    exportAsQual' :: T.Text, -- does not include lib name
     exportAsUnqual :: T.Text
   }
 
@@ -77,17 +78,28 @@ data DbExportRow = DbExportRow
 -- Encode/decode
 
 encodeQName :: QName -> T.Text
-encodeQName (QName m x) = coerce m <> "." <> coerce x
+encodeQName (QName l m x) = coerce l <> ";" <> coerce m <> "." <> coerce x
 
 decodeQName :: T.Text -> Either T.Text QName
 decodeQName txt = do
+  let (lib, txt') = second T.tail $ T.breakOn ";" txt
+      (mod, name) = first T.init $ T.breakOnEnd "." txt'
+  when (T.null mod || T.null name) do
+    throwError $ "Bad QName: " <> txt
+  pure $ QName (coerce lib) (coerce mod) (coerce name)
+
+encodeQName' :: QName' -> T.Text
+encodeQName' (QName' m x) = coerce m <> "." <> coerce x
+
+decodeQName' :: T.Text -> Either T.Text QName'
+decodeQName' txt = do
   let (mod, name) = first T.init $ T.breakOnEnd "." txt
   when (T.null mod || T.null name) do
     throwError $ "Bad QName: " <> txt
-  pure $ QName (coerce mod) (coerce name)
+  pure $ QName' (coerce mod) (coerce name)
 
-nonNullQNameEnc :: Encoders.NullableOrNot Encoders.Value QName
-nonNullQNameEnc = Encoders.nonNullable $ encodeQName >$< Encoders.text
+nonNullQName'Enc :: Encoders.NullableOrNot Encoders.Value QName'
+nonNullQName'Enc = Encoders.nonNullable $ encodeQName' >$< Encoders.text
 
 nonNullQNameDec :: Decoders.NullableOrNot Decoders.Value QName
 nonNullQNameDec = Decoders.nonNullable $ Decoders.refine decodeQName Decoders.text
@@ -224,17 +236,20 @@ insertManyExports = lmap encodeExports do
     INSERT INTO exports
       ( canonical_name
       , export_as_qual
+      , export_as_qual_
       , export_as_unqual )
     SELECT * FROM UNNEST
       ( $1 :: text[]
       , $2 :: text[]
-      , $3 :: text[] )
+      , $3 :: text[]
+      , $4 :: text[] )
   |]
   where
-    encodeExports = V.unzip3 . V.map (adapt . encodeExport) . V.fromList
+    encodeExports = V.unzip4 . V.map (adapt . encodeExport) . V.fromList
     adapt DbExportRow {..} =
       ( canonicalName,
         exportAsQual,
+        exportAsQual',
         exportAsUnqual
       )
 
@@ -259,6 +274,7 @@ encodeExport export = DbExportRow {..}
   where
     canonicalName = encodeQName export.canonicalName
     exportAsQual = encodeQName export.exportAs
+    exportAsQual' = encodeQName' (ignoreLibName export.exportAs)
     exportAsUnqual = coerce export.exportAs.name
 
 -- Health check
@@ -316,24 +332,24 @@ resolveNames exe names = do
       do Pipeline.statement qualNames loadReferentQual
       do Pipeline.statement unqualNames loadReferentUnqual
   pure $! flip fmapDefault names \case
-    Qual m x -> M.findWithDefault [] (QName m x) resolQual
+    Qual m x -> M.findWithDefault [] (QName' m x) resolQual
     Unqual x -> M.findWithDefault [] x resolUnqual
 
-loadReferentQual :: Statement [QName] (M.Map QName [Referent])
+loadReferentQual :: Statement [QName'] (M.Map QName' [Referent])
 loadReferentQual = lmap encodeQNames $ refineResult decodeReferents do
   [foldStatement|
-    SELECT e.export_as_qual :: text, e.canonical_name :: text, i.body :: bytea?
+    SELECT e.export_as_qual_ :: text, e.canonical_name :: text, i.body :: bytea?
     FROM library_items i
     JOIN exports_qual e
       ON i.canonical_name = e.canonical_name
-    WHERE e.export_as_qual = ANY($1 :: text[])
+    WHERE e.export_as_qual_ = ANY($1 :: text[])
   |]
     groupReferents
   where
-    encodeQNames = V.map encodeQName . V.fromList
+    encodeQNames = V.map encodeQName' . V.fromList
     decodeReferents =
       traverse (traverse decodeReferent)
-        . M.mapKeysMonotonic (fromRight (impossible "loadReferentQual.decodeReferents") . decodeQName)
+        . M.mapKeysMonotonic (fromRight (impossible "loadReferentQual.decodeReferents") . decodeQName')
     groupReferents =
       lmap (\(exportAs, canonName, body) -> (exportAs, (canonName, body))) do
         Foldl.foldByKeyMap Foldl.list
@@ -478,9 +494,9 @@ loadCandidatesNE a names compats =
         parS
           $ """
             SELECT canonical_name FROM exports_qual
-            WHERE export_as_qual =
+            WHERE export_as_qual_ =
             """
-          <> Snippet.encoderAndParam nonNullQNameEnc (QName m x)
+          <> Snippet.encoderAndParam nonNullQName'Enc (QName' m x)
       Unqual x ->
         parS
           $ """
@@ -519,9 +535,9 @@ sepBy xs sep = sconcat (NE.intersperse sep xs)
 --------------------------------------------------------------------------------
 -- Utils
 
-pqNameToEither :: PQName -> Either QName Name
+pqNameToEither :: PQName -> Either QName' Name
 pqNameToEither = \case
-  Qual m x -> Left (QName m x)
+  Qual m x -> Left (QName' m x)
   Unqual x -> Right x
 
 unzip12 ::

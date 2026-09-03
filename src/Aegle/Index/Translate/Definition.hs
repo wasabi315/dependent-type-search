@@ -49,8 +49,8 @@ getKind = \case
 
 translateToAxiom :: Definition -> Transl TS.Definition
 translateToAxiom def = do
-  let name = translateQName def.defName
-      kind = getKind def.theDef
+  name <- translateQName def.defName
+  let kind = getKind def.theDef
       (moduleName, position) = bindingSite def.defName
   signature <- translateType def.defType
   originalSignature <- withAllDefsOpaque $ translateType def.defType
@@ -58,8 +58,8 @@ translateToAxiom def = do
 
 translateFunDef :: Definition -> Transl TS.Definition
 translateFunDef def = do
-  let name = translateQName def.defName
-      (moduleName, position) = bindingSite def.defName
+  name <- translateQName def.defName
+  let (moduleName, position) = bindingSite def.defName
   signature <- translateType def.defType
   originalSignature <- withAllDefsOpaque $ translateType def.defType
   body <- ifM

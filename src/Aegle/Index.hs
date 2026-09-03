@@ -29,7 +29,6 @@ import Agda.Utils.IO.Directory
 import Agda.Utils.Impossible (__IMPOSSIBLE__)
 import Agda.Utils.Maybe (ifJustM)
 import Control.Foldl qualified as Foldl
-import Data.Map.Strict qualified as M
 import Data.Set qualified as S
 import Data.Text qualified as T
 import Prettyprinter qualified as P
@@ -89,15 +88,17 @@ loadPrimLibConfig = do
 --------------------------------------------------------------------------------
 -- Module provenance
 
-collectModuleOrigins :: Foldl.FoldM TCM Source (M.Map TopLevelModuleName LibName)
+-- FIXME: false assumption: module name uniquely determins library name
+collectModuleOrigins :: Foldl.FoldM TCM Source [(ModuleName, LibName)]
 collectModuleOrigins = flip foldMapM pure \src ->
-  withModuleInfo src \_ -> do
+  withModuleInfo src \modInfo -> do
     -- cubical is not yet supported
     ifJustM (useTC (stPragmaOptions . lensOptCubical)) (\_ -> pure mempty) do
-      let libName = case src.srcProjectLibs of
+      let modName = modInfo.miInterface.iModuleName
+          libName = case src.srcProjectLibs of
             [libFile] -> libFile._libName
-            _ -> error "TODO: decideNameOrigin"
-      pure $! M.singleton src.srcModuleName libName
+            _ -> error "TODO: collectModuleOrigins"
+      pure [(modName, libName)]
 
 --------------------------------------------------------------------------------
 -- Transparent definitions
