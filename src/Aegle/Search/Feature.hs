@@ -72,7 +72,7 @@ resultHead = fromJust . resultHead' id (const $ impossible "resultHead")
 
 -- | The input type must be closed.
 resultHeadQ :: Type -> Maybe (ResultHead PQName)
-resultHeadQ = resultHead' (const $ impossible "resultHeadQ") id
+resultHeadQ = resultHead' (\(QName _ m x) -> Qual m x) id
 
 data ResultHeadCompat n
   = IsVar
