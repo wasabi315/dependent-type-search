@@ -53,7 +53,7 @@ translateConcreteQName lib = go ""
   where
     go acc = \case
       C.QName x -> do
-        let m = TS.ModuleName acc
+        let m = TS.ModuleName $ T.tail acc -- to remove initial dot
             x' = translateName x
         pure $ TS.QName lib m x'
       C.Qual m x -> go (acc <> "." <> coerce (translateName m)) x
