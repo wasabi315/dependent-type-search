@@ -13,7 +13,6 @@ import Aegle.Prelude
 import Aegle.Search.Feature
 import Control.Foldl qualified as Foldl
 import Data.Map.Strict qualified as M
-import Data.Ord
 import Data.Set qualified as S
 import Data.Text qualified as T
 import Deriving.Aeson

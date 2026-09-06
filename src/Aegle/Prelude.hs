@@ -24,6 +24,7 @@ module Aegle.Prelude
     module Data.Functor.Identity,
     module Data.Maybe,
     module Data.Monoid,
+    module Data.Ord,
     module Data.Semigroup,
     module Data.String,
     module Data.Traversable,
@@ -107,6 +108,7 @@ import Data.Hashable
 import Data.List (elemIndex, intersperse, partition, sort, sortOn, (!?))
 import Data.Maybe (fromJust, fromMaybe, isJust, isNothing, listToMaybe, maybe, maybeToList)
 import Data.Monoid hiding (First (..), Last (..))
+import Data.Ord
 import Data.Profunctor
 import Data.Semigroup hiding (Arg (..))
 import Data.String

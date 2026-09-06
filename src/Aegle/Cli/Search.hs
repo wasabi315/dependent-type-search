@@ -13,7 +13,6 @@ import Aegle.Database.Backend.PostgreSQL
 import Aegle.Prelude
 import Aegle.Search as Search
 import Control.Exception
-import Data.Ord
 import Data.Text qualified as T
 import Hasql.Connection
 import Hasql.Connection.Setting

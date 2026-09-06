@@ -60,13 +60,16 @@ liftPRen PRen {..} =
       ren = IM.insert (coerce cod) dom ren,
       ..
     }
+{-# INLINE liftPRen #-}
 
 -- | @PRen Γ Δ → PRen Γ (Δ, x : A)@.
 skipPRen :: PartialRenaming -> PartialRenaming
-skipPRen = #cod +~ 1
+skipPRen PRen {..} = PRen {cod = cod + 1, ..}
+{-# INLINE skipPRen #-}
 
 skipPRenN :: Level -> PartialRenaming -> PartialRenaming
-skipPRenN n = #cod +~ n
+skipPRenN n PRen {..} = PRen {cod = cod + n, ..}
+{-# INLINE skipPRenN #-}
 
 -- Monad for pruning
 type Prune = StateT MetaCtx Maybe

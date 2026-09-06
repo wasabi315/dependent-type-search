@@ -1,6 +1,7 @@
 module Aegle.Core.GenName
   ( genName,
     genModuleName,
+    genLibName,
     genQName,
     genPQName,
   )
@@ -26,8 +27,11 @@ genName = Name <$> genIdent
 genModuleName :: Gen ModuleName
 genModuleName = ModuleName <$> genIdent
 
+genLibName :: Gen LibName
+genLibName = LibName <$> genIdent
+
 genQName :: Gen QName
-genQName = QName <$> genModuleName <*> genName
+genQName = QName <$> genLibName <*> genModuleName <*> genName
 
 genPQName :: Gen PQName
 genPQName =

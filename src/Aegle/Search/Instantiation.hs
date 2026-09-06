@@ -67,13 +67,12 @@ check mctx ctx query itemName item =
   asum
     [ do
         (item, inst, mctx) <- possibleInstantiation mctx ctx item (VOpaque itemName SNil)
-        (i, i', mctx) <- IStr.maybeToStream $ listToMaybe do
+        (i, mctx) <- IStr.maybeToStream $ listToMaybe do
           (i, i', mctx) <- matchIso ctx.topEnv mctx ctx.level ! #pat item ! #term query
           guard $ allMetaSolved mctx
-          pure (i, i', mctx)
-        let j = i <> sym i'
-            ~sol = closeTm ctx.locals $ quote mctx ctx.level $ transport j inst
-        pure (j, sol),
+          pure $! i <> sym i' // mctx
+        let ~sol = closeTm ctx.locals $ quote mctx ctx.level $ transport i inst
+        pure (i, sol),
       IStr.Later do
         (query, mctx) <- choose $ forceNondet mctx query
         case query of
