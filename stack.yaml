@@ -6,6 +6,7 @@ packages:
   - aegle-core
   - aegle-index
   - aegle-postgres
+  - aegle-search
   - aegle-app
 
 extra-deps:

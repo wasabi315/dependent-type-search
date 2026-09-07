@@ -6,6 +6,7 @@ module Aegle.Core.Name
     LibName (..),
     QName (..),
     PQName (..),
+    levelToIndex,
   )
 where
 
@@ -26,6 +27,9 @@ newtype Index = Index Int
 newtype Level = Level Int
   deriving stock (Generic)
   deriving newtype (Eq, Ord, Num, Show, Hashable, Enum, Flat, NFData)
+
+levelToIndex :: Level -> Level -> Index
+levelToIndex (Level l) (Level x) = Index (l - x - 1)
 
 -- | Names
 newtype Name = Name T.Text

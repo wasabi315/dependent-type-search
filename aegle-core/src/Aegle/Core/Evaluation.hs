@@ -58,7 +58,7 @@ data VQuant = VQuant Name VType (Value -> VType)
 
 type Env = [Value]
 
-pattern (:>) :: Env -> Value -> Env
+pattern (:>) :: [a] -> a -> [a]
 pattern e :> v <- v : e
   where
     e :> ~v = v : e
@@ -123,9 +123,6 @@ eval env = \case
   Pair t u -> VPair (eval env t) (eval env u)
   Proj1 t -> vProj1 (eval env t)
   Proj2 t -> vProj2 (eval env t)
-
-levelToIndex :: Level -> Level -> Index
-levelToIndex (Level l) (Level x) = Index (l - x - 1)
 
 quote :: Level -> Value -> Term
 quote l = \case
