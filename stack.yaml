@@ -3,6 +3,7 @@ compiler: ghc-9.12.2
 compiler-check: match-exact
 
 packages:
+  - aegle-core
   - aegle-app
 
 extra-deps:
