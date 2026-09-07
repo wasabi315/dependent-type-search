@@ -13,7 +13,7 @@ import Hasql.Connection.Setting.Connection qualified as ConnSetting
 import Hasql.Connection.Setting.Connection.Param
 import Hasql.Pool.Config qualified as Pool
 import OptEnvConf hiding (Command)
-import Paths_aegle
+import Paths_aegle_app
 
 --------------------------------------------------------------------------------
 -- Options

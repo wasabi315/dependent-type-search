@@ -17,7 +17,7 @@ import Lucid.Servant
 import Network.URI.Encode qualified
 import Network.Wai.Handler.Warp qualified as Warp
 import Network.Wai.Middleware.RequestLogger
-import Paths_aegle
+import Paths_aegle_app
 import Prettyprinter
 import Servant
 import Servant.HTML.Lucid

@@ -4,7 +4,7 @@ cabal-version: 2.2
 --
 -- see: https://github.com/sol/hpack
 
-name:           aegle
+name:           aegle-app
 version:        0.1.0
 synopsis:       Type-based library search for Agda
 description:    Please see the README on GitHub at <https://github.com/wasabi315/aegle#readme>
@@ -15,11 +15,7 @@ author:         Satoshi Takimoto
 maintainer:     wasabi.nvim.st@gmail.com
 copyright:      2016 András Kovács, 2025 Satoshi Takimoto
 license:        BSD-3-Clause
-license-file:   LICENSE
 build-type:     Simple
-extra-source-files:
-    README.md
-    CHANGELOG.md
 data-files:
     migration/202603071213_init.sql
     static/style.css
@@ -81,9 +77,9 @@ library
       Data.Set.NonEmpty.Extra
       Hasql.Executor
   other-modules:
-      Paths_aegle
+      Paths_aegle_app
   autogen-modules:
-      Paths_aegle
+      Paths_aegle_app
   hs-source-dirs:
       src
   default-extensions:
@@ -190,9 +186,9 @@ library
 executable aegle
   main-is: Main.hs
   other-modules:
-      Paths_aegle
+      Paths_aegle_app
   autogen-modules:
-      Paths_aegle
+      Paths_aegle_app
   hs-source-dirs:
       app
   default-extensions:
@@ -242,7 +238,7 @@ executable aegle
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -O2 -funbox-strict-fields -optP-Wno-nonportable-include-path
   build-depends:
       Agda
-    , aegle
+    , aegle-app
     , aeson
     , base >=4.7 && <5
     , bytestring
@@ -307,9 +303,9 @@ test-suite aegle-test
   other-modules:
       Aegle.Core.GenName
       Aegle.Search.TestFeature
-      Paths_aegle
+      Paths_aegle_app
   autogen-modules:
-      Paths_aegle
+      Paths_aegle_app
   hs-source-dirs:
       test
   default-extensions:
@@ -359,7 +355,7 @@ test-suite aegle-test
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -O2 -funbox-strict-fields -optP-Wno-nonportable-include-path
   build-depends:
       Agda
-    , aegle
+    , aegle-app
     , aeson
     , base >=4.7 && <5
     , bytestring

@@ -1,14 +1,10 @@
-name: aegle
+name: aegle-app
 version: 0.1.0
 github: wasabi315/aegle
 license: BSD-3-Clause
 author: Satoshi Takimoto
 maintainer: wasabi.nvim.st@gmail.com
 copyright: 2016 András Kovács, 2025 Satoshi Takimoto
-
-extra-source-files:
-  - README.md
-  - CHANGELOG.md
 
 data-files:
   - migration/*.sql
@@ -168,7 +164,7 @@ executables:
     main: Main.hs
     source-dirs: app
     dependencies:
-      - aegle
+      - aegle-app
     when:
       - condition: flag(debug)
         then:
@@ -185,7 +181,7 @@ tests:
     main: Main.hs
     source-dirs: test
     dependencies:
-      - aegle
+      - aegle-app
       - tasty
       - hedgehog
       - tasty-hedgehog

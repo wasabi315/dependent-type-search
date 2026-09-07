@@ -35,7 +35,7 @@ import Hasql.Session
 import Hasql.Statement
 import Hasql.TH
 import Hasql.Transaction.Sessions
-import Paths_aegle
+import Paths_aegle_app
 import System.FilePath
 
 --------------------------------------------------------------------------------
