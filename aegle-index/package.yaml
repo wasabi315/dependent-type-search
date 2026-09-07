@@ -1,0 +1,96 @@
+name: aegle-index
+version: 0.1.0
+github: wasabi315/aegle
+license: BSD-3-Clause
+author: Satoshi Takimoto
+maintainer: wasabi.nvim.st@gmail.com
+copyright: 2016 András Kovács, 2025 Satoshi Takimoto
+
+synopsis: Type-based library search for Agda
+category: Language
+
+description: Please see the README on GitHub at <https://github.com/wasabi315/aegle#readme>
+
+dependencies:
+  - base >= 4.7 && < 5
+  - aegle-core
+  - Agda
+  - containers
+  - deriving-aeson
+  - directory
+  - filemanip
+  - foldl
+  - prettyprinter
+  - prettyprinter-ansi-terminal
+  - text
+
+language: GHC2024
+
+default-extensions:
+  - AllowAmbiguousTypes
+  - BlockArguments
+  - CPP
+  - DerivingVia
+  - DeriveAnyClass
+  - DuplicateRecordFields
+  - MultilineStrings
+  - MultiParamTypeClasses
+  - NoFieldSelectors
+  - NoImplicitPrelude
+  - OrPatterns
+  - OverloadedLabels
+  - OverloadedStrings
+  - OverloadedRecordDot
+  - PatternSynonyms
+  - QualifiedDo
+  - RecordWildCards
+  - Strict
+  - TypeFamilies
+  - ViewPatterns
+
+ghc-options:
+  - -Wall
+  - -Wcompat
+  - -Widentities
+  - -Wincomplete-record-updates
+  - -Wincomplete-uni-patterns
+  - -Wmissing-deriving-strategies
+  - -Wmissing-export-lists
+  - -Wmissing-home-modules
+  - -Wpartial-fields
+  - -Wredundant-constraints
+  - -Wno-name-shadowing
+  - -O2
+  - -funbox-strict-fields
+  - -optP-Wno-nonportable-include-path
+
+flags:
+  debug:
+    description: turn on debug traces
+    default: false
+    manual: true
+  dump:
+    description: dump core
+    default: false
+    manual: true
+  llvm:
+    description: use llvm for codegen
+    default: false
+    manual: true
+
+when:
+  - condition: flag(debug)
+    cpp-options:
+      - -DDEBUG
+  - condition: flag(dump)
+    ghc-options:
+      - -ddump-simpl
+      - -dsuppress-all
+      - -dno-suppress-type-signatures
+      - -ddump-to-file
+  - condition: flag(llvm)
+    ghc-options:
+      - -fllvm
+
+library:
+  source-dirs: src

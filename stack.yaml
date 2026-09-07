@@ -3,7 +3,11 @@ compiler: ghc-9.12.2
 compiler-check: match-exact
 
 packages:
-  - .
+  - aegle-core
+  - aegle-index
+  - aegle-postgres
+  - aegle-search
+  - aegle-app
 
 extra-deps:
   - named-0.4.0.0
