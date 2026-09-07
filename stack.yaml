@@ -5,6 +5,7 @@ compiler-check: match-exact
 packages:
   - aegle-core
   - aegle-index
+  - aegle-postgres
   - aegle-app
 
 extra-deps:
