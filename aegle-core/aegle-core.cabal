@@ -74,12 +74,9 @@ library
       ViewPatterns
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -O2 -funbox-strict-fields -optP-Wno-nonportable-include-path
   build-depends:
-      aeson
-    , base >=4.7 && <5
-    , bytestring
+      base >=4.7 && <5
     , containers
     , deepseq
-    , deriving-aeson
     , flat
     , foldl
     , generic-lens
@@ -87,7 +84,6 @@ library
     , microlens-platform
     , mtl
     , named
-    , nonempty-containers
     , prettyprinter
     , profunctors
     , text

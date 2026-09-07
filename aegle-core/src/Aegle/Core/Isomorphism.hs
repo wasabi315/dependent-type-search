@@ -10,6 +10,7 @@ module Aegle.Core.Isomorphism
     curry,
     assoc,
     quoteIso,
+    nfIso,
   )
 where
 
@@ -168,13 +169,13 @@ assoc = go Refl
         go (i <> Assoc) $ VQuant y a1 \ ~u -> VSigma x (a2 u) \ ~v -> b (VPair u v)
       a -> (VQuant x a b, i)
 
-quoteIso :: Level -> Value -> (Term, Iso)
+quoteIso :: Level -> VType -> (Type, Iso)
 quoteIso l = \case
   VPi x a b -> quoteIsoPi l (VQuant x a b)
   VSigma x a b -> quoteIsoSigma l (VQuant x a b)
   v -> quote l v // mempty
 
-quoteIsoPi :: Level -> VQuant -> (Term, Iso)
+quoteIsoPi :: Level -> VQuant -> (Type, Iso)
 quoteIsoPi l pi = do
   let (VQuant x a b, i) = curry pi
       (ta, ia) = quoteIso l a
@@ -187,3 +188,6 @@ quoteIsoSigma l sig = do
       (ta, ia) = quoteIso l a
       (tb, ib) = quoteIso (l + 1) $ b (transportInv ia (VVar l))
   Sigma x ta tb // i <> sigmaCongL ia <> sigmaCongR ib
+
+nfIso :: Env -> Type -> (Type, Iso)
+nfIso env t = quoteIso (Level $ length env) (eval env t)

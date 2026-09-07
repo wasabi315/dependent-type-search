@@ -1,5 +1,24 @@
-module Aegle.Database.Feature where
+module Aegle.Database.Feature
+  ( Feature (..),
+    ResultHead (..),
+    ResultHeadCompat (..),
+    Polymorphic (..),
+    PolymorphicCompat (..),
+    Arity (..),
+    ArityCompat (..),
+    AllFeature (..),
+    AllFeatureCompat (..),
+    FilterFeature (..),
+    FilterFeatureCompat (..),
+    resultHead,
+    polymorphic,
+    arity,
+    allFeature,
+  )
+where
 
+import Aegle.Core.Name
+import Aegle.Core.Term
 import Aegle.Prelude
 import Data.Generics.Product.Subtype
 
@@ -9,7 +28,12 @@ import Data.Generics.Product.Subtype
 class Feature a where
   -- | @compatible query db@ means that a definition with feature @db@ is a
   -- possible candidate for a search query with feature @query@.
-  -- Should be a preorder.
+  -- Should be a preorder:
+  --   * Reflexivity:  @'compatible' ! #query x ! #db x = True@
+  --   * Transitivity: @'compatible' ! #query x ! #db y = True@ and
+  --                   @'compatible' ! #query y ! #db z = True@ implies
+  --                   @'compatible' ! #query x ! #db z = True@.
+  -- Should satisfy @'compatible' = 'matchesCompat' . 'toCompat'@.
   compatible :: "query" :! a -> "db" :! a -> Bool
   compatible = matchesCompat . toCompat
   {-# INLINE compatible #-}
@@ -22,8 +46,8 @@ class Feature a where
   matchesCompat :: Compat a -> "db" :! a -> Bool
 
 --------------------------------------------------------------------------------
--- Result Head
 
+-- | Result head feature
 data ResultHead n
   = RHU
   | RHVar
@@ -64,9 +88,8 @@ instance (Eq n) => Feature (ResultHead n) where
   {-# INLINE matchesCompat #-}
 
 --------------------------------------------------------------------------------
--- Polymorphic
 
--- | Polymorphic feature.
+-- | Polymorphic feature
 data Polymorphic = Monomorphic | Polymorphic
   deriving stock (Eq, Ord, Show, Enum, Bounded, Generic)
 
@@ -90,7 +113,7 @@ instance Feature Polymorphic where
 
 --------------------------------------------------------------------------------
 
--- | Arity feature.
+-- | Arity feature
 data Arity = Arity
   { hasVar :: Bool,
     arity :: Int
@@ -116,6 +139,7 @@ instance Feature Arity where
 
 --------------------------------------------------------------------------------
 
+-- | All features to be indexed
 data AllFeature n = AllFeature
   { resultHead :: ResultHead n,
     polymorphic :: Polymorphic,
@@ -149,6 +173,7 @@ instance (Eq n) => Feature (AllFeature n) where
 
 --------------------------------------------------------------------------------
 
+-- | Features used for filtering. Subset of 'AllFeature'.
 data FilterFeature n = FilterFeature
   { resultHead :: ResultHead n,
     polymorphic :: Polymorphic,
@@ -182,3 +207,49 @@ instance (Eq n) => Feature (FilterFeature n) where
 
 _subWitness :: Lens' (AllFeature n) (FilterFeature n)
 _subWitness = super
+
+--------------------------------------------------------------------------------
+
+-- | The input type must be closed and well-formed. Doesn't perform any reduction.
+resultHead :: Type -> ResultHead QName
+resultHead t = case headTerm (returnType t) of
+  U -> RHU
+  Var {} -> RHVar
+  Opaque x -> RHTop x
+  Sigma {} -> RHSigma
+  Proj1 {} -> RHProj1
+  Proj2 {} -> RHProj2
+  Lam {}; Pair {} -> error "resultHead: not a type"
+  Pi {}; App {} -> impossible "resultHead"
+
+-- | The input type must be closed. Doesn't perform any reduction.
+polymorphic :: Type -> Polymorphic
+polymorphic = \case
+  Pi _ a _ | endsInSort a -> Polymorphic
+  Pi _ _ b -> polymorphic b
+  _ -> Monomorphic
+
+-- | The input type must be closed. Doesn't perform any reduction.
+arity :: Type -> Arity
+arity = go [] False 0
+  where
+    go ctx hasVar arity = \case
+      Pi _ a b -> case headTerm a of
+        Var i
+          | endsInSort (ctx !! coerce i) ->
+              go (a : ctx) True (arity + 1) b
+        _ ->
+          go (a : ctx) hasVar (arity + 1) b
+      a -> case headTerm a of
+        Var i
+          | endsInSort (ctx !! coerce i) ->
+              Arity {hasVar = True, ..}
+        _ -> Arity {..}
+
+allFeature :: Type -> AllFeature QName
+allFeature typ =
+  AllFeature
+    { resultHead = resultHead typ,
+      polymorphic = polymorphic typ,
+      arity = arity typ
+    }

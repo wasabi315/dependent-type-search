@@ -13,11 +13,8 @@ description: Please see the README on GitHub at <https://github.com/wasabi315/ae
 
 dependencies:
   - base >= 4.7 && < 5
-  - aeson
-  - bytestring
   - containers
   - deepseq
-  - deriving-aeson
   - flat
   - foldl
   - generic-lens
@@ -25,7 +22,6 @@ dependencies:
   - microlens-platform
   - mtl
   - named
-  - nonempty-containers
   - prettyprinter
   - profunctors
   - text
