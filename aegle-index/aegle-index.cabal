@@ -1,0 +1,112 @@
+cabal-version: 2.2
+
+-- This file has been generated from package.yaml by hpack version 0.39.6.
+--
+-- see: https://github.com/sol/hpack
+
+name:           aegle-index
+version:        0.1.0
+synopsis:       Type-based library search for Agda
+description:    Please see the README on GitHub at <https://github.com/wasabi315/aegle#readme>
+category:       Language
+homepage:       https://github.com/wasabi315/aegle#readme
+bug-reports:    https://github.com/wasabi315/aegle/issues
+author:         Satoshi Takimoto
+maintainer:     wasabi.nvim.st@gmail.com
+copyright:      2016 András Kovács, 2025 Satoshi Takimoto
+license:        BSD-3-Clause
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/wasabi315/aegle
+
+flag debug
+  description: turn on debug traces
+  manual: True
+  default: False
+
+flag dump
+  description: dump core
+  manual: True
+  default: False
+
+flag llvm
+  description: use llvm for codegen
+  manual: True
+  default: False
+
+library
+  exposed-modules:
+      Aegle.Index
+      Aegle.Index.Statistics
+      Aegle.Index.Translate
+      Aegle.Index.Translate.Definition
+      Aegle.Index.Translate.Name
+      Aegle.Index.Translate.Scope
+      Aegle.Index.Translate.Term
+      Aegle.Index.Translate.TransparentDef
+      Aegle.Index.TransparentDefs
+      Aegle.Index.Utils
+  other-modules:
+      Paths_aegle_index
+  autogen-modules:
+      Paths_aegle_index
+  hs-source-dirs:
+      src
+  default-extensions:
+      AllowAmbiguousTypes
+      BlockArguments
+      CPP
+      DerivingVia
+      DeriveAnyClass
+      DuplicateRecordFields
+      MultilineStrings
+      MultiParamTypeClasses
+      NoFieldSelectors
+      NoImplicitPrelude
+      OrPatterns
+      OverloadedLabels
+      OverloadedStrings
+      OverloadedRecordDot
+      PatternSynonyms
+      QualifiedDo
+      RecordWildCards
+      Strict
+      TypeFamilies
+      ViewPatterns
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -O2 -funbox-strict-fields -optP-Wno-nonportable-include-path
+  build-depends:
+      Agda
+    , aegle-core
+    , aeson
+    , base >=4.7 && <5
+    , bytestring
+    , containers
+    , deepseq
+    , deriving-aeson
+    , directory
+    , filemanip
+    , filepath
+    , flat
+    , foldl
+    , generic-lens
+    , hashable
+    , microlens-platform
+    , mtl
+    , named
+    , prettyprinter
+    , prettyprinter-ansi-terminal
+    , profunctors
+    , text
+    , time
+    , unordered-containers
+    , vector
+    , witherable
+  default-language: GHC2024
+  if flag(debug)
+    cpp-options: -DDEBUG
+  if flag(dump)
+    ghc-options: -ddump-simpl -dsuppress-all -dno-suppress-type-signatures -ddump-to-file
+  if flag(llvm)
+    ghc-options: -fllvm
