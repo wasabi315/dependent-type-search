@@ -4,7 +4,7 @@ module Main
 where
 
 import Aegle.Prelude
-import Aegle.Search.TestFeature qualified
+import Aegle.Database.TestFeature qualified
 import Test.Tasty
 
 --------------------------------------------------------------------------------
@@ -16,5 +16,5 @@ tests :: TestTree
 tests =
   testGroup
     "Tests"
-    [ Aegle.Search.TestFeature.tests
+    [ Aegle.Database.TestFeature.tests
     ]

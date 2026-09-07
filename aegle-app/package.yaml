@@ -7,7 +7,6 @@ maintainer: wasabi.nvim.st@gmail.com
 copyright: 2016 András Kovács, 2025 Satoshi Takimoto
 
 data-files:
-  - migration/*.sql
   - static/style.css
   - static/script.js
 
@@ -18,98 +17,29 @@ description: Please see the README on GitHub at <https://github.com/wasabi315/ae
 
 dependencies:
   - base >= 4.7 && < 5
-  - aeson
-  - Agda
-  - bytestring
-  - containers
-  - deepseq
-  - deriving-aeson
-  - directory
-  - filepath
-  - filemanip
-  - flat
-  - foldl
-  - generic-lens
-  - hashable
-  - haskeline
-  - hasql
-  - hasql-dynamic-statements
-  - hasql-migration
-  - hasql-pool
-  - hasql-th
-  - hasql-transaction
-  - lucid
-  - megaparsec
-  - microlens-platform
-  - mtl
-  - named
-  - nonempty-containers
-  - opt-env-conf
-  - parser-combinators
-  - prettyprinter
-  - prettyprinter-ansi-terminal
-  - profunctors
-  - repline
-  - servant
-  - servant-lucid
-  - servant-server
-  - streamly
-  - text
-  - time
-  - unordered-containers
-  - uri-encode
-  - vector
-  - wai
-  - wai-extra
-  - warp
-  - witherable
-  - yaml
 
-language: GHC2021
+language: GHC2024
 
 default-extensions:
   - AllowAmbiguousTypes
-  - BangPatterns
   - BlockArguments
-  - ConstraintKinds
   - CPP
-  - DataKinds
   - DerivingVia
   - DeriveAnyClass
   - DuplicateRecordFields
-  - ExplicitNamespaces
-  - FlexibleContexts
-  - FlexibleInstances
-  - FunctionalDependencies
-  - GADTs
-  - InstanceSigs
-  - ImplicitParams
-  - KindSignatures
-  - LambdaCase
   - MultilineStrings
   - MultiParamTypeClasses
-  - MultiWayIf
   - NoFieldSelectors
   - NoImplicitPrelude
   - OrPatterns
   - OverloadedLabels
   - OverloadedStrings
   - OverloadedRecordDot
-  - PackageImports
   - PatternSynonyms
-  - PolyKinds
   - QualifiedDo
-  - RankNTypes
   - RecordWildCards
-  - ScopedTypeVariables
-  - StandaloneDeriving
-  - StandaloneKindSignatures
   - Strict
-  - TemplateHaskell
-  - TypeApplications
   - TypeFamilies
-  - TypeFamilyDependencies
-  - UndecidableInstances
   - ViewPatterns
 
 ghc-options:
@@ -158,6 +88,34 @@ when:
 
 library:
   source-dirs: src
+  dependencies:
+    - aegle-core
+    - aegle-index
+    - aegle-postgres
+    - aegle-search
+    - aeson
+    - containers
+    - deriving-aeson
+    - directory
+    - filepath
+    - foldl
+    - generic-lens
+    - hasql
+    - hasql-pool
+    - lucid
+    - opt-env-conf
+    - prettyprinter
+    - prettyprinter-ansi-terminal
+    - repline
+    - servant-lucid
+    - servant-server
+    - text
+    - time
+    - uri-encode
+    - vector
+    - wai-extra
+    - warp
+    - yaml
 
 executables:
   aegle:
@@ -175,14 +133,3 @@ executables:
             - -threaded
             - -rtsopts
             - -with-rtsopts= "-A64M -N"
-
-tests:
-  aegle-test:
-    main: Main.hs
-    source-dirs: test
-    dependencies:
-      - aegle-app
-      - tasty
-      - hedgehog
-      - tasty-hedgehog
-      - tasty-hunit

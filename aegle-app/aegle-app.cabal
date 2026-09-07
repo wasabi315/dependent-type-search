@@ -17,7 +17,6 @@ copyright:      2016 András Kovács, 2025 Satoshi Takimoto
 license:        BSD-3-Clause
 build-type:     Simple
 data-files:
-    migration/202603071213_init.sql
     static/style.css
     static/script.js
 
@@ -47,35 +46,7 @@ library
       Aegle.Cli.Interactive
       Aegle.Cli.Search
       Aegle.Cli.Serve
-      Aegle.Core.Evaluation
-      Aegle.Core.Isomorphism
-      Aegle.Core.Name
-      Aegle.Core.Term
-      Aegle.Database.Backend
-      Aegle.Database.Backend.PostgreSQL
-      Aegle.Index
-      Aegle.Index.Statistics
-      Aegle.Index.Translate
-      Aegle.Index.Translate.Definition
-      Aegle.Index.Translate.Name
-      Aegle.Index.Translate.Scope
-      Aegle.Index.Translate.Term
-      Aegle.Index.Translate.TransparentDef
-      Aegle.Index.TransparentDefs
-      Aegle.Index.Utils
-      Aegle.Prelude
-      Aegle.Search
-      Aegle.Search.Feature
-      Aegle.Search.Instantiation
-      Aegle.Search.Matching
-      Aegle.Search.Matching.ModuloIso
-      Aegle.Search.Matching.Pruning
-      Aegle.Search.Parser
-      Aegle.Search.Query
       Aegle.Web
-      Data.ImmatureStream
-      Data.Set.NonEmpty.Extra
-      Hasql.Executor
   other-modules:
       Paths_aegle_app
   autogen-modules:
@@ -84,98 +55,56 @@ library
       src
   default-extensions:
       AllowAmbiguousTypes
-      BangPatterns
       BlockArguments
-      ConstraintKinds
       CPP
-      DataKinds
       DerivingVia
       DeriveAnyClass
       DuplicateRecordFields
-      ExplicitNamespaces
-      FlexibleContexts
-      FlexibleInstances
-      FunctionalDependencies
-      GADTs
-      InstanceSigs
-      ImplicitParams
-      KindSignatures
-      LambdaCase
       MultilineStrings
       MultiParamTypeClasses
-      MultiWayIf
       NoFieldSelectors
       NoImplicitPrelude
       OrPatterns
       OverloadedLabels
       OverloadedStrings
       OverloadedRecordDot
-      PackageImports
       PatternSynonyms
-      PolyKinds
       QualifiedDo
-      RankNTypes
       RecordWildCards
-      ScopedTypeVariables
-      StandaloneDeriving
-      StandaloneKindSignatures
       Strict
-      TemplateHaskell
-      TypeApplications
       TypeFamilies
-      TypeFamilyDependencies
-      UndecidableInstances
       ViewPatterns
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -O2 -funbox-strict-fields -optP-Wno-nonportable-include-path
   build-depends:
-      Agda
+      aegle-core
+    , aegle-index
+    , aegle-postgres
+    , aegle-search
     , aeson
     , base >=4.7 && <5
-    , bytestring
     , containers
-    , deepseq
     , deriving-aeson
     , directory
-    , filemanip
     , filepath
-    , flat
     , foldl
     , generic-lens
-    , hashable
-    , haskeline
     , hasql
-    , hasql-dynamic-statements
-    , hasql-migration
     , hasql-pool
-    , hasql-th
-    , hasql-transaction
     , lucid
-    , megaparsec
-    , microlens-platform
-    , mtl
-    , named
-    , nonempty-containers
     , opt-env-conf
-    , parser-combinators
     , prettyprinter
     , prettyprinter-ansi-terminal
-    , profunctors
     , repline
-    , servant
     , servant-lucid
     , servant-server
-    , streamly
     , text
     , time
-    , unordered-containers
     , uri-encode
     , vector
-    , wai
     , wai-extra
     , warp
-    , witherable
     , yaml
-  default-language: GHC2021
+  default-language: GHC2024
   if flag(debug)
     cpp-options: -DDEBUG
   if flag(dump)
@@ -193,99 +122,30 @@ executable aegle
       app
   default-extensions:
       AllowAmbiguousTypes
-      BangPatterns
       BlockArguments
-      ConstraintKinds
       CPP
-      DataKinds
       DerivingVia
       DeriveAnyClass
       DuplicateRecordFields
-      ExplicitNamespaces
-      FlexibleContexts
-      FlexibleInstances
-      FunctionalDependencies
-      GADTs
-      InstanceSigs
-      ImplicitParams
-      KindSignatures
-      LambdaCase
       MultilineStrings
       MultiParamTypeClasses
-      MultiWayIf
       NoFieldSelectors
       NoImplicitPrelude
       OrPatterns
       OverloadedLabels
       OverloadedStrings
       OverloadedRecordDot
-      PackageImports
       PatternSynonyms
-      PolyKinds
       QualifiedDo
-      RankNTypes
       RecordWildCards
-      ScopedTypeVariables
-      StandaloneDeriving
-      StandaloneKindSignatures
       Strict
-      TemplateHaskell
-      TypeApplications
       TypeFamilies
-      TypeFamilyDependencies
-      UndecidableInstances
       ViewPatterns
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -O2 -funbox-strict-fields -optP-Wno-nonportable-include-path
   build-depends:
-      Agda
-    , aegle-app
-    , aeson
+      aegle-app
     , base >=4.7 && <5
-    , bytestring
-    , containers
-    , deepseq
-    , deriving-aeson
-    , directory
-    , filemanip
-    , filepath
-    , flat
-    , foldl
-    , generic-lens
-    , hashable
-    , haskeline
-    , hasql
-    , hasql-dynamic-statements
-    , hasql-migration
-    , hasql-pool
-    , hasql-th
-    , hasql-transaction
-    , lucid
-    , megaparsec
-    , microlens-platform
-    , mtl
-    , named
-    , nonempty-containers
-    , opt-env-conf
-    , parser-combinators
-    , prettyprinter
-    , prettyprinter-ansi-terminal
-    , profunctors
-    , repline
-    , servant
-    , servant-lucid
-    , servant-server
-    , streamly
-    , text
-    , time
-    , unordered-containers
-    , uri-encode
-    , vector
-    , wai
-    , wai-extra
-    , warp
-    , witherable
-    , yaml
-  default-language: GHC2021
+  default-language: GHC2024
   if flag(debug)
     cpp-options: -DDEBUG
   if flag(dump)
@@ -296,120 +156,3 @@ executable aegle
     ghc-options: -threaded
   else
     ghc-options: -threaded -rtsopts -with-rtsopts= "-A64M -N"
-
-test-suite aegle-test
-  type: exitcode-stdio-1.0
-  main-is: Main.hs
-  other-modules:
-      Aegle.Core.GenName
-      Aegle.Search.TestFeature
-      Paths_aegle_app
-  autogen-modules:
-      Paths_aegle_app
-  hs-source-dirs:
-      test
-  default-extensions:
-      AllowAmbiguousTypes
-      BangPatterns
-      BlockArguments
-      ConstraintKinds
-      CPP
-      DataKinds
-      DerivingVia
-      DeriveAnyClass
-      DuplicateRecordFields
-      ExplicitNamespaces
-      FlexibleContexts
-      FlexibleInstances
-      FunctionalDependencies
-      GADTs
-      InstanceSigs
-      ImplicitParams
-      KindSignatures
-      LambdaCase
-      MultilineStrings
-      MultiParamTypeClasses
-      MultiWayIf
-      NoFieldSelectors
-      NoImplicitPrelude
-      OrPatterns
-      OverloadedLabels
-      OverloadedStrings
-      OverloadedRecordDot
-      PackageImports
-      PatternSynonyms
-      PolyKinds
-      QualifiedDo
-      RankNTypes
-      RecordWildCards
-      ScopedTypeVariables
-      StandaloneDeriving
-      StandaloneKindSignatures
-      Strict
-      TemplateHaskell
-      TypeApplications
-      TypeFamilies
-      TypeFamilyDependencies
-      UndecidableInstances
-      ViewPatterns
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -O2 -funbox-strict-fields -optP-Wno-nonportable-include-path
-  build-depends:
-      Agda
-    , aegle-app
-    , aeson
-    , base >=4.7 && <5
-    , bytestring
-    , containers
-    , deepseq
-    , deriving-aeson
-    , directory
-    , filemanip
-    , filepath
-    , flat
-    , foldl
-    , generic-lens
-    , hashable
-    , haskeline
-    , hasql
-    , hasql-dynamic-statements
-    , hasql-migration
-    , hasql-pool
-    , hasql-th
-    , hasql-transaction
-    , hedgehog
-    , lucid
-    , megaparsec
-    , microlens-platform
-    , mtl
-    , named
-    , nonempty-containers
-    , opt-env-conf
-    , parser-combinators
-    , prettyprinter
-    , prettyprinter-ansi-terminal
-    , profunctors
-    , repline
-    , servant
-    , servant-lucid
-    , servant-server
-    , streamly
-    , tasty
-    , tasty-hedgehog
-    , tasty-hunit
-    , text
-    , time
-    , unordered-containers
-    , uri-encode
-    , vector
-    , wai
-    , wai-extra
-    , warp
-    , witherable
-    , yaml
-  default-language: GHC2021
-  if flag(debug)
-    cpp-options: -DDEBUG
-  if flag(dump)
-    ghc-options: -ddump-simpl -dsuppress-all -dno-suppress-type-signatures -ddump-to-file
-  if flag(llvm)
-    ghc-options: -fllvm

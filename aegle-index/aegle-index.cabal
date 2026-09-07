@@ -79,30 +79,15 @@ library
   build-depends:
       Agda
     , aegle-core
-    , aeson
     , base >=4.7 && <5
-    , bytestring
     , containers
-    , deepseq
     , deriving-aeson
     , directory
     , filemanip
-    , filepath
-    , flat
     , foldl
-    , generic-lens
-    , hashable
-    , microlens-platform
-    , mtl
-    , named
     , prettyprinter
     , prettyprinter-ansi-terminal
-    , profunctors
     , text
-    , time
-    , unordered-containers
-    , vector
-    , witherable
   default-language: GHC2024
   if flag(debug)
     cpp-options: -DDEBUG

@@ -16,34 +16,20 @@ description: Please see the README on GitHub at <https://github.com/wasabi315/ae
 
 dependencies:
   - base >= 4.7 && < 5
-  - aeson
   - aegle-core
   - bytestring
   - containers
-  - deepseq
-  - deriving-aeson
-  - directory
   - filepath
-  - filemanip
   - flat
   - foldl
-  - generic-lens
-  - hashable
   - hasql
   - hasql-dynamic-statements
   - hasql-migration
   - hasql-pool
   - hasql-th
   - hasql-transaction
-  - parser-combinators
-  - prettyprinter
-  - prettyprinter-ansi-terminal
-  - profunctors
   - text
-  - time
-  - unordered-containers
   - vector
-  - yaml
 
 language: GHC2024
 

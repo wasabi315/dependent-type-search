@@ -5,10 +5,11 @@ module Aegle.Web
 where
 
 import Aegle.Core.Name
-import Aegle.Core.Term
+import Aegle.Core.Term (Unqualified (..))
 import Aegle.Database.Backend
 import Aegle.Prelude
 import Aegle.Search qualified as Search
+import Aegle.Search.Term
 import Data.Aeson (ToJSON)
 import Data.Text qualified as T
 import Data.Time.Clock
@@ -255,7 +256,7 @@ searchUI dbReader timeout = \query -> do
                 " "
               span_ [class_ "match-main"] do
                 a_ [hrefDefSite moduleName position] do
-                  strong_ $ prettyHtml (ignoreLibName canonicalName)
+                  strong_ $ toHtml $ T.show (pretty canonicalName.moduleName <> "." <> pretty canonicalName.name)
                 " :"
                 wbr_ []
                 " "
@@ -272,7 +273,7 @@ searchUI dbReader timeout = \query -> do
                       code_ do
                         prettyHtml name.libName
                         " "
-                        prettyHtml (ignoreLibName name)
+                        toHtml $ T.show (pretty name.moduleName <> "." <> pretty name.name)
               p_ [class_ "detail-row"] do
                 strong_ "Solution: "
                 code_ $ prettyHtml $ Unqualified solution

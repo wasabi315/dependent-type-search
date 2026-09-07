@@ -1,4 +1,4 @@
-cabal-version: 2.2
+cabal-version: 3.0
 
 -- This file has been generated from package.yaml by hpack version 0.39.6.
 --
@@ -88,9 +88,98 @@ library
     , profunctors
     , text
     , time
-    , unordered-containers
-    , vector
     , witherable
+  default-language: GHC2024
+  if flag(debug)
+    cpp-options: -DDEBUG
+  if flag(dump)
+    ghc-options: -ddump-simpl -dsuppress-all -dno-suppress-type-signatures -ddump-to-file
+  if flag(llvm)
+    ghc-options: -fllvm
+
+library aegle-core-testing
+  visibility: public
+  exposed-modules:
+      Aegle.Core.GenName
+  other-modules:
+      Paths_aegle_core
+  autogen-modules:
+      Paths_aegle_core
+  hs-source-dirs:
+      testlib
+  default-extensions:
+      AllowAmbiguousTypes
+      BlockArguments
+      CPP
+      DerivingVia
+      DeriveAnyClass
+      DuplicateRecordFields
+      MultilineStrings
+      MultiParamTypeClasses
+      NoFieldSelectors
+      NoImplicitPrelude
+      OrPatterns
+      OverloadedLabels
+      OverloadedStrings
+      OverloadedRecordDot
+      PatternSynonyms
+      QualifiedDo
+      RecordWildCards
+      Strict
+      TypeFamilies
+      ViewPatterns
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -O2 -funbox-strict-fields -optP-Wno-nonportable-include-path
+  build-depends:
+      aegle-core
+    , base >=4.7 && <5
+    , hedgehog
+    , text
+  default-language: GHC2024
+  if flag(debug)
+    cpp-options: -DDEBUG
+  if flag(dump)
+    ghc-options: -ddump-simpl -dsuppress-all -dno-suppress-type-signatures -ddump-to-file
+  if flag(llvm)
+    ghc-options: -fllvm
+
+test-suite aegle-core-test
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      Aegle.Database.TestFeature
+      Paths_aegle_core
+  autogen-modules:
+      Paths_aegle_core
+  hs-source-dirs:
+      test
+  default-extensions:
+      AllowAmbiguousTypes
+      BlockArguments
+      CPP
+      DerivingVia
+      DeriveAnyClass
+      DuplicateRecordFields
+      MultilineStrings
+      MultiParamTypeClasses
+      NoFieldSelectors
+      NoImplicitPrelude
+      OrPatterns
+      OverloadedLabels
+      OverloadedStrings
+      OverloadedRecordDot
+      PatternSynonyms
+      QualifiedDo
+      RecordWildCards
+      Strict
+      TypeFamilies
+      ViewPatterns
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -O2 -funbox-strict-fields -optP-Wno-nonportable-include-path
+  build-depends:
+      aegle-core
+    , base >=4.7 && <5
+    , hedgehog
+    , tasty
+    , tasty-hedgehog
   default-language: GHC2024
   if flag(debug)
     cpp-options: -DDEBUG

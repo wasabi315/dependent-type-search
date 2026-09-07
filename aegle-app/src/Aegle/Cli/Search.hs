@@ -7,11 +7,12 @@ where
 
 import Aegle.Core.Isomorphism
 import Aegle.Core.Name
-import Aegle.Core.Term
+import Aegle.Core.Term (Unqualified (..))
 import Aegle.Database.Backend
 import Aegle.Database.Backend.PostgreSQL
 import Aegle.Prelude
 import Aegle.Search as Search
+import Aegle.Search.Term
 import Control.Exception
 import Data.Text qualified as T
 import Hasql.Connection
@@ -87,7 +88,7 @@ putResult Result {..} =
     matchDoc Match {item = LibraryItem {..}, ..} =
       vsep
         [ annotate (bold <> color Green) do
-            "∙" <+> pretty (ignoreLibName canonicalName) <+> colon <+> pretty (Unqualified originalSignature),
+            "∙" <+> pretty canonicalName.moduleName <> "." <> pretty canonicalName.name <+> colon <+> pretty (Unqualified originalSignature),
           indent 2
             $ vsep
             $ catMaybes
@@ -95,7 +96,7 @@ putResult Result {..} =
                 Just $ "◦ kind           :" <+> kindDoc kind,
                 case reexportedAs of
                   [] -> Nothing
-                  _ -> Just $ "◦ re-exported as :" <+> hsep (punctuate comma $ reexportedAs <&> \name -> pretty name.libName <+> pretty (ignoreLibName name)),
+                  _ -> Just $ "◦ re-exported as :" <+> hsep (punctuate comma $ reexportedAs <&> \name -> pretty name.libName <+> pretty name.moduleName <> "." <> pretty name.name),
                 case iso of
                   Refl -> Nothing
                   _ -> Just $ "◦ isomorphism    :" <+> pretty iso,

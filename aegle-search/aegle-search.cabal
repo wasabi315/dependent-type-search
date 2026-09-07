@@ -80,23 +80,12 @@ library
   build-depends:
       aegle-core
     , base >=4.7 && <5
-    , bytestring
     , containers
-    , deepseq
-    , directory
-    , filemanip
-    , filepath
-    , hashable
     , megaparsec
-    , parser-combinators
     , prettyprinter
-    , prettyprinter-ansi-terminal
-    , profunctors
     , streamly
     , text
     , time
-    , unordered-containers
-    , vector
   default-language: GHC2024
   if flag(debug)
     cpp-options: -DDEBUG

@@ -72,34 +72,20 @@ library
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -O2 -funbox-strict-fields -optP-Wno-nonportable-include-path
   build-depends:
       aegle-core
-    , aeson
     , base >=4.7 && <5
     , bytestring
     , containers
-    , deepseq
-    , deriving-aeson
-    , directory
-    , filemanip
     , filepath
     , flat
     , foldl
-    , generic-lens
-    , hashable
     , hasql
     , hasql-dynamic-statements
     , hasql-migration
     , hasql-pool
     , hasql-th
     , hasql-transaction
-    , parser-combinators
-    , prettyprinter
-    , prettyprinter-ansi-terminal
-    , profunctors
     , text
-    , time
-    , unordered-containers
     , vector
-    , yaml
   default-language: GHC2024
   if flag(debug)
     cpp-options: -DDEBUG

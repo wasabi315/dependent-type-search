@@ -1,10 +1,10 @@
-module Aegle.Search.TestFeature
+module Aegle.Database.TestFeature
   ( tests,
   )
 where
 
 import Aegle.Prelude
-import Aegle.Search.Feature
+import Aegle.Database.Feature
 import Hedgehog
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
