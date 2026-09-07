@@ -40,76 +40,82 @@ invert mctx gamma sp = do
   pure (PRen Nothing dom gamma ren, mask fsp <$ guard (not $ IS.null nlvars))
 
 -- | Solve @Γ ⊢ m spine =? rhs@.
-solve :: TopEnv -> MetaCtx -> Level -> MetaVar -> Spine -> Value -> Maybe MetaCtx
-solve tenv mctx gamma m sp rhs = do
+solve :: MetaCtx -> Level -> MetaVar -> Spine -> Value -> Maybe MetaCtx
+solve mctx gamma m sp rhs = do
   pren <- invert mctx gamma sp
-  solveWithPren tenv mctx m pren rhs
+  solveWithPren mctx m pren rhs
 
 --------------------------------------------------------------------------------
 
-match0 :: TopEnv -> MetaCtx -> "pat" :! Term -> "term" :! Term -> [MetaCtx]
-match0 tenv mctx (Arg p) (Arg t) = do
-  let vp = eval tenv mctx [] p
-      vt = eval tenv mctx [] t
-  match tenv mctx 0 ! #pat vp ! #term vt
+match0 :: MetaCtx -> "pat" :! Term -> "term" :! Term -> [MetaCtx]
+match0 mctx (Arg p) (Arg t) = do
+  let vp = eval mctx [] p
+      vt = eval mctx [] t
+  match mctx 0 ! #pat vp ! #term vt
 
-match :: TopEnv -> MetaCtx -> Level -> "pat" :! Value -> "term" :! Value -> [MetaCtx]
-match tenv mctx l (Arg p) (Arg t) = case (force mctx p, force mctx t) of
+match :: MetaCtx -> Level -> "pat" :! Value -> "term" :! Value -> [MetaCtx]
+match mctx l (Arg p) (Arg t) = case (force mctx p, force mctx t) of
   (_, VFlex {}) -> error "match: metavariable in term"
   (VBrave {}, _) -> []
   (_, VBrave {}) -> []
   (VPi _ pa pb, VPi _ a b) -> do
-    mctx <- match tenv mctx l ! #pat pa ! #term a
-    match tenv mctx (l + 1) ! #pat (pb $ VVar l) ! #term (b $ VVar l)
+    mctx <- match mctx l ! #pat pa ! #term a
+    match mctx (l + 1) ! #pat (pb $ VVar l) ! #term (b $ VVar l)
   (VU, VU) -> pure mctx
   (VLam _ pt, VLam _ t) ->
-    match tenv mctx (l + 1) ! #pat (pt $ VVar l) ! #term (t $ VVar l)
+    match mctx (l + 1) ! #pat (pt $ VVar l) ! #term (t $ VVar l)
   (p, VLam _ pt) ->
-    match tenv mctx (l + 1) ! #pat (p $$ VVar l) ! #term (pt $ VVar l)
+    match mctx (l + 1) ! #pat (p $$ VVar l) ! #term (pt $ VVar l)
   (VLam _ pt, t) ->
-    match tenv mctx (l + 1) ! #pat (pt $ VVar l) ! #term (t $$ VVar l)
+    match mctx (l + 1) ! #pat (pt $ VVar l) ! #term (t $$ VVar l)
   (VSigma _ pa pb, VSigma _ a b) -> do
-    mctx <- match tenv mctx l ! #pat pa ! #term a
-    match tenv mctx (l + 1) ! #pat (pb $ VVar l) ! #term (b $ VVar l)
+    mctx <- match mctx l ! #pat pa ! #term a
+    match mctx (l + 1) ! #pat (pb $ VVar l) ! #term (b $ VVar l)
   (VPair pt pu, VPair t u) -> do
-    mctx <- match tenv mctx l ! #pat pt ! #term t
-    match tenv mctx l ! #pat pu ! #term u
+    mctx <- match mctx l ! #pat pt ! #term t
+    match mctx l ! #pat pu ! #term u
   (VPair pt pu, t) -> do
-    mctx <- match tenv mctx l ! #pat pt ! #term (vProj1 t)
-    match tenv mctx l ! #pat pu ! #term (vProj2 t)
+    mctx <- match mctx l ! #pat pt ! #term (vProj1 t)
+    match mctx l ! #pat pu ! #term (vProj2 t)
   (pt, VPair t u) -> do
-    mctx <- match tenv mctx l ! #pat (vProj1 pt) ! #term t
-    match tenv mctx l ! #pat (vProj2 pt) ! #term u
+    mctx <- match mctx l ! #pat (vProj1 pt) ! #term t
+    match mctx l ! #pat (vProj2 pt) ! #term u
   (VRigid px psp, VRigid x sp)
-    | px == x -> matchSpine tenv mctx l ! #pat psp ! #term sp
+    | px == x -> matchSpine mctx l ! #pat psp ! #term sp
   (VOpaque px psp, VOpaque x sp)
-    | px == x -> matchSpine tenv mctx l ! #pat psp ! #term sp
-  (VFlex m psp, t) -> maybeToList $ solve tenv mctx l m psp t
-  (VAmb px psp pxs [], VOpaque x sp)
-    | x `S.member` pxs -> do
+    | px == x -> matchSpine mctx l ! #pat psp ! #term sp
+  (VFlex m psp, t) -> maybeToList $ solve mctx l m psp t
+  (VAmb px psp, VOpaque x sp)
+    | Unresolved pxs [] <- lookupResol mctx px,
+      x `S.member` pxs -> do
         let mctx' = resolveOpaque mctx px x
-        matchSpine tenv mctx' l ! #pat psp ! #term sp
-  (VOpaque px psp, VAmb x sp xs [])
-    | px `S.member` xs -> do
+        matchSpine mctx' l ! #pat psp ! #term sp
+  -- we don't take intersection of possible name sets currently
+  (VAmb px psp, VAmb x sp)
+    | px == x,
+      Unresolved _ [] <- lookupResol mctx px ->
+        matchSpine mctx l ! #pat psp ! #term sp
+  (VAmb px psp, t)
+    | Unresolved pxs pts@(_ : _) <- lookupResol mctx px -> do
+        (p, mctx) <- chooseAmb mctx px psp pxs pts
+        match mctx l ! #pat p ! #term t
+  (VOpaque px psp, VAmb x sp)
+    | Unresolved xs [] <- lookupResol mctx x,
+      px `S.member` xs -> do
         let mctx' = resolveOpaque mctx x px
-        matchSpine tenv mctx' l ! #pat psp ! #term sp
-  -- we don't take intersection currently
-  (VAmb px psp _ [], VAmb x sp _ [])
-    | px == x -> matchSpine tenv mctx l ! #pat psp ! #term sp
-  (VAmb px psp pxs pts@(_ : _), t) -> do
-    (p, mctx) <- chooseAmb mctx px psp pxs pts
-    match tenv mctx l ! #pat p ! #term t
-  (p, VAmb x sp xs ts@(_ : _)) -> do
-    (t, mctx) <- chooseAmb mctx x sp xs ts
-    match tenv mctx l ! #pat p ! #term t
+        matchSpine mctx' l ! #pat psp ! #term sp
+  (p, VAmb x sp)
+    | Unresolved xs ts@(_ : _) <- lookupResol mctx x -> do
+        (t, mctx) <- chooseAmb mctx x sp xs ts
+        match mctx l ! #pat p ! #term t
   _ -> []
 
-matchSpine :: TopEnv -> MetaCtx -> Level -> "pat" :! Spine -> "term" :! Spine -> [MetaCtx]
-matchSpine tenv mctx l (Arg psp) (Arg sp) = case (psp, sp) of
+matchSpine :: MetaCtx -> Level -> "pat" :! Spine -> "term" :! Spine -> [MetaCtx]
+matchSpine mctx l (Arg psp) (Arg sp) = case (psp, sp) of
   (SNil, SNil) -> pure mctx
   (SApp psp p, SApp sp t) -> do
-    mctx <- matchSpine tenv mctx l ! #pat psp ! #term sp
-    match tenv mctx l ! #pat p ! #term t
-  (SProj1 psp, SProj1 sp) -> matchSpine tenv mctx l ! #pat psp ! #term sp
-  (SProj2 psp, SProj2 sp) -> matchSpine tenv mctx l ! #pat psp ! #term sp
+    mctx <- matchSpine mctx l ! #pat psp ! #term sp
+    match mctx l ! #pat p ! #term t
+  (SProj1 psp, SProj1 sp) -> matchSpine mctx l ! #pat psp ! #term sp
+  (SProj2 psp, SProj2 sp) -> matchSpine mctx l ! #pat psp ! #term sp
   _ -> []

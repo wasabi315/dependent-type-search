@@ -91,5 +91,5 @@ constructDefinition ::
   TS.Definition
 constructDefinition Definition' {..} = TS.Definition {..}
   where
-    (signature', _) = TS.normalise0 mempty (TS.emptyMetaCtx mempty) signature
+    (signature', _) = TS.normalise0 (TS.emptyMetaCtx mempty) signature
     feature = TS.allFeature signature'

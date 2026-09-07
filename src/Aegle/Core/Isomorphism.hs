@@ -167,8 +167,8 @@ assoc mctx = go Refl
         go (i <> Assoc) $ Quant y a1 \ ~u -> VSigma x (a2 u) \ ~v -> b (VPair u v)
       a -> (Quant x a b, i)
 
-normalise0 :: TopEnv -> MetaCtx -> Term -> (Term, Iso)
-normalise0 tenv mctx t = normalise mctx 0 (eval tenv mctx [] t)
+normalise0 :: MetaCtx -> Term -> (Term, Iso)
+normalise0 mctx t = normalise mctx 0 (eval mctx [] t)
 
 normalise :: MetaCtx -> Level -> Value -> (Term, Iso)
 normalise mctx l = \case

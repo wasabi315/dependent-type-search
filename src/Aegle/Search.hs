@@ -81,19 +81,21 @@ search config query = onTimeout config.timeout (Left Timeout) $ runExceptT do
     -- 1. parse query
     Q.Query {..} <- parseQuery config.querySrc query ??% ParseError
 
-    -- 2. resolve free variables and obtain 'MetaCtx' and 'TopEnv'
+    -- 2. resolve free variables and seed the 'MetaCtx' with their candidates
     refMap <- liftIO $ resolveNames config.dbReader $ M.fromSet id (Q.freeVars typ)
-    let mctx = emptyMetaCtx mempty
-    tenv <- flip M.traverseWithKey refMap \x refs -> do
+    -- Transparent bodies are closed and does not mentions metas and ambiguous names
+    let mctx0 = emptyMetaCtx mempty
+    resol <- flip M.traverseWithKey refMap \x refs -> do
       when (null refs) do
         throwError (NotFound x)
       let (opaques, transps) =
             partitionEithers $ refs <&> \Referent {..} ->
-              maybe (Left canonicalName) (Right . eval mempty mctx []) body
-      pure TopEnvEntry {opaques = S.fromList opaques, ..}
+              maybe (Left canonicalName) (Right . eval mctx0 []) body
+      pure $! Unresolved (S.fromList opaques) transps
+    let mctx = emptyMetaCtx resol
 
     -- 3. Speculatively normalise the query type and compute possible features
-    let typ' = Q.eval tenv [] typ
+    let typ' = Q.eval [] typ
         typs = quoteNondet mctx 0 typ'
         feats = nubOrd $ mapMaybe (filterFeatureQ . fst) typs
         compats = feats <&> \feat -> toCompat ! #query feat
@@ -105,31 +107,31 @@ search config query = onTimeout config.timeout (Left Timeout) $ runExceptT do
     -- 4. Try matching
     if config.recordCandTimes
       then liftIO do
-        (matches, candTimes) <- matchWithTime tenv typ' cands
+        (matches, candTimes) <- matchWithTime mctx typ' cands
         pure (numCands, matches, Just candTimes)
       else liftIO do
-        matches <- match tenv typ' cands
+        matches <- match mctx typ' cands
         pure (numCands, matches, Nothing)
 
   pure Result {..}
 
-match :: TopEnv -> Value -> [LibraryItem] -> IO [Match]
-match tenv query items =
+match :: MetaCtx -> Value -> [LibraryItem] -> IO [Match]
+match mctx query items =
   Streamly.fromList items
     & Streamly.parConcatMap
       id
       ( \item@LibraryItem {..} ->
-          case IStr.streamToMaybe $ check0 tenv query canonicalName signature of
+          case IStr.streamToMaybe $ check0 mctx query canonicalName signature of
             Nothing -> Streamly.nil
             Just (iso, solution) -> Streamly.fromPure $! Match {..}
       )
     & Streamly.toList
 
-matchWithTime :: TopEnv -> Value -> [LibraryItem] -> IO ([Match], [CandTime])
-matchWithTime tenv query items = do
+matchWithTime :: MetaCtx -> Value -> [LibraryItem] -> IO ([Match], [CandTime])
+matchWithTime mctx query items = do
   results <- for items \item@LibraryItem {..} ->
     (item,) <$> timedPure do
-      IStr.streamToMaybe $ check0 tenv query canonicalName signature
+      IStr.streamToMaybe $ check0 mctx query canonicalName signature
   let candTimes =
         results <&> \(item, (result, time)) ->
           CandTime {name = item.canonicalName, matched = isJust result, ..}

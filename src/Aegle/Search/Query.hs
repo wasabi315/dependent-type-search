@@ -17,7 +17,6 @@ import Aegle.Core.Evaluation hiding (eval)
 import Aegle.Core.Name
 import Aegle.Core.Term (AppView (..), TeleView (..))
 import Aegle.Prelude
-import Data.Map.Strict qualified as M
 import Data.Set qualified as S
 import Data.Text qualified as T
 import Prettyprinter
@@ -93,24 +92,23 @@ freeVars = go []
 --------------------------------------------------------------------------------
 -- Evaluation
 
-eval :: TopEnv -> [(Name, Value)] -> Term -> Value
-eval tenv env = \case
+eval :: [(Name, Value)] -> Term -> Value
+eval env = \case
   Var (Unqual x)
     | Just t <- lookup x env -> t
-  Var x
-    | TopEnvEntry {..} <- tenv M.! x -> VAmb x SNil opaques transps
+  Var x -> VAmb x SNil
   U -> VU
   Pi x a b -> do
     let x' = if Unqual x `S.member` freeVars b then x else "_"
-    VPi x' (eval tenv env a) \ ~v -> eval tenv ((x', v) : env) b
-  Lam x t -> VLam x \v -> eval tenv ((x, v) : env) t
-  App t u -> eval tenv env t $$ eval tenv env u
+    VPi x' (eval env a) \ ~v -> eval ((x', v) : env) b
+  Lam x t -> VLam x \v -> eval ((x, v) : env) t
+  App t u -> eval env t $$ eval env u
   Sigma x a b -> do
     let x' = if Unqual x `S.member` freeVars b then x else "_"
-    VSigma x' (eval tenv env a) \ ~v -> eval tenv ((x', v) : env) b
-  Pair t u -> eval tenv env t `VPair` eval tenv env u
-  Proj1 t -> vProj1 (eval tenv env t)
-  Proj2 t -> vProj2 (eval tenv env t)
+    VSigma x' (eval env a) \ ~v -> eval ((x', v) : env) b
+  Pair t u -> eval env t `VPair` eval env u
+  Proj1 t -> vProj1 (eval env t)
+  Proj2 t -> vProj2 (eval env t)
 
 --------------------------------------------------------------------------------
 -- Prettyprinting

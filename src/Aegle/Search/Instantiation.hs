@@ -17,8 +17,7 @@ import Prettyprinter
 -- Context
 
 data Ctx = Ctx
-  { topEnv :: TopEnv,
-    level :: Level,
+  { level :: Level,
     locals :: Locals
   }
 
@@ -26,12 +25,11 @@ data Locals
   = Here
   | Bind Locals Name ~Term
 
-initCtx :: TopEnv -> Ctx
-initCtx topEnv =
+initCtx :: Ctx
+initCtx =
   Ctx
     { level = 0,
-      locals = Here,
-      ..
+      locals = Here
     }
 
 bind :: MetaCtx -> Ctx -> Name -> VType -> Ctx
@@ -53,11 +51,10 @@ closeTm = \cases
   Here t -> t
   (Bind locs x _) b -> closeTm locs (Lam x b)
 
-check0 :: TopEnv -> Value -> QName -> Type -> IStr.Stream (Iso, Term)
-check0 tenv query itemName item = do
-  let ctx = initCtx tenv
-      mctx = emptyMetaCtx mempty
-      item' = eval tenv mctx [] item
+check0 :: MetaCtx -> Value -> QName -> Type -> IStr.Stream (Iso, Term)
+check0 mctx query itemName item = do
+  let ctx = initCtx
+      item' = eval mctx [] item
   check mctx ctx query itemName item'
 
 -- FIXME: currently not considering pi permutation
@@ -68,7 +65,7 @@ check mctx ctx query itemName item =
     [ do
         (item, inst, mctx) <- possibleInstantiation mctx ctx item (VOpaque itemName SNil)
         (i, mctx) <- IStr.maybeToStream $ listToMaybe do
-          (i, i', mctx) <- matchIso ctx.topEnv mctx ctx.level ! #pat item ! #term query
+          (i, i', mctx) <- matchIso mctx ctx.level ! #pat item ! #term query
           guard $ allMetaSolved mctx
           pure $! i <> sym i' // mctx
         let ~sol = closeTm ctx.locals $ quote mctx ctx.level $ transport i inst
@@ -92,7 +89,7 @@ possibleInstantiation mctx ctx a ~inst =
         VPi "_" _ _ -> empty
         VPi _ a b -> do
           (m, mctx) <- pure $ freshMeta mctx ctx a
-          let mv = eval ctx.topEnv mctx (idEnv ctx.level) m
+          let mv = eval mctx (idEnv ctx.level) m
           possibleInstantiation mctx ctx (b mv) (inst $$ mv)
         _ -> empty
     ]
@@ -102,7 +99,7 @@ idPruning l = replicate (coerce l) True
 
 freshMeta :: MetaCtx -> Ctx -> Value -> (Term, MetaCtx)
 freshMeta mctx ctx a = do
-  let ~closed = eval ctx.topEnv mctx [] $ closeTy ctx.locals (quote mctx ctx.level a)
+  let ~closed = eval mctx [] $ closeTy ctx.locals (quote mctx ctx.level a)
       (m, mctx') = newMeta mctx closed
   (AppPruning (Meta m) (idPruning ctx.level), mctx')
 
@@ -112,7 +109,6 @@ traceCheck :: MetaCtx -> Ctx -> Value -> QName -> Value -> Bool
 traceCheck mctx ctx query itemName item = traceFalse $ show do
   vsep
     [ "check" <+> pretty itemName,
-      "tenv" <+> colon <+> align (pretty ctx.topEnv),
       "mctx" <+> colon <+> align (pretty mctx),
       "ctx size" <+> colon <+> pretty ctx.level,
       "query" <+> colon <+> pretty ((mctx, ctx.level) :⊢ query),
@@ -123,7 +119,6 @@ tracePossibleInstantiation :: MetaCtx -> Ctx -> Value -> Bool
 tracePossibleInstantiation mctx ctx a = traceFalse $ show do
   vsep
     [ "possibleInstantiation",
-      "tenv" <+> colon <+> align (pretty ctx.topEnv),
       "mctx" <+> colon <+> align (pretty mctx),
       "a" <+> colon <+> pretty ((mctx, ctx.level) :⊢ a)
     ]
